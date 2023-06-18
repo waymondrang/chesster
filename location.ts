@@ -21,18 +21,10 @@ export class ChessterLocation {
     this.piece = piece;
   }
 
-  getPiece(): ChessterPiece | undefined {
-    return this.piece;
-  }
-
   setPiece(piece: ChessterPiece | undefined) {
     if (piece) piece.location = this;
     this.piece = piece;
     this.empty = piece === undefined;
-  }
-
-  getBoard(): ChessterBoard {
-    return this.board;
   }
 
   isEmpty(): boolean {
@@ -47,7 +39,11 @@ export class ChessterLocation {
     return this.y;
   }
 
-  toString(): string {
+  coordString(): string {
     return `[${this.x}, ${this.y}]`;
+  }
+
+  toString(): string {
+    return (this.piece?.piece || "empty") + " @ " + this.coordString();
   }
 }

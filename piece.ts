@@ -1,6 +1,27 @@
 import { ChessterBoard } from "./board";
 import { ChessterLocation } from "./location";
-import { WHITE, location, piece, team } from "./types";
+import { BLACK, WHITE, location, piece, team } from "./types";
+
+function calculateTeam(piece: piece) {
+  switch (piece) {
+    case "♔":
+    case "♕":
+    case "♗":
+    case "♘":
+    case "♖":
+    case "♙":
+      return WHITE;
+    case "♚":
+    case "♛":
+    case "♝":
+    case "♞":
+    case "♜":
+    case "♟︎":
+      return BLACK;
+    default:
+      throw new Error("Invalid piece: " + piece);
+  }
+}
 
 export class ChessterPiece {
   piece: piece;
@@ -8,11 +29,11 @@ export class ChessterPiece {
   location: ChessterLocation;
   #board: ChessterBoard;
 
-  constructor(location: ChessterLocation, piece: piece, team: team) {
-    this.#board = location.getBoard();
+  constructor(location: ChessterLocation, piece: piece) {
+    this.#board = location.board;
     this.location = location;
     this.piece = piece;
-    this.team = team;
+    this.team = calculateTeam(piece);
   }
 
   getTeam() {
@@ -33,26 +54,28 @@ export class ChessterPiece {
     return this.team === piece.team;
   }
 
-  toString(): string {
-    return `${this.team} ${this.piece} at ${this.location.toString()}`;
-  }
-
   getAvailableMoves(): location[] {
     switch (this.piece) {
-      case "king":
+      case "♔":
+      case "♚":
         return this.getKingMoves();
-      case "pawn":
-        return this.getPawnMoves();
-      case "rook":
-        return this.getRookMoves();
-      case "bishop":
-        return this.getBishopMoves();
-      case "knight":
-        return this.getKnightMoves();
-      case "queen":
+      case "♕":
+      case "♛":
         return this.getQueenMoves();
+      case "♗":
+      case "♝":
+        return this.getBishopMoves();
+      case "♘":
+      case "♞":
+        return this.getKnightMoves();
+      case "♖":
+      case "♜":
+        return this.getRookMoves();
+      case "♙":
+      case "♟︎":
+        return this.getPawnMoves();
       default:
-        return [];
+        throw new Error("Invalid piece: " + this.piece);
     }
   }
 
@@ -60,11 +83,6 @@ export class ChessterPiece {
     const start = performance.now();
     const moves = this.getAvailableMoves();
     const end = performance.now();
-    console.log(
-      `getAvailableMoves() for ${this.toString()} took ${
-        end - start
-      } milliseconds.`
-    );
     return [moves, end - start];
   }
 
@@ -82,10 +100,7 @@ export class ChessterPiece {
           this.location.y + j,
         ]);
         if (!location) continue;
-        if (
-          location.getPiece() === undefined ||
-          this.isEnemy(location.getPiece()!)
-        )
+        if (location.piece === undefined || this.isEnemy(location.piece!))
           moves.push([this.location.x + i, this.location.y + j]);
       }
     }
@@ -97,27 +112,21 @@ export class ChessterPiece {
     const direction = this.team === WHITE ? 1 : -1;
     if (
       (this.location.y === 1 || this.location.y === 6) &&
-      this.#board
-        .get([this.location.x, this.location.y + direction * 2])
-        ?.isEmpty()
+      this.#board.get([this.location.x, this.location.y + direction * 2])?.empty
     )
       moves.push([this.location.x, this.location.y + 2]);
-    if (
-      this.#board.get([this.location.x, this.location.y + direction])?.isEmpty()
-    )
+    if (this.#board.get([this.location.x, this.location.y + direction])?.empty)
       moves.push([this.location.x, this.location.y + direction]);
     if (
       this.#board
         .get([this.location.x + 1, this.location.y + direction])
-        ?.getPiece()
-        ?.isEnemy(this)
+        ?.piece?.isEnemy(this)
     )
       moves.push([this.location.x + 1, this.location.y + 1]);
     if (
       this.#board
         .get([this.location.x - 1, this.location.y + direction])
-        ?.getPiece()
-        ?.isEnemy(this)
+        ?.piece?.isEnemy(this)
     )
       moves.push([this.location.x - 1, this.location.y + direction]);
     return moves;
@@ -125,54 +134,49 @@ export class ChessterPiece {
 
   getRookMoves(): location[] {
     const moves: location[] = [];
-    console.log("Getting rook moves");
     for (let i = 1; i < 8; i++) {
-      if (this.#board.get([this.location.x + i, this.location.y])?.isEmpty())
+      if (this.#board.get([this.location.x + i, this.location.y])?.empty)
         moves.push([this.location.x + i, this.location.y]);
       else if (
         this.#board
           .get([this.location.x + i, this.location.y])
-          ?.getPiece()
-          ?.isEnemy(this)
+          ?.piece?.isEnemy(this)
       ) {
         moves.push([this.location.x + i, this.location.y]);
         break;
       } else break;
     }
-    for (let i = -7; i < 0; i++) {
+    for (let i = 1; i < 8; i++) {
       if (
-        this.#board.get([this.location.x + i, this.location.y])?.isEmpty() ||
+        this.#board.get([this.location.x - i, this.location.y])?.empty ||
         this.#board
-          .get([this.location.x + i, this.location.y])
-          ?.getPiece()
-          ?.isEnemy(this)
+          .get([this.location.x - i, this.location.y])
+          ?.piece?.isEnemy(this)
       )
-        moves.push([this.location.x + i, this.location.y]);
+        moves.push([this.location.x - i, this.location.y]);
       else break;
     }
     for (let i = 1; i < 8; i++) {
-      if (this.#board.get([this.location.x, this.location.y + i])?.isEmpty())
+      if (this.#board.get([this.location.x, this.location.y + i])?.empty)
         moves.push([this.location.x, this.location.y + i]);
       else if (
         this.#board
           .get([this.location.x, this.location.y + i])
-          ?.getPiece()
-          ?.isEnemy(this)
+          ?.piece?.isEnemy(this)
       ) {
         moves.push([this.location.x, this.location.y + i]);
         break;
       } else break;
     }
-    for (let i = -7; i < 0; i++) {
-      if (this.#board.get([this.location.x, this.location.y + i])?.isEmpty())
-        moves.push([this.location.x, this.location.y + i]);
+    for (let i = 1; i < 8; i++) {
+      if (this.#board.get([this.location.x, this.location.y - i])?.empty)
+        moves.push([this.location.x, this.location.y - i]);
       else if (
         this.#board
-          .get([this.location.x, this.location.y + i])
-          ?.getPiece()
-          ?.isEnemy(this)
+          .get([this.location.x, this.location.y - i])
+          ?.piece?.isEnemy(this)
       ) {
-        moves.push([this.location.x, this.location.y + i]);
+        moves.push([this.location.x, this.location.y - i]);
         break;
       } else break;
     }
@@ -190,10 +194,7 @@ export class ChessterPiece {
           this.location.y + j,
         ]);
         if (!location) continue;
-        if (
-          location.getPiece() === undefined ||
-          this.isEnemy(location.getPiece()!)
-        )
+        if (location.piece === undefined || this.isEnemy(location.piece!))
           moves.push([this.location.x + i, this.location.y + j]);
       }
     }
@@ -203,62 +204,50 @@ export class ChessterPiece {
   getBishopMoves(): location[] {
     const moves: location[] = [];
     for (let i = 1; i < 8; i++) {
-      if (
-        this.#board.get([this.location.x + i, this.location.y + i])?.isEmpty()
-      )
+      if (this.#board.get([this.location.x + i, this.location.y + i])?.empty)
         moves.push([this.location.x + i, this.location.y + i]);
       else if (
         this.#board
           .get([this.location.x + i, this.location.y + i])
-          ?.getPiece()
-          ?.isEnemy(this)
-      ) {
-        moves.push([this.location.x + i, this.location.y + i]);
-        break;
-      } else break;
-    }
-    for (let i = -7; i < 0; i++) {
-      if (
-        this.#board.get([this.location.x + i, this.location.y + i])?.isEmpty()
-      )
-        moves.push([this.location.x + i, this.location.y + i]);
-      else if (
-        this.#board
-          .get([this.location.x + i, this.location.y + i])
-          ?.getPiece()
-          ?.isEnemy(this)
+          ?.piece?.isEnemy(this)
       ) {
         moves.push([this.location.x + i, this.location.y + i]);
         break;
       } else break;
     }
     for (let i = 1; i < 8; i++) {
-      if (
-        this.#board.get([this.location.x - i, this.location.y + i])?.isEmpty()
-      )
+      if (this.#board.get([this.location.x - i, this.location.y - i])?.empty)
+        moves.push([this.location.x - i, this.location.y - i]);
+      else if (
+        this.#board
+          .get([this.location.x - i, this.location.y - i])
+          ?.piece?.isEnemy(this)
+      ) {
+        moves.push([this.location.x - i, this.location.y - i]);
+        break;
+      } else break;
+    }
+    for (let i = 1; i < 8; i++) {
+      if (this.#board.get([this.location.x - i, this.location.y + i])?.empty)
         moves.push([this.location.x - i, this.location.y + i]);
       else if (
         this.#board
           .get([this.location.x - i, this.location.y + i])
-          ?.getPiece()
-          ?.isEnemy(this)
+          ?.piece?.isEnemy(this)
       ) {
         moves.push([this.location.x - i, this.location.y + i]);
         break;
       } else break;
     }
-    for (let i = -7; i < 0; i++) {
-      if (
-        this.#board.get([this.location.x - i, this.location.y + i])?.isEmpty()
-      )
-        moves.push([this.location.x - i, this.location.y + i]);
+    for (let i = 1; i < 8; i++) {
+      if (this.#board.get([this.location.x + i, this.location.y - i])?.empty)
+        moves.push([this.location.x + i, this.location.y - i]);
       else if (
         this.#board
-          .get([this.location.x - i, this.location.y + i])
-          ?.getPiece()
-          ?.isEnemy(this)
+          .get([this.location.x + i, this.location.y - i])
+          ?.piece?.isEnemy(this)
       ) {
-        moves.push([this.location.x - i, this.location.y + i]);
+        moves.push([this.location.x + i, this.location.y - i]);
         break;
       } else break;
     }
@@ -268,114 +257,98 @@ export class ChessterPiece {
   getQueenMoves(): location[] {
     const moves: location[] = [];
     for (let i = 1; i < 8; i++) {
-      if (this.#board.get([this.location.x + i, this.location.y])?.isEmpty())
+      if (this.#board.get([this.location.x + i, this.location.y])?.empty)
         moves.push([this.location.x + i, this.location.y]);
       else if (
-        this.#board
-          .get([this.location.x + i, this.location.y])
-          ?.getPiece()
-          ?.isEnemy(this)
-      ) {
-        moves.push([this.location.x + i, this.location.y]);
-        break;
-      } else break;
-    }
-    for (let i = -7; i < 0; i++) {
-      if (this.#board.get([this.location.x + i, this.location.y])?.isEmpty())
-        moves.push([this.location.x + i, this.location.y]);
-      else if (
-        this.#board
-          .get([this.location.x + i, this.location.y])
-          ?.getPiece()
-          ?.isEnemy(this)
+        this.#board.board[this.location.x + i][this.location.y]?.piece?.isEnemy(
+          this
+        )
       ) {
         moves.push([this.location.x + i, this.location.y]);
         break;
       } else break;
     }
     for (let i = 1; i < 8; i++) {
-      if (this.#board.get([this.location.x, this.location.y + i])?.isEmpty())
+      if (this.#board.get([this.location.x - i, this.location.y])?.empty)
+        moves.push([this.location.x - i, this.location.y]);
+      else if (
+        this.#board
+          .get([this.location.x - i, this.location.y])
+          ?.piece?.isEnemy(this)
+      ) {
+        moves.push([this.location.x - i, this.location.y]);
+        break;
+      } else break;
+    }
+    for (let i = 1; i < 8; i++) {
+      if (this.#board.get([this.location.x, this.location.y + i])?.empty)
         moves.push([this.location.x, this.location.y + i]);
       else if (
         this.#board
           .get([this.location.x, this.location.y + i])
-          ?.getPiece()
-          ?.isEnemy(this)
-      ) {
-        moves.push([this.location.x, this.location.y + i]);
-        break;
-      } else break;
-    }
-    for (let i = -7; i < 0; i++) {
-      if (this.#board.get([this.location.x, this.location.y + i])?.isEmpty())
-        moves.push([this.location.x, this.location.y + i]);
-      else if (
-        this.#board
-          .get([this.location.x, this.location.y + i])
-          ?.getPiece()
-          ?.isEnemy(this)
+          ?.piece?.isEnemy(this)
       ) {
         moves.push([this.location.x, this.location.y + i]);
         break;
       } else break;
     }
     for (let i = 1; i < 8; i++) {
-      if (
-        this.#board.get([this.location.x + i, this.location.y + i])?.isEmpty()
-      )
-        moves.push([this.location.x + i, this.location.y + i]);
+      if (this.#board.get([this.location.x, this.location.y - i])?.empty)
+        moves.push([this.location.x, this.location.y - i]);
       else if (
-        this.#board
-          .get([this.location.x + i, this.location.y + i])
-          ?.getPiece()
-          ?.isEnemy(this)
+        this.#board.board[this.location.x][this.location.y - i]?.piece?.isEnemy(
+          this
+        )
       ) {
-        moves.push([this.location.x + i, this.location.y + i]);
+        moves.push([this.location.x, this.location.y - i]);
         break;
       } else break;
     }
-    for (let i = -7; i < 0; i++) {
-      if (
-        this.#board.get([this.location.x + i, this.location.y + i])?.isEmpty()
-      )
+    for (let i = 1; i < 8; i++) {
+      if (this.#board.get([this.location.x + i, this.location.y + i])?.empty)
         moves.push([this.location.x + i, this.location.y + i]);
       else if (
         this.#board
           .get([this.location.x + i, this.location.y + i])
-          ?.getPiece()
-          ?.isEnemy(this)
+          ?.piece?.isEnemy(this)
       ) {
         moves.push([this.location.x + i, this.location.y + i]);
         break;
       } else break;
     }
     for (let i = 1; i < 8; i++) {
-      if (
-        this.#board.get([this.location.x - i, this.location.y + i])?.isEmpty()
-      )
+      if (this.#board.get([this.location.x - i, this.location.y - i])?.empty)
+        moves.push([this.location.x - i, this.location.y - i]);
+      else if (
+        this.#board
+          .get([this.location.x - i, this.location.y - i])
+          ?.piece?.isEnemy(this)
+      ) {
+        moves.push([this.location.x - i, this.location.y - i]);
+        break;
+      } else break;
+    }
+    for (let i = 1; i < 8; i++) {
+      if (this.#board.get([this.location.x - i, this.location.y + i])?.empty)
         moves.push([this.location.x - i, this.location.y + i]);
       else if (
         this.#board
           .get([this.location.x - i, this.location.y + i])
-          ?.getPiece()
-          ?.isEnemy(this)
+          ?.piece?.isEnemy(this)
       ) {
         moves.push([this.location.x - i, this.location.y + i]);
         break;
       } else break;
     }
-    for (let i = -7; i < 0; i++) {
-      if (
-        this.#board.get([this.location.x - i, this.location.y + i])?.isEmpty()
-      )
-        moves.push([this.location.x - i, this.location.y + i]);
+    for (let i = 1; i < 8; i++) {
+      if (this.#board.get([this.location.x + i, this.location.y - i])?.empty)
+        moves.push([this.location.x + i, this.location.y - i]);
       else if (
         this.#board
-          .get([this.location.x - i, this.location.y + i])
-          ?.getPiece()
-          ?.isEnemy(this)
+          .get([this.location.x + i, this.location.y - i])
+          ?.piece?.isEnemy(this)
       ) {
-        moves.push([this.location.x - i, this.location.y + i]);
+        moves.push([this.location.x + i, this.location.y - i]);
         break;
       } else break;
     }

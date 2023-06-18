@@ -1,21 +1,45 @@
 import { ChessterGame } from "./game";
-import { piece_string } from "./types";
+import { piece, pieceBoard } from "./types";
 
 const game = new ChessterGame();
 
-const board: piece_string[][] = [
-  ["br", "bn", "bb", "bq", "bk", "bb", "bn", "br"],
-  ["bp", "bp", "bp", "bp", "bp", "bp", "bp", "bp"],
-  ["  ", "  ", "  ", "  ", "  ", "  ", "wn", "  "],
-  ["  ", "  ", "  ", "  ", "  ", "  ", "  ", "  "],
-  ["  ", "  ", "  ", "  ", "  ", "  ", "  ", "  "],
-  ["  ", "  ", "  ", "  ", "  ", "  ", "  ", "  "],
-  ["wp", "wp", "wp", "wp", "wp", "wp", "wp", "wp"],
-  ["wr", "wn", "wb", "wq", "wk", "wb", "wn", "wr"],
+const board: pieceBoard = [
+  ["♜", "♞", "♝", "♛", "♚", "♝", "♞", "♜"],
+  ["♟︎", "♟︎", "♟︎", "♟︎", "♟︎", "♟︎", "♟︎", "♟︎"],
+  ["", "", "", "", "", "", "", ""],
+  ["", "", "", "", "", "", "", ""],
+  ["", "", "", "♙", "", "", "", ""],
+  ["", "", "", "", "", "", "", ""],
+  ["♙", "♙", "♙", "", "♙", "♙", "♙", "♙"],
+  ["♖", "♘", "♗", "♕", "♔", "♗", "♘", "♖"],
 ];
 
 game.init(board);
 
-console.log(
-  game.board.get([7, 6])!.getPiece()!.getAvailableMovesWithPerformance()
-);
+let startTime = performance.now();
+let avgTime = 0;
+const iterations = 5000;
+
+for (let k = 0; k < iterations; k++) {
+  let totalTime = 0;
+
+  for (let i = 0; i < 8; i++) {
+    for (let j = 0; j < 8; j++) {
+      let result =
+        game.board.board[i][j].piece?.getAvailableMovesWithPerformance();
+      if (result) {
+        totalTime += result[1];
+      }
+    }
+  }
+
+  avgTime += totalTime;
+}
+
+let endTime = performance.now();
+console.log(`Total time: ${endTime - startTime}ms`);
+console.log(`Average time: ${avgTime / iterations}ms`);
+
+console.log(game.board.board[0][0].piece?.getAvailableMovesWithPerformance());
+
+game.printBoard();

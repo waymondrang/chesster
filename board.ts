@@ -3,38 +3,17 @@ import { ChessterPiece } from "./piece";
 import {
   BLACK,
   WHITE,
-  board,
   location,
+  locationBoard,
   piece,
-  piece_string,
+  pieceBoard,
   team,
 } from "./types";
-
-const defaultBoard: piece_string[][] = [
-  ["br", "bn", "bb", "bq", "bk", "bb", "bn", "br"],
-  ["bp", "bp", "bp", "bp", "bp", "bp", "bp", "bp"],
-  ["  ", "  ", "  ", "  ", "  ", "  ", "  ", "  "],
-  ["  ", "  ", "  ", "  ", "  ", "  ", "  ", "  "],
-  ["  ", "  ", "  ", "  ", "  ", "  ", "  ", "  "],
-  ["  ", "  ", "  ", "  ", "  ", "  ", "  ", "  "],
-  ["wp", "wp", "wp", "wp", "wp", "wp", "wp", "wp"],
-  ["wr", "wn", "wb", "wq", "wk", "wb", "wn", "wr"],
-];
-
-function rotateArrayRight<T>(arr: T[][]) {
-  const new_arr: T[][] = [];
-  for (let i = 0; i < arr.length; i++) {
-    new_arr.push([]);
-    for (let j = 0; j < arr[i].length; j++) {
-      new_arr[i].push(arr[j][i]);
-    }
-  }
-  return new_arr;
-}
+import { defaultBoard } from "./util";
 
 export class ChessterBoard {
   // 8 x 8 board
-  board: board;
+  board: locationBoard;
   whitePieces: ChessterPiece[];
   blackPieces: ChessterPiece[];
 
@@ -42,40 +21,21 @@ export class ChessterBoard {
     this.board = [];
     this.whitePieces = [];
     this.blackPieces = [];
-  }
 
-  init(board: piece_string[][] = defaultBoard) {
-    board = rotateArrayRight<piece_string>(board.reverse());
     for (let i = 0; i < 8; i++) {
       this.board.push([]);
       for (let j = 0; j < 8; j++) {
-        let location = new ChessterLocation(this, i, j);
-        if (board[i][j].trim() !== "") {
-          let team: team = board[i][j][0] === "b" ? BLACK : WHITE;
-          let type: piece;
-          switch (board[i][j][1]) {
-            case "r":
-              type = "rook";
-              break;
-            case "n":
-              type = "knight";
-              break;
-            case "b":
-              type = "bishop";
-              break;
-            case "q":
-              type = "queen";
-              break;
-            case "k":
-              type = "king";
-              break;
-            case "p":
-              type = "pawn";
-              break;
-            default:
-              throw new Error("Invalid piece");
-          }
-          let piece = new ChessterPiece(location, type, team);
+        this.board[i].push(new ChessterLocation(this, i, j));
+      }
+    }
+  }
+
+  init(board: pieceBoard = defaultBoard) {
+    for (let i = 0; i < 8; i++) {
+      for (let j = 0; j < 8; j++) {
+        let location = this.board[j][i];
+        if (board[7 - i][j] !== "") {
+          let piece = new ChessterPiece(location, <piece>board[7 - i][j]);
           location.setPiece(piece);
 
           if (piece.getTeam() === WHITE) {
@@ -84,7 +44,6 @@ export class ChessterBoard {
             this.blackPieces.push(piece);
           }
         }
-        this.board[i].push(location); // push location, not piece
       }
     }
   }
