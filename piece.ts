@@ -45,28 +45,49 @@ export class ChessterPiece {
    * @returns
    */
   getAvailableMoves(): ChessterMove[] {
+    let moves: ChessterMove[] = [];
     switch (this.piece) {
       case "♔":
       case "♚":
-        return this.getKingMoves();
+        moves = this.getKingMoves();
+        break;
       case "♕":
       case "♛":
-        return this.getQueenMoves();
+        moves = this.getQueenMoves();
+        break;
       case "♗":
       case "♝":
-        return this.getBishopMoves();
+        moves = this.getBishopMoves();
+        break;
       case "♘":
       case "♞":
-        return this.getKnightMoves();
+        moves = this.getKnightMoves();
+        break;
       case "♖":
       case "♜":
-        return this.getRookMoves();
+        moves = this.getRookMoves();
+        break;
       case "♙":
       case "♟︎":
-        return this.getPawnMoves();
+        moves = this.getPawnMoves();
+        break;
       default:
         throw new Error("Invalid piece: " + this.piece);
     }
+
+    if (this.team === WHITE && this.#board.game.whiteChecked) {
+      let blackMoves = this.#board.game.black.pieces.flatMap((piece) =>
+        piece.getAvailableMoves()
+      );
+      moves = moves.filter((move) => !blackMoves.includes(move));
+    } else if (this.team === BLACK && this.#board.game.blackChecked) {
+      let whiteMoves = this.#board.game.white.pieces.flatMap((piece) =>
+        piece.getAvailableMoves()
+      );
+      moves = moves.filter((move) => !whiteMoves.includes(move));
+    }
+
+    return moves;
   }
 
   getAvailableMovesWithPerformance(): [ChessterMove[], number] {
