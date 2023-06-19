@@ -5,6 +5,7 @@ import {
   BLACK,
   WHITE,
   history,
+  moveData,
   moveTypes,
   piece,
   pieceBoard,
@@ -19,7 +20,7 @@ export class ChessterGame {
   history: history;
 
   constructor() {
-    this.board = new ChessterBoard();
+    this.board = new ChessterBoard(this);
     this.white = new ChessterPlayer(this, WHITE);
     this.black = new ChessterPlayer(this, BLACK);
     this.turn = WHITE;
@@ -41,11 +42,14 @@ export class ChessterGame {
       if (!move.castle) throw new Error("Castle move has no castle property");
       move.castle.to.setPiece(move.castle.piece);
       move.castle.from.setPiece(undefined);
-    } else if (move.type === moveTypes.CAPTURE) {
+    } else if (
+      move.type === moveTypes.CAPTURE ||
+      move.type === moveTypes.EN_PASSANT_CAPTURE
+    ) {
       if (!move.take) throw new Error("Capture move has no take property");
       move.take.taken = true;
       move.take.location.setPiece(undefined);
-      // TODO: capture logic
+      // TODO: capture logic (i.e. scoring)
     }
 
     move.to.setPiece(move.piece);
@@ -54,6 +58,22 @@ export class ChessterGame {
     this.history.push(move);
 
     this.turn = this.turn === WHITE ? BLACK : WHITE;
+  }
+
+  validateAndMove(moveData: moveData): boolean {
+    const { from, to, type } = moveData;
+
+    const piece = this.board.get(from)?.piece;
+    if (!piece) return false;
+
+    const move = piece.getAvailableMoves().find((move) => {
+      return move.to.x === to[0] && move.to.y === to[1] && move.type === type;
+    });
+    if (!move) return false;
+
+    this.move(move);
+
+    return true;
   }
 
   printBoard() {

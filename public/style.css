@@ -45,6 +45,7 @@ nav {
 
 #labs {
     letter-spacing: 0.01rem;
+    opacity: 1;
 }
 
 #game {
@@ -71,13 +72,17 @@ nav {
 
 #turn {
     transition: all 0.25s cubic-bezier(0, 0, .01, 1);
+    height: 32px;
+    width: 32px;
+    border-radius: 0.2rem;
+    margin: 0;
+    padding: 0;
+    position: relative;
 }
 
 #turn.white {
     background-color: #fefefe;
     color: #1b1b1b;
-    padding: 0.2rem 0.4rem;
-    border-radius: 0.2rem;
     font-variation-settings:
         'FILL' 0,
         'wght' 400,
@@ -88,8 +93,6 @@ nav {
 #turn.black {
     background-color: #1b1b1b;
     color: #fefefe;
-    padding: 0.2rem 0.4rem;
-    border-radius: 0.2rem;
     font-variation-settings:
         'FILL' 1,
         'wght' 400,
@@ -97,19 +100,33 @@ nav {
         'opsz' 20
 }
 
+#turn span {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+}
+
 #restart {
     height: 32px;
     width: 32px;
+    position: relative;
     background-color: #F25116;
     border: solid transparent;
     border-radius: 0.25rem;
     box-sizing: border-box;
     color: #ffffff;
     cursor: pointer;
-    display: inline-block;
     margin: 0;
     padding: 0;
     box-shadow: 0 6px 12px rgba(242, 81, 22, 0.1), 0 6px 12px rgba(242, 81, 22, 0.1);
+}
+
+#restart span {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
 }
 
 #chessboard {
@@ -177,6 +194,10 @@ nav {
 
 .cell.castle {
     background-color: #F2E205;
+}
+
+.cell.en_passant {
+    background-color: #CDA3A7;
 }
 
 .cell:hover {

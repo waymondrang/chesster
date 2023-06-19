@@ -1,3 +1,4 @@
+import { ChessterGame } from "./game";
 import { ChessterLocation } from "./location";
 import { ChessterPiece } from "./piece";
 import {
@@ -16,11 +17,13 @@ export class ChessterBoard {
   board: locationBoard;
   whitePieces: ChessterPiece[];
   blackPieces: ChessterPiece[];
+  game: ChessterGame;
 
-  constructor() {
+  constructor(game: ChessterGame) {
     this.board = [];
     this.whitePieces = [];
     this.blackPieces = [];
+    this.game = game;
   }
 
   init(board: pieceBoard = defaultBoard) {
@@ -59,13 +62,8 @@ export class ChessterBoard {
   }
 
   get(location: location): ChessterLocation | undefined {
-    if (this.checkOutOfBounds(location)) return undefined;
+    if (this.checkOutOfBounds(location)) return;
     return this.board[location[0]][location[1]];
-  }
-
-  set(location: location, piece: ChessterPiece) {
-    if (this.checkOutOfBounds(location)) throw new Error("Out of bounds");
-    this.board[location[0]][location[1]].setPiece(piece);
   }
 
   getTeamPieces(team: team): ChessterPiece[] {

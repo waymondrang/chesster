@@ -229,21 +229,6 @@ export class ChessterPiece {
     const direction = this.team === WHITE ? 1 : -1;
 
     if (
-      (this.location.y === 1 || this.location.y === 6) &&
-      this.#board.get([this.location.x, this.location.y + direction * 2])?.empty
-    ) {
-      //   moves.push([this.location.x, this.location.y + 2]);
-      moves.push(
-        new ChessterMove(
-          this,
-          this.location,
-          this.#board.get([this.location.x, this.location.y + direction * 2])!,
-          moveTypes.MOVE
-        )
-      );
-    }
-
-    if (
       this.#board.get([this.location.x, this.location.y + direction])?.empty
     ) {
       //   moves.push([this.location.x, this.location.y + direction]);
@@ -255,6 +240,26 @@ export class ChessterPiece {
           moveTypes.MOVE
         )
       );
+
+      // advancing two squares requires two vacant squares
+      if (
+        (this.location.y === 1 || this.location.y === 6) &&
+        this.#board.get([this.location.x, this.location.y + direction * 2])
+          ?.empty
+      ) {
+        //   moves.push([this.location.x, this.location.y + 2]);
+        moves.push(
+          new ChessterMove(
+            this,
+            this.location,
+            this.#board.get([
+              this.location.x,
+              this.location.y + direction * 2,
+            ])!,
+            moveTypes.MOVE
+          )
+        );
+      }
     }
 
     if (
@@ -296,6 +301,30 @@ export class ChessterPiece {
               this.location.x - 1,
               this.location.y + direction,
             ])!.piece!,
+          }
+        )
+      );
+    }
+
+    // en passant
+    let lastMove = this.#board.game.history.at(-1);
+    if (
+      this.team === WHITE &&
+      this.location.y === 4 &&
+      lastMove?.piece.piece === "♟︎" &&
+      lastMove?.from.y === 6 &&
+      lastMove?.to.y === 4 &&
+      (lastMove?.to.x === this.location.x + 1 ||
+        lastMove?.to.x === this.location.x - 1)
+    ) {
+      moves.push(
+        new ChessterMove(
+          this,
+          this.location,
+          this.#board.get([lastMove!.to.x, lastMove!.to.y + 1])!,
+          moveTypes.EN_PASSANT_CAPTURE,
+          {
+            take: lastMove!.piece,
           }
         )
       );
@@ -379,122 +408,122 @@ export class ChessterPiece {
       } else break;
     }
 
-    // castling
-    let whiteKingPositionPiece = this.#board.get([4, 0])?.piece;
-    if (
-      this.team === WHITE &&
-      whiteKingPositionPiece?.piece === "♔" &&
-      whiteKingPositionPiece?.moved === false &&
-      this.moved === false
-    ) {
-      if (
-        this.location.y === 0 &&
-        this.location.x === 0 &&
-        this.#board.get([1, 0])?.empty &&
-        this.#board.get([2, 0])?.empty &&
-        this.#board.get([3, 0])?.empty
-      ) {
-        // moves.push([3, 0]);
-        moves.push(
-          new ChessterMove(
-            this,
-            this.location,
-            this.#board.get([3, 0])!,
-            moveTypes.CASTLE,
-            {
-              castle: new ChessterMove(
-                whiteKingPositionPiece,
-                whiteKingPositionPiece.location!,
-                this.#board.get([2, 0])!,
-                moveTypes.MOVE
-              ),
-            }
-          )
-        );
-      }
-      if (
-        this.location.y === 0 &&
-        this.location.x === 7 &&
-        this.#board.get([5, 0])?.empty &&
-        this.#board.get([6, 0])?.empty
-      ) {
-        // moves.push([5, 0]);
-        moves.push(
-          new ChessterMove(
-            this,
-            this.location,
-            this.#board.get([5, 0])!,
-            moveTypes.CASTLE,
-            {
-              castle: new ChessterMove(
-                whiteKingPositionPiece,
-                whiteKingPositionPiece.location!,
-                this.#board.get([6, 0])!,
-                moveTypes.MOVE
-              ),
-            }
-          )
-        );
-      }
-    }
+    // castling (should be initiated by the king)
+    // let whiteKingPositionPiece = this.#board.get([4, 0])?.piece;
+    // if (
+    //   this.team === WHITE &&
+    //   whiteKingPositionPiece?.piece === "♔" &&
+    //   whiteKingPositionPiece?.moved === false &&
+    //   this.moved === false
+    // ) {
+    //   if (
+    //     this.location.y === 0 &&
+    //     this.location.x === 0 &&
+    //     this.#board.get([1, 0])?.empty &&
+    //     this.#board.get([2, 0])?.empty &&
+    //     this.#board.get([3, 0])?.empty
+    //   ) {
+    //     // moves.push([3, 0]);
+    //     moves.push(
+    //       new ChessterMove(
+    //         this,
+    //         this.location,
+    //         this.#board.get([3, 0])!,
+    //         moveTypes.CASTLE,
+    //         {
+    //           castle: new ChessterMove(
+    //             whiteKingPositionPiece,
+    //             whiteKingPositionPiece.location!,
+    //             this.#board.get([2, 0])!,
+    //             moveTypes.MOVE
+    //           ),
+    //         }
+    //       )
+    //     );
+    //   }
+    //   if (
+    //     this.location.y === 0 &&
+    //     this.location.x === 7 &&
+    //     this.#board.get([5, 0])?.empty &&
+    //     this.#board.get([6, 0])?.empty
+    //   ) {
+    //     // moves.push([5, 0]);
+    //     moves.push(
+    //       new ChessterMove(
+    //         this,
+    //         this.location,
+    //         this.#board.get([5, 0])!,
+    //         moveTypes.CASTLE,
+    //         {
+    //           castle: new ChessterMove(
+    //             whiteKingPositionPiece,
+    //             whiteKingPositionPiece.location!,
+    //             this.#board.get([6, 0])!,
+    //             moveTypes.MOVE
+    //           ),
+    //         }
+    //       )
+    //     );
+    //   }
+    // }
 
-    let blackKingPositionPiece = this.#board.get([7, 4])?.piece;
-    if (
-      this.team === BLACK &&
-      blackKingPositionPiece?.piece === "♚" &&
-      blackKingPositionPiece?.moved === false &&
-      this.moved === false
-    ) {
-      if (
-        this.location.y === 7 &&
-        this.location.x === 0 &&
-        this.#board.get([1, 7])?.empty &&
-        this.#board.get([2, 7])?.empty &&
-        this.#board.get([3, 7])?.empty
-      ) {
-        // moves.push([3, 7]);
-        moves.push(
-          new ChessterMove(
-            this,
-            this.location,
-            this.#board.get([3, 7])!,
-            moveTypes.CASTLE,
-            {
-              castle: new ChessterMove(
-                blackKingPositionPiece,
-                blackKingPositionPiece.location!,
-                this.#board.get([2, 7])!,
-                moveTypes.MOVE
-              ),
-            }
-          )
-        );
-      }
-      if (
-        this.location.y === 7 &&
-        this.location.x === 7 &&
-        this.#board.get([5, 7])?.empty &&
-        this.#board.get([6, 7])?.empty
-      ) {
-        // moves.push([5, 7]);
-        moves.push(
-          new ChessterMove(
-            this,
-            this.location,
-            this.#board.get([5, 7])!,
-            moveTypes.CASTLE,
-            {
-              castle: new ChessterMove(
-                blackKingPositionPiece,
-                blackKingPositionPiece.location!,
-                this.#board.get([6, 7])!,
-                moveTypes.MOVE
-              ),
-            }
-          )
-        );
-      }
-    }
+    // let blackKingPositionPiece = this.#board.get([7, 4])?.piece;
+    // if (
+    //   this.team === BLACK &&
+    //   blackKingPositionPiece?.piece === "♚" &&
+    //   blackKingPositionPiece?.moved === false &&
+    //   this.moved === false
+    // ) {
+    //   if (
+    //     this.location.y === 7 &&
+    //     this.location.x === 0 &&
+    //     this.#board.get([1, 7])?.empty &&
+    //     this.#board.get([2, 7])?.empty &&
+    //     this.#board.get([3, 7])?.empty
+    //   ) {
+    //     // moves.push([3, 7]);
+    //     moves.push(
+    //       new ChessterMove(
+    //         this,
+    //         this.location,
+    //         this.#board.get([3, 7])!,
+    //         moveTypes.CASTLE,
+    //         {
+    //           castle: new ChessterMove(
+    //             blackKingPositionPiece,
+    //             blackKingPositionPiece.location!,
+    //             this.#board.get([2, 7])!,
+    //             moveTypes.MOVE
+    //           ),
+    //         }
+    //       )
+    //     );
+    //   }
+    //   if (
+    //     this.location.y === 7 &&
+    //     this.location.x === 7 &&
+    //     this.#board.get([5, 7])?.empty &&
+    //     this.#board.get([6, 7])?.empty
+    //   ) {
+    //     // moves.push([5, 7]);
+    //     moves.push(
+    //       new ChessterMove(
+    //         this,
+    //         this.location,
+    //         this.#board.get([5, 7])!,
+    //         moveTypes.CASTLE,
+    //         {
+    //           castle: new ChessterMove(
+    //             blackKingPositionPiece,
+    //             blackKingPositionPiece.location!,
+    //             this.#board.get([6, 7])!,
+    //             moveTypes.MOVE
+    //           ),
+    //         }
+    //       )
+    //     );
+    //   }
+    // }
 
     return moves;
   }

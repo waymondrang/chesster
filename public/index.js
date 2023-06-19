@@ -75,6 +75,12 @@ function reloadBoard(boardOfData, boardOfElements) {
       cell.classList.add((i + j) % 2 == 0 ? "variant1" : "variant2");
       chessboard.appendChild(cell);
       boardOfElements[i].push(cell);
+      //   boardOfElements[i].push({
+      //     element: cell,
+      //     x: i,
+      //     y: j,
+      //     piece: null,
+      //   });
     }
   }
 
@@ -100,8 +106,8 @@ function reloadBoard(boardOfData, boardOfElements) {
         boardOfElements[7 - j][i].addEventListener("click", async () => {
           let move = selectedElementMoves.find(
             (move) =>
-              move.to.x == i &&
-              move.to.y == j &&
+              move.to[0] == i &&
+              move.to[1] == j &&
               boardOfElements[7 - j][i].classList.contains(move.type)
           );
 
@@ -145,7 +151,7 @@ function reloadBoard(boardOfData, boardOfElements) {
 
           boardOfElements[7 - j][i].classList.add("selected");
 
-          let data = await fetch("/availableMoves", {
+          let data = await fetch("/getMoves", {
             method: "POST",
             headers: {
               "Content-Type": "application/json",
@@ -161,7 +167,9 @@ function reloadBoard(boardOfData, boardOfElements) {
 
           console.log(moves);
           for (let move of moves) {
-            boardOfElements[7 - move.to.y][move.to.x].classList.add(move.type);
+            boardOfElements[7 - move.to[1]][move.to[0]].classList.add(
+              move.type
+            );
           }
 
           // set selected variables

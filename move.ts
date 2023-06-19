@@ -1,7 +1,7 @@
 import { ChessterGame } from "./game";
 import { ChessterLocation } from "./location";
 import { ChessterPiece } from "./piece";
-import { moveType, piece } from "./types";
+import { moveData, moveType, piece } from "./types";
 
 export class ChessterMove {
   castle: ChessterMove | undefined;
@@ -52,38 +52,14 @@ export class ChessterMove {
   }
 
   /**
-   * TODO: omitted promotion and en passant
+   * To send move options to client
    * @returns
    */
-  toJSON(): any {
+  toMoveData(): moveData {
     return {
-      piece: this.piece.piece,
-      from: {
-        x: this.from.x,
-        y: this.from.y,
-      },
-      to: {
-        x: this.to.x,
-        y: this.to.y,
-      },
+      from: [this.from.x, this.from.y],
+      to: [this.to.x, this.to.y],
       type: this.type,
-      take: this.take?.piece,
-      castle: this.castle?.toJSON(),
     };
-  }
-
-  static fromJSON(game: ChessterGame, json: any): ChessterMove {
-    return new ChessterMove(
-      game.board.get([json.from.x, json.from.y])!.piece!,
-      game.board.get([json.from.x, json.from.y])!,
-      game.board.get([json.to.x, json.to.y])!,
-      json.type,
-      {
-        take: game.board.get([json.to.x, json.to.y])!.piece,
-        castle: json.castle
-          ? ChessterMove.fromJSON(game, json.castle)
-          : undefined,
-      }
-    );
   }
 }

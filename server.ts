@@ -1,6 +1,6 @@
 import express from "express";
 import { ChessterGame } from "./game";
-import { moveType, moveTypes, pieceBoard } from "./types";
+import { moveData, moveType, moveTypes, pieceBoard } from "./types";
 import { ChessterMove } from "./move";
 
 const app = express();
@@ -30,7 +30,7 @@ app.get("/moveTypes", (request, response) => {
   response.send(moveTypes);
 });
 
-app.post("/availableMoves", (request, response) => {
+app.post("/getMoves", (request, response) => {
   //   console.log(request.body);
 
   let data = request.body;
@@ -38,18 +38,18 @@ app.post("/availableMoves", (request, response) => {
 
   //   console.log(calculated);
 
-  let moves: any = [];
-  if (calculated) moves = calculated.map((move) => move.toJSON());
+  let moves: moveData[] = [];
+  if (calculated) moves = calculated.map((move) => move.toMoveData());
 
   response.send(moves);
 });
 
 app.post("/move", (request, response) => {
-  let data = request.body;
+  let data: moveData = request.body;
 
   console.log(data);
 
-  game.move(ChessterMove.fromJSON(game, data));
+  game.validateAndMove(data);
 
   response.send({ board: game.board.toPieceBoard(), turn: game.turn });
 });

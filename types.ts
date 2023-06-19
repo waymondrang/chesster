@@ -40,3 +40,9 @@ export type locationBoard = ChessterLocation[][];
 export type history = ChessterMove[];
 
 export type moveType = (typeof moveTypes)[keyof typeof moveTypes];
+
+export type moveData = {
+  from: location;
+  to: location;
+  type: moveType;
+};
