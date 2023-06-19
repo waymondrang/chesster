@@ -69,11 +69,20 @@ nav {
     box-shadow: 0 19px 38px rgba(0, 0, 0, 0.30), 0 15px 12px rgba(0, 0, 0, 0.22);
 }
 
+#turn {
+    transition: all 0.25s cubic-bezier(0, 0, .01, 1);
+}
+
 #turn.white {
     background-color: #fefefe;
     color: #1b1b1b;
     padding: 0.2rem 0.4rem;
     border-radius: 0.2rem;
+    font-variation-settings:
+        'FILL' 0,
+        'wght' 400,
+        'GRAD' 0,
+        'opsz' 20
 }
 
 #turn.black {
@@ -81,9 +90,16 @@ nav {
     color: #fefefe;
     padding: 0.2rem 0.4rem;
     border-radius: 0.2rem;
+    font-variation-settings:
+        'FILL' 1,
+        'wght' 400,
+        'GRAD' 0,
+        'opsz' 20
 }
 
 #restart {
+    height: 32px;
+    width: 32px;
     background-color: #F25116;
     border: solid transparent;
     border-radius: 0.25rem;
@@ -92,7 +108,7 @@ nav {
     cursor: pointer;
     display: inline-block;
     margin: 0;
-    padding: 0.2rem 0.4rem;
+    padding: 0;
     box-shadow: 0 6px 12px rgba(242, 81, 22, 0.1), 0 6px 12px rgba(242, 81, 22, 0.1);
 }
 
@@ -165,4 +181,9 @@ nav {
 
 .cell:hover {
     border: var(--border-size, 0.25rem) solid #F25116;
+}
+
+.material-symbols-outlined {
+    font-size: 18px;
+    line-height: initial;
 }

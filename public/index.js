@@ -85,7 +85,6 @@ function reloadBoard(boardOfData, boardOfElements) {
   boardOfData = json.board;
   turn = json.turn;
 
-  turn_span.textContent = turn;
   turn_span.classList.remove(WHITE);
   turn_span.classList.remove(BLACK);
   turn_span.classList.add(turn);
@@ -121,7 +120,6 @@ function reloadBoard(boardOfData, boardOfElements) {
             board = json.board;
             turn = json.turn;
 
-            turn_span.textContent = turn;
             turn_span.classList.remove(WHITE);
             turn_span.classList.remove(BLACK);
             turn_span.classList.add(turn);
@@ -187,7 +185,6 @@ function reloadBoard(boardOfData, boardOfElements) {
     board = json.board;
     turn = json.turn;
 
-    turn_span.textContent = turn;
     turn_span.classList.remove(WHITE);
     turn_span.classList.remove(BLACK);
     turn_span.classList.add(turn);
