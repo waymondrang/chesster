@@ -61,7 +61,7 @@ function createRandomBoard(): pieceBoard {
   return board;
 }
 
-const tests = [1, 10, 100, 1000, 10000];
+const tests = [1, 10, 100, 1000, 10000, 100000];
 
 const perTest = 3;
 
@@ -87,12 +87,10 @@ for (let x = 0; x < tests.length; x++) {
 
       let endTime = performance.now();
 
-      averageTime += endTime - startTime;
+      averageTime =
+        averageTime * (x / (x + 1)) + (endTime - startTime) / (x + 1);
     }
 
-    console.log(
-      `Average time for ${tests[x]} #${perTest}:`,
-      averageTime / tests[x]
-    );
+    console.log(`Average time for ${tests[x]} #${perTest}:`, averageTime);
   }
 }
