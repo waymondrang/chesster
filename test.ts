@@ -1,51 +1,98 @@
 import { ChessterGame } from "./game";
-import { BLACK, WHITE, piece, pieceBoard } from "./types";
+import { piece, pieceBoard } from "./types";
 
 const game = new ChessterGame();
 
-const board: pieceBoard = [
-  ["♜", "♞", "♝", "♛", "♚", "♝", "♞", "♜"],
-  ["♟︎", "♟︎", "", "♟︎", "", "♟︎", "♟︎", "♟︎"],
-  ["", "", "", "", "", "", "", ""],
-  ["", "", "", "♛", "", "", "♛", ""],
-  ["", "♛", "", "♙", "", "", "", "♖"],
-  ["", "", "", "", "", "♛", "", ""],
-  ["", "♙", "♙", "", "♙", "♙", "♙", "♙"],
-  ["♖", "", "", "", "♔", "", "♛", "♖"],
+const piecesList: piece[] = [
+  "♔",
+  "♕",
+  "♗",
+  "♗",
+  "♘",
+  "♘",
+  "♖",
+  "♖",
+  "♙",
+  "♙",
+  "♙",
+  "♙",
+  "♙",
+  "♙",
+  "♙",
+  "♙",
+  "♚",
+  "♛",
+  "♝",
+  "♝",
+  "♞",
+  "♞",
+  "♜",
+  "♜",
+  "♟︎",
+  "♟︎",
+  "♟︎",
+  "♟︎",
+  "♟︎",
+  "♟︎",
+  "♟︎",
+  "♟︎",
 ];
 
-game.init(board);
+function createRandomBoard(): pieceBoard {
+  var pieces = piecesList;
+  var board: pieceBoard = new Array(8)
+    .fill("")
+    .map(() => new Array(8).fill(""));
 
-let startTime = performance.now();
-let avgTime = 0;
-const iterations = 5000;
+  for (let i = 0; i < pieces.length; i++) {
+    const piece = pieces[i];
 
-for (let k = 0; k < iterations; k++) {
-  let totalTime = 0;
+    let x = Math.floor(Math.random() * 8);
+    let y = Math.floor(Math.random() * 8);
 
-  for (let i = 0; i < 8; i++) {
-    for (let j = 0; j < 8; j++) {
-      let result =
-        game.board.board[i][j].piece?.getAvailableMovesWithPerformance();
-      if (result) {
-        totalTime += result[1];
-      }
+    while (board[x][y]) {
+      x = Math.floor(Math.random() * 8);
+      y = Math.floor(Math.random() * 8);
     }
+
+    board[x][y] = piece;
   }
 
-  avgTime += totalTime;
+  return board;
 }
 
-let endTime = performance.now();
-console.log(`Total time: ${endTime - startTime}ms`);
-console.log(`Average time: ${avgTime / iterations}ms`);
+const tests = [1, 10, 100, 1000, 10000];
 
-var result = game.board.board[3][7].piece?.getAvailableMovesWithPerformance();
+const perTest = 3;
 
-for (let move of result![0]) {
-  console.log(move.toString());
+for (let x = 0; x < tests.length; x++) {
+  for (let p = 0; p < perTest; p++) {
+    var averageTime = 0; // do not change
+
+    for (let i = 0; i < tests[x]; i++) {
+      let board = createRandomBoard();
+      game.init(board);
+
+      let startTime = performance.now();
+
+      for (let j = 0; j < 8; j++) {
+        for (let k = 0; k < 8; k++) {
+          let piece = game.board.board[j][k].piece;
+
+          if (!piece) continue;
+
+          let moves = piece.getAvailableMoves();
+        }
+      }
+
+      let endTime = performance.now();
+
+      averageTime += endTime - startTime;
+    }
+
+    console.log(
+      `Average time for ${tests[x]} #${perTest}:`,
+      averageTime / tests[x]
+    );
+  }
 }
-
-console.log("White in check? " + game.checkCheckedEnemy(BLACK));
-
-game.printBoard();
