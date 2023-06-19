@@ -12,8 +12,4 @@ export class ChessterPlayer {
     this.taken = [];
     this.team = team;
   }
-
-  move() {
-    this.game.move({ from: "", to: "" });
-  }
 }

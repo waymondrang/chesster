@@ -1,17 +1,17 @@
 import { ChessterGame } from "./game";
-import { piece, pieceBoard } from "./types";
+import { BLACK, WHITE, piece, pieceBoard } from "./types";
 
 const game = new ChessterGame();
 
 const board: pieceBoard = [
   ["♜", "♞", "♝", "♛", "♚", "♝", "♞", "♜"],
-  ["♟︎", "♟︎", "♟︎", "♟︎", "♟︎", "♟︎", "♟︎", "♟︎"],
+  ["♟︎", "♟︎", "", "♟︎", "", "♟︎", "♟︎", "♟︎"],
   ["", "", "", "", "", "", "", ""],
-  ["", "", "", "", "", "", "", ""],
-  ["", "", "", "♙", "", "", "", ""],
-  ["", "", "", "", "", "", "", ""],
-  ["♙", "♙", "♙", "", "♙", "♙", "♙", "♙"],
-  ["♖", "♘", "♗", "♕", "♔", "♗", "♘", "♖"],
+  ["", "", "", "♛", "", "", "♛", ""],
+  ["", "♛", "", "♙", "", "", "", "♖"],
+  ["", "", "", "", "", "♛", "", ""],
+  ["", "♙", "♙", "", "♙", "♙", "♙", "♙"],
+  ["♖", "", "", "", "♔", "", "♛", "♖"],
 ];
 
 game.init(board);
@@ -40,6 +40,12 @@ let endTime = performance.now();
 console.log(`Total time: ${endTime - startTime}ms`);
 console.log(`Average time: ${avgTime / iterations}ms`);
 
-console.log(game.board.board[0][0].piece?.getAvailableMovesWithPerformance());
+var result = game.board.board[3][7].piece?.getAvailableMovesWithPerformance();
+
+for (let move of result![0]) {
+  console.log(move.toString());
+}
+
+console.log("White in check? " + game.checkCheckedEnemy(BLACK));
 
 game.printBoard();

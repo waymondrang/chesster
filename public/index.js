@@ -1,0 +1,163 @@
+const chessboard = document.querySelector("#chessboard");
+
+const WHITE = "white";
+const BLACK = "black";
+
+const moveTypes = {
+  MOVE: "move",
+  CAPTURE: "capture",
+  CASTLE: "castle",
+  EN_PASSANT_CAPTURE: "en_passant",
+  PROMOTION: "promotion",
+};
+
+function calculateTeam(piece) {
+  switch (piece) {
+    case "♔":
+    case "♕":
+    case "♗":
+    case "♘":
+    case "♖":
+    case "♙":
+      return WHITE;
+    case "♚":
+    case "♛":
+    case "♝":
+    case "♞":
+    case "♜":
+    case "♟︎":
+      return BLACK;
+    default:
+      throw new Error("Invalid piece: " + piece);
+  }
+}
+
+function clearAllHighlights(boardOfElements) {
+  for (let i = 0; i < 8; i++) {
+    for (let j = 0; j < 8; j++) {
+      for (let modifier of [
+        ...Object.keys(moveTypes).map((moveType) => moveTypes[moveType]),
+        "selected",
+      ]) {
+        boardOfElements[i][j].classList.remove(modifier);
+      }
+    }
+  }
+}
+
+function reloadBoard(boardOfData, boardOfElements) {
+  clearAllHighlights(boardOfElements);
+
+  for (let i = 0; i < 8; i++) {
+    for (let j = 0; j < 8; j++) {
+      let piece = boardOfData[j][i];
+      boardOfElements[7 - j][i].textContent = piece;
+    }
+  }
+}
+
+(async () => {
+  var boardOfElements = [[], [], [], [], [], [], [], []];
+  var selectedElement = null;
+  var selectedElementMoves = [];
+  var boardOfData = [];
+  var turn = null;
+
+  console.log(moveTypes);
+
+  for (let i = 0; i < 8; i++) {
+    for (let j = 0; j < 8; j++) {
+      const cell = document.createElement("div");
+      cell.classList.add("cell");
+      cell.classList.add((i + j) % 2 == 0 ? "variant1" : "variant2");
+      chessboard.appendChild(cell);
+      boardOfElements[i].push(cell);
+    }
+  }
+
+  // initial data fetch
+  const data = await fetch("/chessboard");
+  const json = await data.json();
+
+  boardOfData = json.board;
+  turn = json.turn;
+
+  console.log(json);
+
+  reloadBoard(boardOfData, boardOfElements);
+
+  for (let i = 0; i < 8; i++) {
+    for (let j = 0; j < 8; j++) {
+      // set onclick event
+      (() => {
+        boardOfElements[7 - j][i].addEventListener("click", async () => {
+          let move = selectedElementMoves.find(
+            (move) =>
+              move.to.x == i &&
+              move.to.y == j &&
+              boardOfElements[7 - j][i].classList.contains(move.type)
+          );
+
+          if (move) {
+            console.log("move", move);
+
+            let data = await fetch("/move", {
+              method: "POST",
+              headers: {
+                "Content-Type": "application/json",
+              },
+              body: JSON.stringify(move),
+            });
+            let json = await data.json(); // returns new chessboard and turn color
+
+            board = json.board;
+            turn = json.turn;
+
+            selectedElement = null;
+            selectedElementMoves = [];
+            reloadBoard(board, boardOfElements);
+            return;
+          }
+
+          // clear all highlights
+          clearAllHighlights(boardOfElements);
+
+          if (
+            selectedElement == boardOfElements[7 - j][i] ||
+            !boardOfElements[7 - j][i].textContent ||
+            calculateTeam(boardOfElements[7 - j][i].textContent) != turn
+          ) {
+            selectedElement = null;
+            selectedElementMoves = [];
+            return;
+          }
+
+          boardOfElements[7 - j][i].classList.add("selected");
+
+          let data = await fetch("/availableMoves", {
+            method: "POST",
+            headers: {
+              "Content-Type": "application/json",
+            },
+            body: JSON.stringify({
+              piece: boardOfElements[7 - j][i].textContent,
+              x: i,
+              y: j,
+            }),
+          });
+
+          let moves = await data.json();
+
+          console.log(moves);
+          for (let move of moves) {
+            boardOfElements[7 - move.to.y][move.to.x].classList.add(move.type);
+          }
+
+          // set selected variables
+          selectedElementMoves = moves;
+          selectedElement = boardOfElements[7 - j][i];
+        });
+      })();
+    }
+  }
+})();

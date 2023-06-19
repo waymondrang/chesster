@@ -1,6 +1,10 @@
 import { ChessterBoard } from "./board";
 import { ChessterPiece } from "./piece";
 
+/**
+ * A location on the board. (I'm not even sure if I need this,
+ * these methods can be implemented in ChessterBoard)
+ */
 export class ChessterLocation {
   x: number;
   y: number;
@@ -25,10 +29,6 @@ export class ChessterLocation {
     if (piece) piece.location = this;
     this.piece = piece;
     this.empty = piece === undefined;
-  }
-
-  isEmpty(): boolean {
-    return this.empty;
   }
 
   getX(): number {

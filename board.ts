@@ -63,4 +63,20 @@ export class ChessterBoard {
     if (this.checkOutOfBounds(location)) throw new Error("Out of bounds");
     this.board[location[0]][location[1]].setPiece(piece);
   }
+
+  getTeamPieces(team: team): ChessterPiece[] {
+    return team === WHITE ? this.whitePieces : this.blackPieces;
+  }
+
+  toPieceBoard(): pieceBoard {
+    let board: pieceBoard = [];
+    for (let i = 0; i < 8; i++) {
+      board.push([]);
+      for (let j = 0; j < 8; j++) {
+        let piece = this.board[j][i].piece;
+        board[i].push(piece ? piece.piece : "");
+      }
+    }
+    return board;
+  }
 }
