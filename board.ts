@@ -21,6 +21,12 @@ export class ChessterBoard {
     this.board = [];
     this.whitePieces = [];
     this.blackPieces = [];
+  }
+
+  init(board: pieceBoard = defaultBoard) {
+    this.board = [];
+    this.whitePieces = [];
+    this.blackPieces = [];
 
     for (let i = 0; i < 8; i++) {
       this.board.push([]);
@@ -28,9 +34,7 @@ export class ChessterBoard {
         this.board[i].push(new ChessterLocation(this, i, j));
       }
     }
-  }
 
-  init(board: pieceBoard = defaultBoard) {
     for (let i = 0; i < 8; i++) {
       for (let j = 0; j < 8; j++) {
         let location = this.board[j][i];

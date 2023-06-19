@@ -8,13 +8,13 @@ const game = new ChessterGame();
 
 const board: pieceBoard = [
   ["♜", "♞", "♝", "♛", "♚", "♝", "♞", "♜"],
-  ["♟︎", "♟︎", "♟︎", "♙", "♟︎", "♟︎", "♟︎", "♟︎"],
+  ["♟︎", "♟︎", "♟︎", "♟︎", "♟︎", "♟︎", "♟︎", "♟︎"],
   ["", "", "", "", "", "", "", ""],
   ["", "", "", "", "", "", "", ""],
   ["", "", "", "", "", "", "", ""],
   ["", "", "", "", "", "", "", ""],
-  ["♙", "♙", "♙", "", "♙", "♙", "♙", "♙"],
-  ["♖", "♘", "♗", "♕", "♔", "", "", "♖"],
+  ["♙", "♙", "♙", "♙", "♙", "♙", "♙", "♙"],
+  ["♖", "♘", "♗", "♕", "♔", "♗", "♘", "♖"],
 ];
 
 game.init(board);
@@ -51,6 +51,12 @@ app.post("/move", (request, response) => {
 
   game.move(ChessterMove.fromJSON(game, data));
 
+  response.send({ board: game.board.toPieceBoard(), turn: game.turn });
+});
+
+app.post("/restart", (request, response) => {
+  game.init(board);
+  console.log(game.board.get([0, 3])?.piece);
   response.send({ board: game.board.toPieceBoard(), turn: game.turn });
 });
 

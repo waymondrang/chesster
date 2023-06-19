@@ -27,6 +27,8 @@ export class ChessterGame {
   }
 
   init(board?: pieceBoard) {
+    this.turn = WHITE;
+    this.history = [];
     this.board.init(board);
   }
 

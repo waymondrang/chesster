@@ -1,4 +1,6 @@
 const chessboard = document.querySelector("#chessboard");
+const turn_span = document.querySelector("#turn");
+const restart = document.querySelector("#restart");
 
 const WHITE = "white";
 const BLACK = "black";
@@ -51,6 +53,7 @@ function reloadBoard(boardOfData, boardOfElements) {
   for (let i = 0; i < 8; i++) {
     for (let j = 0; j < 8; j++) {
       let piece = boardOfData[j][i];
+      boardOfElements[7 - j][i].innerHTML = "";
       boardOfElements[7 - j][i].textContent = piece;
     }
   }
@@ -82,6 +85,11 @@ function reloadBoard(boardOfData, boardOfElements) {
   boardOfData = json.board;
   turn = json.turn;
 
+  turn_span.textContent = turn;
+  turn_span.classList.remove(WHITE);
+  turn_span.classList.remove(BLACK);
+  turn_span.classList.add(turn);
+
   console.log(json);
 
   reloadBoard(boardOfData, boardOfElements);
@@ -112,6 +120,11 @@ function reloadBoard(boardOfData, boardOfElements) {
 
             board = json.board;
             turn = json.turn;
+
+            turn_span.textContent = turn;
+            turn_span.classList.remove(WHITE);
+            turn_span.classList.remove(BLACK);
+            turn_span.classList.add(turn);
 
             selectedElement = null;
             selectedElementMoves = [];
@@ -160,4 +173,65 @@ function reloadBoard(boardOfData, boardOfElements) {
       })();
     }
   }
+
+  // set onclick event for new game button
+  restart.addEventListener("click", async () => {
+    let data = await fetch("/restart", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+      },
+    });
+    let json = await data.json(); // returns new chessboard and turn color
+
+    board = json.board;
+    turn = json.turn;
+
+    turn_span.textContent = turn;
+    turn_span.classList.remove(WHITE);
+    turn_span.classList.remove(BLACK);
+    turn_span.classList.add(turn);
+
+    selectedElement = null;
+    selectedElementMoves = [];
+    reloadBoard(board, boardOfElements);
+    return;
+  });
 })();
+
+document.documentElement.style.setProperty(
+  "--chessboard-size",
+  (window.innerHeight > window.innerWidth
+    ? window.innerWidth
+    : window.innerHeight) *
+    0.6 +
+    "px"
+);
+
+document.documentElement.style.setProperty(
+  "--border-size",
+  (window.innerHeight > window.innerWidth
+    ? window.innerWidth
+    : window.innerHeight) *
+    0.005 +
+    "px"
+);
+
+window.addEventListener("resize", () => {
+  document.documentElement.style.setProperty(
+    "--chessboard-size",
+    (window.innerHeight > window.innerWidth
+      ? window.innerWidth
+      : window.innerHeight) *
+      0.6 +
+      "px"
+  );
+  document.documentElement.style.setProperty(
+    "--border-size",
+    (window.innerHeight > window.innerWidth
+      ? window.innerWidth
+      : window.innerHeight) *
+      0.005 +
+      "px"
+  );
+});
