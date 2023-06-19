@@ -53,8 +53,8 @@ function reloadBoard(boardOfData, boardOfElements) {
   for (let i = 0; i < 8; i++) {
     for (let j = 0; j < 8; j++) {
       let piece = boardOfData[j][i];
-      boardOfElements[7 - j][i].innerHTML = "";
-      boardOfElements[7 - j][i].textContent = piece;
+      boardOfElements[7 - i][j].innerHTML = "";
+      if (piece) boardOfElements[7 - i][j].textContent = piece.string;
     }
   }
 }
@@ -103,12 +103,15 @@ function reloadBoard(boardOfData, boardOfElements) {
     for (let j = 0; j < 8; j++) {
       // set onclick event
       (() => {
-        boardOfElements[7 - j][i].addEventListener("click", async () => {
+        const element = boardOfElements[7 - j][i];
+        element.addEventListener("click", async () => {
+          console.log("clicked", i, j);
+
           let move = selectedElementMoves.find(
             (move) =>
               move.to[0] == i &&
               move.to[1] == j &&
-              boardOfElements[7 - j][i].classList.contains(move.type)
+              element.classList.contains(move.type)
           );
 
           if (move) {
@@ -140,16 +143,16 @@ function reloadBoard(boardOfData, boardOfElements) {
           clearAllHighlights(boardOfElements);
 
           if (
-            selectedElement == boardOfElements[7 - j][i] ||
-            !boardOfElements[7 - j][i].textContent ||
-            calculateTeam(boardOfElements[7 - j][i].textContent) != turn
+            selectedElement == element ||
+            !element.textContent ||
+            calculateTeam(element.textContent) != turn
           ) {
             selectedElement = null;
             selectedElementMoves = [];
             return;
           }
 
-          boardOfElements[7 - j][i].classList.add("selected");
+          element.classList.add("selected");
 
           let data = await fetch("/getMoves", {
             method: "POST",
@@ -157,7 +160,6 @@ function reloadBoard(boardOfData, boardOfElements) {
               "Content-Type": "application/json",
             },
             body: JSON.stringify({
-              piece: boardOfElements[7 - j][i].textContent,
               x: i,
               y: j,
             }),
@@ -174,7 +176,7 @@ function reloadBoard(boardOfData, boardOfElements) {
 
           // set selected variables
           selectedElementMoves = moves;
-          selectedElement = boardOfElements[7 - j][i];
+          selectedElement = element;
         });
       })();
     }

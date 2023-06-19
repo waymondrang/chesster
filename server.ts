@@ -1,29 +1,28 @@
 import express from "express";
 import { ChessterGame } from "./game";
-import { moveData, moveType, moveTypes, pieceBoard } from "./types";
-import { ChessterMove } from "./move";
+import { ChessterBoardString, ChessterMove, moveTypes } from "./types";
 
 const app = express();
 const game = new ChessterGame();
 
-const board: pieceBoard = [
+const newBoard: ChessterBoardString = [
   ["♜", "♞", "♝", "♛", "♚", "♝", "♞", "♜"],
   ["♟︎", "♟︎", "♟︎", "♟︎", "♟︎", "♟︎", "♟︎", "♟︎"],
-  ["", "", "", "", "", "", "", ""],
-  ["", "", "", "", "", "", "", ""],
-  ["", "", "", "", "", "", "", ""],
-  ["", "", "", "", "", "", "", ""],
+  new Array(8).fill(undefined),
+  new Array(8).fill(undefined),
+  new Array(8).fill(undefined),
+  new Array(8).fill(undefined),
   ["♙", "♙", "♙", "♙", "♙", "♙", "♙", "♙"],
   ["♖", "♘", "♗", "♕", "♔", "♗", "♘", "♖"],
 ];
 
-game.init(board);
+game.init(newBoard);
 
 app.use(express.static("public"));
 app.use(express.json());
 
 app.get("/chessboard", (request, response) => {
-  response.send({ board: game.board.toPieceBoard(), turn: game.turn });
+  response.send({ board: game.board, turn: game.turn });
 });
 
 app.get("/moveTypes", (request, response) => {
@@ -31,38 +30,32 @@ app.get("/moveTypes", (request, response) => {
 });
 
 app.post("/getMoves", (request, response) => {
-  //   console.log(request.body);
-
   let data = request.body;
-  let calculated = game.board.get([data.x, data.y])?.piece?.getAvailableMoves();
+  let piece = game.board[data.x][data.y];
 
-  //   console.log(calculated);
+  if (!piece) {
+    response.send([]);
+    return;
+  }
 
-  let moves: moveData[] = [];
-  if (calculated) moves = calculated.map((move) => move.toMoveData());
-
+  let moves = game.getAvailableMoves(piece);
   response.send(moves);
 });
 
 app.post("/move", (request, response) => {
-  let data: moveData = request.body;
+  const data: ChessterMove = request.body;
+  const result = game.validateAndMove(data);
 
-  console.log(data);
+  if (!result) {
+    throw new Error("Invalid move");
+  }
 
-  game.validateAndMove(data);
-
-  console.log(
-    "White checked: " + game.whiteChecked,
-    "Black checked: " + game.blackChecked
-  );
-
-  response.send({ board: game.board.toPieceBoard(), turn: game.turn });
+  response.send({ board: game.board, turn: game.turn });
 });
 
 app.post("/restart", (request, response) => {
-  game.init(board);
-  console.log(game.board.get([0, 3])?.piece);
-  response.send({ board: game.board.toPieceBoard(), turn: game.turn });
+  game.init(newBoard);
+  response.send({ board: game.board, turn: game.turn });
 });
 
 app.listen(3000, () => {

@@ -1,8 +1,4 @@
-import { ChessterLocation } from "./location";
-import { ChessterMove } from "./move";
-import { ChessterPiece } from "./piece";
-
-export type piece =
+export type ChessterPieceString =
   | "♔"
   | "♕"
   | "♗"
@@ -29,20 +25,42 @@ export const WHITE = "white";
 
 export const BLACK = "black";
 
-export type pieceBoard = (piece | "")[][];
+// rename?
+export type ChessterBoard = (ChessterPiece | undefined)[][];
+export type ChessterBoardString = (ChessterPieceString | undefined)[][];
 
-export type team = typeof WHITE | typeof BLACK;
+export type ChessterTeam = typeof WHITE | typeof BLACK;
 
-export type location = [number, number];
+export type ChessterLocation = [number, number];
 
-export type locationBoard = ChessterLocation[][];
-
-export type history = ChessterMove[];
-
-export type moveType = (typeof moveTypes)[keyof typeof moveTypes];
-
-export type moveData = {
-  from: location;
-  to: location;
-  type: moveType;
+export type ChessterPlayer = {
+  team: ChessterTeam;
+  pieces: ChessterPiece[];
+  taken: ChessterPiece[];
 };
+
+export type ChessterMove = {
+  piece: ChessterPiece;
+  from: ChessterLocation;
+  to: ChessterLocation;
+  type: (typeof moveTypes)[keyof typeof moveTypes];
+  capture?: {
+    piece: ChessterPiece;
+  };
+  castle?: {
+    from: ChessterLocation;
+    to: ChessterLocation;
+    piece: ChessterPiece;
+  };
+  promotion?: ChessterPiece;
+  // en passant is a type of capture
+};
+
+export type ChessterPiece = {
+  string: ChessterPieceString;
+  team: ChessterTeam;
+  moved: boolean;
+  location: ChessterLocation;
+};
+
+export type ChessterHistory = ChessterMove[];

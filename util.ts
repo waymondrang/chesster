@@ -1,17 +1,22 @@
-import { BLACK, WHITE, piece, pieceBoard } from "./types";
+import {
+  BLACK,
+  ChessterBoardString,
+  ChessterPieceString,
+  WHITE,
+} from "./types";
 
-export const defaultBoard: pieceBoard = [
+export const defaultBoard: ChessterBoardString = [
   ["♜", "♞", "♝", "♛", "♚", "♝", "♞", "♜"],
   ["♟︎", "♟︎", "♟︎", "♟︎", "♟︎", "♟︎", "♟︎", "♟︎"],
-  ["", "", "", "", "", "", "", ""],
-  ["", "", "", "", "", "", "", ""],
-  ["", "", "", "", "", "", "", ""],
-  ["", "", "", "", "", "", "", ""],
+  new Array(8).fill(undefined),
+  new Array(8).fill(undefined),
+  new Array(8).fill(undefined),
+  new Array(8).fill(undefined),
   ["♙", "♙", "♙", "♙", "♙", "♙", "♙", "♙"],
   ["♖", "♘", "♗", "♕", "♔", "♗", "♘", "♖"],
 ];
 
-export function calculateTeam(piece: piece) {
+export function calculateTeam(piece: ChessterPieceString) {
   switch (piece) {
     case "♔":
     case "♕":
