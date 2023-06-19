@@ -15,21 +15,15 @@ import { defaultBoard } from "./util";
 export class ChessterBoard {
   // 8 x 8 board
   board: locationBoard;
-  whitePieces: ChessterPiece[];
-  blackPieces: ChessterPiece[];
   game: ChessterGame;
 
   constructor(game: ChessterGame) {
     this.board = [];
-    this.whitePieces = [];
-    this.blackPieces = [];
     this.game = game;
   }
 
   init(board: pieceBoard = defaultBoard) {
     this.board = [];
-    this.whitePieces = [];
-    this.blackPieces = [];
 
     for (let i = 0; i < 8; i++) {
       this.board.push([]);
@@ -46,9 +40,9 @@ export class ChessterBoard {
           location.setPiece(piece);
 
           if (piece.getTeam() === WHITE) {
-            this.whitePieces.push(piece);
+            this.game.white.addPiece(piece);
           } else {
-            this.blackPieces.push(piece);
+            this.game.black.addPiece(piece);
           }
         }
       }
@@ -64,10 +58,6 @@ export class ChessterBoard {
   get(location: location): ChessterLocation | undefined {
     if (this.checkOutOfBounds(location)) return;
     return this.board[location[0]][location[1]];
-  }
-
-  getTeamPieces(team: team): ChessterPiece[] {
-    return team === WHITE ? this.whitePieces : this.blackPieces;
   }
 
   toPieceBoard(): pieceBoard {

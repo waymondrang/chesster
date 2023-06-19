@@ -51,6 +51,11 @@ app.post("/move", (request, response) => {
 
   game.validateAndMove(data);
 
+  console.log(
+    "White checked: " + game.whiteChecked,
+    "Black checked: " + game.blackChecked
+  );
+
   response.send({ board: game.board.toPieceBoard(), turn: game.turn });
 });
 

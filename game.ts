@@ -18,6 +18,8 @@ export class ChessterGame {
   black: ChessterPlayer;
   turn: team;
   history: history;
+  whiteChecked: boolean; // whether white is in check
+  blackChecked: boolean; // whether black is in check
 
   constructor() {
     this.board = new ChessterBoard(this);
@@ -25,6 +27,8 @@ export class ChessterGame {
     this.black = new ChessterPlayer(this, BLACK);
     this.turn = WHITE;
     this.history = [];
+    this.whiteChecked = false;
+    this.blackChecked = false;
   }
 
   init(board?: pieceBoard) {
@@ -40,6 +44,7 @@ export class ChessterGame {
 
     if (move.type === moveTypes.CASTLE) {
       if (!move.castle) throw new Error("Castle move has no castle property");
+      move.castle.piece.moved = true;
       move.castle.to.setPiece(move.castle.piece);
       move.castle.from.setPiece(undefined);
     } else if (
@@ -50,12 +55,23 @@ export class ChessterGame {
       move.take.taken = true;
       move.take.location.setPiece(undefined);
       // TODO: capture logic (i.e. scoring)
+      if (move.take.team === WHITE) {
+        this.white.removePiece(move.take);
+        this.black.taken.push(move.take);
+      } else {
+        this.black.removePiece(move.take);
+        this.white.taken.push(move.take);
+      }
     }
 
+    move.piece.moved = true;
     move.to.setPiece(move.piece);
     move.from.setPiece(undefined);
 
     this.history.push(move);
+
+    this.whiteChecked = this.isChecked(WHITE);
+    this.blackChecked = this.isChecked(BLACK);
 
     this.turn = this.turn === WHITE ? BLACK : WHITE;
   }
@@ -87,12 +103,12 @@ export class ChessterGame {
   }
 
   /**
-   * Checks if the enemy team is checked
+   * Checks if the given team is checked
    * @param team The team to check
-   * @returns Whether the enemy team is checked
+   * @returns Whether the given team is checked
    */
-  checkCheckedEnemy(team: team): boolean {
-    for (let piece of this.board.getTeamPieces(team)) {
+  isChecked(team: team): boolean {
+    for (let piece of (team === WHITE ? this.black : this.white).pieces) {
       let moves = piece.getAvailableMoves();
       for (let move of moves) {
         let take = move.take;
