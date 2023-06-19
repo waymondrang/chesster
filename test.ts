@@ -1,5 +1,9 @@
 import { ChessterGame } from "./game";
-import { ChessterBoardString, ChessterPieceString } from "./types";
+import {
+  ChessterBoard,
+  ChessterBoardString,
+  ChessterPieceString,
+} from "./types";
 
 const game = new ChessterGame();
 
@@ -61,29 +65,38 @@ function createRandomBoard(): ChessterBoardString {
   return board;
 }
 
-const numberOfTests = 100;
+const tests = [1, 10, 100, 1000, 10000, 100000];
 
-var averageTime = 0; // do not change
+const perTest = 3;
 
-for (let i = 0; i < numberOfTests; i++) {
-  let board = createRandomBoard();
-  game.init(board);
+for (let x = 0; x < tests.length; x++) {
+  for (let p = 0; p < perTest; p++) {
+    var averageTime = 0; // do not change
 
-  let startTime = performance.now();
+    for (let i = 0; i < tests[x]; i++) {
+      let board = createRandomBoard();
+      game.init(board);
 
-  for (let j = 0; j < 8; j++) {
-    for (let k = 0; k < 8; k++) {
-      let piece = game.board[j][k];
+      let startTime = performance.now();
 
-      if (!piece) continue;
+      for (let j = 0; j < 8; j++) {
+        for (let k = 0; k < 8; k++) {
+          let piece = game.board[j][k];
 
-      let moves = game.getAvailableMoves(piece);
+          if (!piece) continue;
+
+          let moves = game.getAvailableMoves(piece);
+        }
+      }
+
+      let endTime = performance.now();
+
+      averageTime += endTime - startTime;
     }
+
+    console.log(
+      `Average time for ${tests[x]} #${perTest}:`,
+      averageTime / tests[x]
+    );
   }
-
-  let endTime = performance.now();
-
-  averageTime += endTime - startTime;
 }
-
-console.log("Average time:", averageTime / numberOfTests);
