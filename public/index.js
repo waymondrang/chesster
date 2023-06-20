@@ -2,15 +2,15 @@ const chessboard = document.querySelector("#chessboard");
 const turn_span = document.querySelector("#turn");
 const restart = document.querySelector("#restart");
 
-const WHITE = "white";
-const BLACK = "black";
+const WHITE = "WHITE";
+const BLACK = "BLACK";
 
 const moveTypes = {
-  MOVE: "move",
-  CAPTURE: "capture",
-  CASTLE: "castle",
-  EN_PASSANT_CAPTURE: "en_passant",
-  PROMOTION: "promotion",
+  MOVE: "MOVE",
+  CAPTURE: "CAPTURE",
+  CASTLE: "CASTLE",
+  EN_PASSANT: "EN_PASSANT",
+  PROMOTION: "PROMOTION",
 };
 
 function calculateTeam(piece) {

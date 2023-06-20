@@ -2,71 +2,83 @@ import {
   BLACK,
   ChessterBoard,
   ChessterBoardString,
+  ChessterGameState,
   ChessterHistory,
   ChessterMove,
   ChessterPiece,
   ChessterPlayer,
   ChessterTeam,
+  RecursivePartial,
   WHITE,
   moveTypes,
 } from "./types";
-import { calculateTeam, defaultBoard } from "./util";
+import { calculateTeam, dCopy, defaultBoard } from "./util";
 
 export class ChessterGame {
-  board: ChessterBoard;
-  whitePlayer: ChessterPlayer;
-  blackPlayer: ChessterPlayer;
-  turn: ChessterTeam;
-  history: ChessterHistory;
-  whiteChecked: boolean; // whether white is in check
-  blackChecked: boolean; // whether black is in check
+  board: ChessterBoard = [[], [], [], [], [], [], [], []];
+  white: ChessterPlayer = {
+    team: WHITE,
+    pieces: [],
+    taken: [],
+    checked: false,
+    checkmated: false,
+  };
+  black: ChessterPlayer = {
+    team: BLACK,
+    pieces: [],
+    taken: [],
+    checked: false,
+    checkmated: false,
+  };
+  turn: ChessterTeam = WHITE;
+  history: ChessterHistory = [];
+  simulation: boolean = false;
 
-  constructor() {
-    this.board = [[], [], [], [], [], [], [], []];
-    this.whitePlayer = {
-      team: WHITE,
-      pieces: [],
-      taken: [],
-    };
-    this.blackPlayer = {
-      team: BLACK,
-      pieces: [],
-      taken: [],
-    };
-    this.turn = WHITE;
-    this.history = [];
-    this.whiteChecked = false;
-    this.blackChecked = false;
+  constructor(state?: RecursivePartial<ChessterGameState>) {
+    this.init(state);
   }
 
-  init(board: ChessterBoardString = defaultBoard) {
-    this.turn = WHITE;
-    this.history = [];
-    this.whiteChecked = false;
-    this.blackChecked = false;
-    this.board = [[], [], [], [], [], [], [], []];
+  init(state?: RecursivePartial<ChessterGameState>) {
+    this.board = <ChessterBoard>state?.board || [
+      [],
+      [],
+      [],
+      [],
+      [],
+      [],
+      [],
+      [],
+    ];
+    this.white = {
+      team: WHITE,
+      pieces: [],
+      taken: <ChessterPiece[]>state?.white?.taken || [],
+      checked: false,
+      checkmated: false,
+    };
+    this.black = {
+      team: BLACK,
+      pieces: [],
+      taken: <ChessterPiece[]>state?.black?.taken || [],
+      checked: false,
+      checkmated: false,
+    };
+    this.turn = <ChessterTeam>state?.turn || WHITE;
+    this.history = <ChessterHistory>state?.history || [];
+    this.simulation = <boolean>state?.simulation || false;
 
     for (let i = 0; i < 8; i++) {
       for (let j = 0; j < 8; j++) {
-        let s = board[7 - i][j];
+        let piece = this.board[i][j];
 
-        if (s) {
-          let piece: ChessterPiece = {
-            string: s,
-            moved: false,
-            team: calculateTeam(s),
-            location: [j, i],
-          };
-
-          this.board[j][i] = piece;
-
-          (piece.team === WHITE
-            ? this.whitePlayer.pieces
-            : this.blackPlayer.pieces
-          ).push(piece);
-        }
+        if (piece)
+          (piece.team === WHITE ? this.white.pieces : this.black.pieces).push(
+            piece
+          );
       }
     }
+
+    this.updateChecked();
   }
 
   move(move: ChessterMove) {
@@ -75,20 +87,37 @@ export class ChessterGame {
 
     // validate move
     if (!piece) throw new Error("No piece at from location");
-    if (piece.team !== this.turn) throw new Error("Wrong team");
+    if (!this.simulation && piece.team !== this.turn)
+      throw new Error("Wrong team");
 
     // handle special moves
     if (move.type === moveTypes.CASTLE) {
       if (!move.castle) throw new Error('Castle move has no "castle" property');
       // move logic for castle
-      this.board[move.castle.piece.location[0]][move.castle.piece.location[1]] =
-        undefined;
+      this.board[move.castle.from[0]][move.castle.from[1]] = undefined;
       move.castle.piece.moved = true;
       move.castle.piece.location = move.castle.to;
       this.board[move.castle.to[0]][move.castle.to[1]] = move.castle.piece;
+
+      // update player pieces
+      if (move.castle.piece.team === WHITE) {
+        this.white.pieces = this.white.pieces.filter(
+          (p) =>
+            p.location[0] !== move.castle!.from[0] ||
+            p.location[1] !== move.castle!.from[1]
+        );
+        this.white.pieces.push(move.castle.piece);
+      } else {
+        this.black.pieces = this.black.pieces.filter(
+          (p) =>
+            p.location[0] !== move.castle!.from[0] ||
+            p.location[1] !== move.castle!.from[1]
+        );
+        this.black.pieces.push(move.castle.piece);
+      }
     } else if (
       move.type === moveTypes.CAPTURE ||
-      move.type === moveTypes.EN_PASSANT_CAPTURE
+      move.type === moveTypes.EN_PASSANT
     ) {
       if (!move.capture)
         throw new Error('Capture move has no "capture" property');
@@ -96,17 +125,22 @@ export class ChessterGame {
         move.capture.piece.location[1]
       ] = undefined;
       if (move.capture.piece.team === WHITE) {
-        this.whitePlayer.pieces.splice(
-          this.whitePlayer.pieces.indexOf(move.capture.piece),
-          1
+        this.black.taken.push(move.capture.piece);
+
+        // remove capture piece using filter and location
+        this.white.pieces = this.white.pieces.filter(
+          (p) =>
+            p.location[0] !== move.capture!.piece.location[0] ||
+            p.location[1] !== move.capture!.piece.location[1]
         );
-        this.blackPlayer.taken.push(move.capture.piece);
       } else {
-        this.blackPlayer.pieces.splice(
-          this.blackPlayer.pieces.indexOf(move.capture.piece),
-          1
+        this.white.taken.push(move.capture.piece);
+
+        this.black.pieces = this.black.pieces.filter(
+          (p) =>
+            p.location[0] !== move.capture!.piece.location[0] ||
+            p.location[1] !== move.capture!.piece.location[1]
         );
-        this.whitePlayer.taken.push(move.capture.piece);
       }
     }
 
@@ -120,8 +154,7 @@ export class ChessterGame {
     this.history.push(move);
 
     // update checked
-    this.whiteChecked = this.isChecked(WHITE);
-    this.blackChecked = this.isChecked(BLACK);
+    this.updateChecked();
 
     // update turn
     this.turn = this.turn === WHITE ? BLACK : WHITE;
@@ -133,12 +166,10 @@ export class ChessterGame {
    * @returns Whether the move was valid and the piece was moved
    */
   validateAndMove(moveData: ChessterMove): boolean {
-    const { piece, to, type } = moveData;
-    const validatePiece = this.board[piece.location[0]][piece.location[1]];
+    const { from, to, type } = moveData;
+    const validatePiece = this.board[from[0]][from[1]];
 
     if (!validatePiece) return false; // no piece at from location
-
-    // console.log(validatePiece);
 
     const move = this.getAvailableMoves(validatePiece).find((move) => {
       return move.to[0] === to[0] && move.to[1] === to[1] && move.type === type;
@@ -154,7 +185,7 @@ export class ChessterGame {
    * Creates a printable string of the board
    * @returns The board as a string
    */
-  boardString(): string {
+  boardToString(): string {
     let boardString = "";
     for (let i = this.board.length; i > 0; i--) {
       let row = "";
@@ -166,15 +197,44 @@ export class ChessterGame {
     return boardString;
   }
 
+  moveToString(move: ChessterMove): string {
+    let moveString = "";
+    if (move.type === moveTypes.CASTLE) {
+      moveString += "castle:";
+      moveString += " piece: [" + move.castle?.piece.string + "]";
+      moveString += " castle from: [" + move.castle?.from.join(",") + "]";
+      moveString += " castle to: [" + move.castle?.to.join(",") + "]";
+    } else if (move.type === moveTypes.CAPTURE) {
+      moveString += "capture:";
+      moveString += " piece: [" + move.capture?.piece.string + "]";
+    } else if (move.type === moveTypes.EN_PASSANT) {
+      moveString += "capture (en passant):";
+      moveString += " piece: [" + move.capture?.piece.string + "]";
+    } else {
+      moveString += "move:";
+    }
+    moveString += " from: [" + move.from.join(",") + "]";
+    moveString += " to: [" + move.to.join(",") + "]";
+    return moveString;
+  }
+
+  updateChecked() {
+    this.white.checked = this.isChecked(WHITE);
+    this.black.checked = this.isChecked(BLACK);
+    // updateChecked runs after turn is updated
+    if (this.white.checked) this.white.checkmated = this.isCheckmated(WHITE);
+    if (this.black.checked) this.black.checkmated = this.isCheckmated(BLACK);
+  }
+
   /**
-   * Checks if the given team is checked
+   * Is the king under attack?
    * @param team The team to check
    * @returns Whether the given team is checked
    */
   isChecked(team: ChessterTeam): boolean {
-    for (let piece of (team === WHITE ? this.blackPlayer : this.whitePlayer)
-      .pieces) {
-      let moves = this.getAvailableMoves(piece);
+    // if any enemy move can capture the king, the team is checked
+    for (let piece of (team === WHITE ? this.black : this.white).pieces) {
+      let moves = this.getAllMoves(piece);
       for (let move of moves) {
         if (
           move.type === moveTypes.CAPTURE &&
@@ -189,28 +249,43 @@ export class ChessterGame {
   }
 
   /**
-   * Checks if the enemy team is checkmated
+   * Are there any moves to get out of check?
    * @param team The team to check
    * @returns Whether the enemy team is checkmated
    * @todo Implement this
    */
-  checkCheckmatedEnemy(team: ChessterTeam): boolean {
-    return false;
+  isCheckmated(team: ChessterTeam): boolean {
+    for (let piece of (team === WHITE ? this.white : this.black).pieces) {
+      if (this.getAvailableMoves(piece).length > 0) {
+        return false;
+      }
+    }
+    return true;
+  }
+
+  getState(): ChessterGameState {
+    return {
+      board: this.board,
+      turn: this.turn,
+      white: this.white,
+      black: this.black,
+      history: this.history,
+      simulation: this.simulation,
+    };
   }
 
   /**
-   * Copies the game and creates a simulation instance
+   * Creates a simulation (copy) of the current game?
    */
-  createSimulation() {
-    return null;
+  static createSimulation(game: ChessterGame): ChessterGame {
+    let simulation = <ChessterGame>(
+      Object.assign(Object.create(Object.getPrototypeOf(game)), game)
+    );
+    simulation.simulation = true;
+    return simulation;
   }
 
-  /**
-   * Returns all available moves for this piece
-   * @returns
-   */
-  getAvailableMoves(piece: ChessterPiece): ChessterMove[] {
-    // console.log("getting available moves for", piece.string);
+  getAllMoves(piece: ChessterPiece): ChessterMove[] {
     let moves: ChessterMove[] = [];
     switch (piece.string) {
       case "♔":
@@ -242,8 +317,39 @@ export class ChessterGame {
           "Invalid piece while getting available moves: " + piece.string
         );
     }
-
     return moves;
+  }
+
+  /**
+   * Returns available moves for the given piece, accounting for check
+   * @returns
+   */
+  getAvailableMoves(piece: ChessterPiece): ChessterMove[] {
+    const moves = this.getAllMoves(piece);
+
+    const simulator = new ChessterGame();
+    const finalMoves = [...moves];
+
+    if (!this.simulation) {
+      for (let move of moves) {
+        simulator.init({
+          ...dCopy(this.getState()),
+          simulation: true,
+        });
+
+        simulator.move(move);
+
+        if (
+          (piece.team === WHITE && simulator.white.checked) ||
+          (piece.team === BLACK && simulator.black.checked)
+        ) {
+          // if white continues to be checked, remove move
+          finalMoves.splice(finalMoves.indexOf(move), 1);
+        }
+      }
+    }
+
+    return finalMoves;
   }
 
   checkOutOfBounds(i: number, j: number): boolean {
@@ -282,87 +388,87 @@ export class ChessterGame {
           });
         }
       }
+    }
 
-      // castling
-      if (
-        piece.team === WHITE &&
-        piece.location[1] === 0 &&
-        piece.location[0] === 4 &&
-        piece.moved === false
-      ) {
-        const left = this.board[0][0];
-        const right = this.board[7][0];
-        if (left?.string === "♖" && left.moved === false) {
-          if (!this.board[1][0] && !this.board[2][0] && !this.board[3][0]) {
-            moves.push({
-              piece: piece,
-              from: piece.location,
-              to: [2, 0],
-              type: moveTypes.CASTLE,
-              castle: {
-                from: [0, 0],
-                to: [3, 0],
-                piece: left,
-              },
-            });
-          }
+    // castling
+    if (
+      piece.team === WHITE &&
+      piece.location[1] === 0 &&
+      piece.location[0] === 4 &&
+      piece.moved === false
+    ) {
+      const left = this.board[0][0];
+      const right = this.board[7][0];
+      if (left?.string === "♖" && left.moved === false) {
+        if (!this.board[1][0] && !this.board[2][0] && !this.board[3][0]) {
+          moves.push({
+            piece: piece,
+            from: piece.location,
+            to: [2, 0],
+            type: moveTypes.CASTLE,
+            castle: {
+              from: [0, 0],
+              to: [3, 0],
+              piece: dCopy(left),
+            },
+          });
         }
-        if (right?.string === "♖" && right.moved === false) {
-          if (!this.board[5][0] && !this.board[6][0]) {
-            moves.push({
-              piece: piece,
-              from: piece.location,
-              to: [6, 0],
-              type: moveTypes.CASTLE,
-              castle: {
-                from: [7, 0],
-                to: [5, 0],
-                piece: right,
-              },
-            });
-          }
+      }
+      if (right?.string === "♖" && right.moved === false) {
+        if (!this.board[5][0] && !this.board[6][0]) {
+          moves.push({
+            piece: piece,
+            from: piece.location,
+            to: [6, 0],
+            type: moveTypes.CASTLE,
+            castle: {
+              from: [7, 0],
+              to: [5, 0],
+              piece: dCopy(right),
+            },
+          });
+        }
+      }
+    }
+
+    if (
+      piece.team === BLACK &&
+      piece.location[1] === 7 &&
+      piece.location[0] === 4 &&
+      piece.moved === false
+    ) {
+      const left = this.board[0][7];
+      const right = this.board[7][7];
+
+      if (left?.string === "♜" && left.moved === false) {
+        if (!this.board[1][7] && !this.board[2][7] && !this.board[3][7]) {
+          moves.push({
+            piece: piece,
+            from: piece.location,
+            to: [2, 7],
+            type: moveTypes.CASTLE,
+            castle: {
+              from: [0, 7],
+              to: [3, 7],
+              piece: dCopy(left),
+            },
+          });
         }
       }
 
-      if (
-        piece.team === BLACK &&
-        piece.location[1] === 7 &&
-        piece.location[0] === 4 &&
-        piece.moved === false
-      ) {
-        const left = this.board[0][7];
-        const right = this.board[7][7];
-
-        if (left?.string === "♜" && left.moved === false) {
-          if (!this.board[1][7] && !this.board[2][7] && !this.board[3][7]) {
-            moves.push({
-              piece: piece,
-              from: piece.location,
-              to: [2, 7],
-              type: moveTypes.CASTLE,
-              castle: {
-                from: [0, 7],
-                to: [3, 7],
-                piece: left,
-              },
-            });
-          }
-        }
-
-        if (right?.string === "♜" && right.moved === false) {
-          if (!this.board[5][7] && !this.board[6][7]) {
-            moves.push({
-              piece: piece,
-              from: piece.location,
-              to: [6, 7],
-              type: moveTypes.CASTLE,
-              castle: {
-                from: [7, 7],
-                to: [5, 7],
-                piece: right,
-              },
-            });
-          }
+      if (right?.string === "♜" && right.moved === false) {
+        if (!this.board[5][7] && !this.board[6][7]) {
+          moves.push({
+            piece: piece,
+            from: piece.location,
+            to: [6, 7],
+            type: moveTypes.CASTLE,
+            castle: {
+              from: [7, 7],
+              to: [5, 7],
+              piece: dCopy(right),
+            },
+          });
         }
       }
     }
@@ -916,7 +1022,7 @@ export class ChessterGame {
         piece: piece,
         from: piece.location,
         to: [lastMove.to[0], lastMove.to[1] + 1],
-        type: moveTypes.EN_PASSANT_CAPTURE,
+        type: moveTypes.EN_PASSANT,
         capture: {
           piece: lastMove.piece,
         },
@@ -937,7 +1043,7 @@ export class ChessterGame {
         piece: piece,
         from: piece.location,
         to: [lastMove.to[0], lastMove.to[1] - 1],
-        type: moveTypes.EN_PASSANT_CAPTURE,
+        type: moveTypes.EN_PASSANT,
         capture: {
           piece: lastMove.piece,
         },

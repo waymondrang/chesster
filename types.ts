@@ -14,18 +14,17 @@ export type ChessterPieceString =
   | "♞";
 
 export const moveTypes = {
-  MOVE: "move",
-  CAPTURE: "capture",
-  CASTLE: "castle",
-  EN_PASSANT_CAPTURE: "en_passant",
-  PROMOTION: "promotion",
+  MOVE: "MOVE",
+  CAPTURE: "CAPTURE",
+  CASTLE: "CASTLE",
+  EN_PASSANT: "EN_PASSANT",
+  PROMOTION: "PROMOTION",
 };
 
-export const WHITE = "white";
+export const WHITE = "WHITE";
 
-export const BLACK = "black";
+export const BLACK = "BLACK";
 
-// rename?
 export type ChessterBoard = (ChessterPiece | undefined)[][];
 export type ChessterBoardString = (ChessterPieceString | undefined)[][];
 
@@ -37,6 +36,8 @@ export type ChessterPlayer = {
   team: ChessterTeam;
   pieces: ChessterPiece[];
   taken: ChessterPiece[];
+  checked: boolean;
+  checkmated: boolean;
 };
 
 export type ChessterMove = {
@@ -56,6 +57,15 @@ export type ChessterMove = {
   // en passant is a type of capture
 };
 
+export type ChessterGameState = {
+  board: ChessterBoard;
+  white: ChessterPlayer;
+  black: ChessterPlayer;
+  history: ChessterHistory;
+  turn: ChessterTeam;
+  simulation: boolean;
+};
+
 export type ChessterPiece = {
   string: ChessterPieceString;
   team: ChessterTeam;
@@ -64,3 +74,19 @@ export type ChessterPiece = {
 };
 
 export type ChessterHistory = ChessterMove[];
+
+// https://stackoverflow.com/a/51365037
+export type RecursivePartial<T> = {
+  [P in keyof T]?: T[P] extends (infer U)[]
+    ? RecursivePartial<U>[]
+    : T[P] extends object | undefined
+    ? RecursivePartial<T[P]>
+    : T[P];
+};
+
+export type Test = {
+  testCase: string;
+  initialState: RecursivePartial<ChessterGameState>;
+  expectedState: RecursivePartial<ChessterGameState>;
+  moves?: ChessterMove[];
+};

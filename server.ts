@@ -1,6 +1,7 @@
 import express from "express";
 import { ChessterGame } from "./game";
 import { ChessterBoardString, ChessterMove, moveTypes } from "./types";
+import { boardStringToBoard } from "./util";
 
 const app = express();
 const game = new ChessterGame();
@@ -16,7 +17,7 @@ const newBoard: ChessterBoardString = [
   ["♖", "♘", "♗", "♕", "♔", "♗", "♘", "♖"],
 ];
 
-game.init(newBoard);
+game.init({ board: boardStringToBoard(newBoard) });
 
 app.use(express.static("public"));
 app.use(express.json());
@@ -50,11 +51,16 @@ app.post("/move", (request, response) => {
     throw new Error("Invalid move");
   }
 
+  console.log("White in check: " + game.white.checked);
+  console.log("Black in check: " + game.black.checked);
+  console.log("White in checkmate: " + game.white.checkmated);
+  console.log("Black in checkmate: " + game.black.checkmated);
+
   response.send({ board: game.board, turn: game.turn });
 });
 
 app.post("/restart", (request, response) => {
-  game.init(newBoard);
+  game.init({ board: boardStringToBoard(newBoard) });
   response.send({ board: game.board, turn: game.turn });
 });
 

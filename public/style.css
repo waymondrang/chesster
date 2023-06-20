@@ -80,7 +80,7 @@ nav {
     position: relative;
 }
 
-#turn.white {
+#turn.WHITE {
     background-color: #fefefe;
     color: #1b1b1b;
     font-variation-settings:
@@ -90,7 +90,7 @@ nav {
         'opsz' 20
 }
 
-#turn.black {
+#turn.BLACK {
     background-color: #1b1b1b;
     color: #fefefe;
     font-variation-settings:
@@ -184,19 +184,19 @@ nav {
     background-color: #F25116;
 }
 
-.cell.move {
+.cell.MOVE {
     background-color: #536473;
 }
 
-.cell.capture {
+.cell.CAPTURE {
     background-color: #B2E7B3;
 }
 
-.cell.castle {
+.cell.CASTLE {
     background-color: #F2E205;
 }
 
-.cell.en_passant {
+.cell.EN_PASSANT {
     background-color: #CDA3A7;
 }
 
