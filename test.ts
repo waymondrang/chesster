@@ -91,12 +91,10 @@ for (let x = 0; x < tests.length; x++) {
 
       let endTime = performance.now();
 
-      averageTime += endTime - startTime;
+      averageTime =
+        averageTime * (x / (x + 1)) + (endTime - startTime) / (x + 1);
     }
 
-    console.log(
-      `Average time for ${tests[x]} #${perTest}:`,
-      averageTime / tests[x]
-    );
+    console.log(`Average time for ${tests[x]} #${perTest}:`, averageTime);
   }
 }
