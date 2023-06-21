@@ -1,36 +1,65 @@
 import { ChessterGame } from "./game";
-import { tests } from "./tests/cases";
-import { rCompare } from "./util";
+import { tests as caseTests } from "./tests/cases";
+import { tests as playTests } from "./tests/plays";
+import { rCompare, simulatePGNGame } from "./util";
 
-var passedCount = 0;
+export function test() {
+  var totalTime = 0;
+  var passedCount = 0;
 
-for (const test of tests) {
-  let game = new ChessterGame(test.initialState);
+  for (const test of caseTests) {
+    let startTime = performance.now();
+    let game = new ChessterGame(test.initialState);
 
-  if (test.moves)
-    for (let move of test.moves) {
-      // game.move(move);
-      game.validateAndMove(move); // validate because why not
-    }
+    if (test.moves) for (let move of test.moves) game.validateAndMove(move); // validate because why not! (alternatively use game.move)
 
-  // compare board states
-  let gameState = game.getState();
-  let expectedState = test.expectedState;
+    // compare board states
+    let passed = rCompare(test.expectedState, game.getState());
+    let endTime = performance.now();
+    if (passed) passedCount++;
 
-  let passed = rCompare(expectedState, gameState);
+    console.log(
+      (passed ? "passed" : "failed") +
+        ' test case: "' +
+        test.title +
+        '" in ' +
+        (endTime - startTime).toFixed(2) +
+        "ms"
+    );
+
+    totalTime += endTime - startTime;
+  }
+
+  for (const test of playTests) {
+    let startTime = performance.now();
+
+    let game = simulatePGNGame(test.pgn);
+
+    // compare board states
+    let passed = rCompare(test.expectedState, game.getState());
+    let endTime = performance.now();
+    if (passed) passedCount++;
+
+    console.log(
+      (passed ? "passed" : "failed") +
+        ' test play: "' +
+        test.title +
+        '" in ' +
+        (endTime - startTime).toFixed(2) +
+        "ms"
+    );
+  }
 
   console.log(
-    (passed ? "passed" : "failed") + ' test case: "' + test.testCase + '"'
+    passedCount +
+      "/" +
+      caseTests.length +
+      " case tests passed (" +
+      ((passedCount / (caseTests.length + playTests.length)) * 100).toFixed(2) +
+      "%) in " +
+      totalTime.toFixed(2) + // time
+      "ms"
   );
-
-  if (passed) passedCount++;
 }
 
-console.log(
-  passedCount +
-    "/" +
-    tests.length +
-    " tests passed (" +
-    (passedCount / tests.length) * 100 +
-    "%)"
-);
+test();

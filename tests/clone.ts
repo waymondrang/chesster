@@ -4,10 +4,10 @@ import {
   ChessterBoardString,
   ChessterPieceString,
 } from "../types";
-import { boardStringToBoard } from "../util";
+import { boardStringToBoard, dCopy, dCopyState, rCompare } from "../util";
 
 // test parameters
-const tests = [50000];
+const tests = [1, 10, 100, 1000, 10000];
 
 const perTest = 3;
 
@@ -19,6 +19,12 @@ const piecesList: ChessterPieceString[] = [
   "♗",
   "♘",
   "♖",
+  "♗",
+  "♘",
+  "♖",
+  "♙",
+  "♙",
+  "♙",
   "♙",
   "♙",
   "♙",
@@ -29,6 +35,12 @@ const piecesList: ChessterPieceString[] = [
   "♝",
   "♞",
   "♜",
+  "♝",
+  "♞",
+  "♜",
+  "♟︎",
+  "♟︎",
+  "♟︎",
   "♟︎",
   "♟︎",
   "♟︎",
@@ -59,11 +71,11 @@ function createRandomBoard(): ChessterBoardString {
   return board;
 }
 
+let bestTime = Infinity;
+
 for (let x = 0; x < tests.length; x++) {
   for (let p = 0; p < perTest; p++) {
     var averageTime = 0; // do not change
-    var gamesChecked = 0;
-    var gamesCheckmated = 0;
 
     for (let i = 0; i < tests[x]; i++) {
       let board = createRandomBoard();
@@ -71,10 +83,11 @@ for (let x = 0; x < tests.length; x++) {
 
       let startTime = performance.now();
 
-      game.updateChecked();
+      ////////////////////////////
+      //    function to test    //
+      ////////////////////////////
 
-      gamesChecked += game.white.checked || game.black.checked ? 1 : 0;
-      gamesCheckmated += game.white.checkmated || game.black.checkmated ? 1 : 0;
+      game.updateChecked();
 
       let endTime = performance.now();
 
@@ -82,18 +95,10 @@ for (let x = 0; x < tests.length; x++) {
         averageTime * (x / (x + 1)) + (endTime - startTime) / (x + 1);
     }
 
-    console.log(`Average time for ${tests[x]} #${perTest}:`, averageTime);
-    console.log(
-      `Games checked: ${gamesChecked} (${(
-        (gamesChecked / tests[x]) *
-        100
-      ).toFixed(2)}%)`
-    );
-    console.log(
-      `Games checkmated: ${gamesCheckmated} (${(
-        (gamesCheckmated / tests[x]) *
-        100
-      ).toFixed(2)}%)`
-    );
+    if (averageTime < bestTime) bestTime = averageTime;
+
+    console.log("Completed test", p + 1, "of", perTest, "for", tests[x]);
   }
+
+  console.log("Best time for", tests[x], ":", bestTime);
 }
