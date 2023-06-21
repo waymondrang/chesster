@@ -375,12 +375,13 @@ export function bCompareState(
   a: PartialChessterGameState,
   b: ChessterGameState
 ): boolean {
-  // compare board
+  // compare turn
   if (a.turn !== undefined && a.turn !== b.turn) {
     console.log("turn mismatch (" + a.turn + " vs " + b.turn + ")");
     return false;
   }
 
+  // compare board
   if (a.board !== undefined) {
     for (let i = 0; i < 8; i++) {
       for (let j = 0; j < 8; j++) {
@@ -471,12 +472,19 @@ export function bCompareState(
 
   // compare white
   if (a.white !== undefined) {
+    // compare taken
     if (a.white.checked !== undefined && a.white.checked !== b.white.checked) {
       console.log(
-        "white checked mismatch (" + a.white.checked + " vs " + b.white.checked
+        "white checked mismatch (" +
+          a.white.checked +
+          " vs " +
+          b.white.checked +
+          ")"
       );
       return false;
     }
+
+    // compare checkmated
     if (
       a.white.checkmated !== undefined &&
       a.white.checkmated !== b.white.checkmated
@@ -485,20 +493,28 @@ export function bCompareState(
         "white checkmated mismatch (" +
           a.white.checkmated +
           " vs " +
-          b.white.checkmated
+          b.white.checkmated +
+          ")"
       );
       return false;
     }
+
+    // compare team
     if (a.white.team !== undefined && a.white.team !== b.white.team) {
       console.log(
-        "white team mismatch (" + a.white.team + " vs " + b.white.team
+        "white team mismatch (" + a.white.team + " vs " + b.white.team + ")"
       );
       return false;
     }
+
+    // compare pieces
     if (
       a.white.pieces !== undefined &&
       a.white.pieces.length !== b.white.pieces.length
     )
+      return false;
+
+    if (a.white.pieces !== undefined)
       for (let i = 0; i < a.white.pieces.length; i++) {
         if (
           a.white.pieces[i].location[0] !== b.white.pieces[i].location[0] ||
@@ -552,10 +568,15 @@ export function bCompareState(
           return false;
         }
       }
+
+    // compare taken
     if (
       a.white.taken !== undefined &&
       a.white.taken.length !== b.white.taken.length
     )
+      return false;
+
+    if (a.white.taken !== undefined)
       for (let i = 0; i < a.white.taken.length; i++) {
         if (
           a.white.taken[i].location[0] !== b.white.taken[i].location[0] ||
@@ -613,8 +634,11 @@ export function bCompareState(
 
   // compare black
   if (a.black !== undefined) {
+    // compare checked
     if (a.black.checked !== undefined && a.black.checked !== b.black.checked)
       return false;
+
+    // compare checkmated
     if (
       a.black.checkmated !== undefined &&
       a.black.checkmated !== b.black.checkmated
@@ -623,20 +647,28 @@ export function bCompareState(
         "black checkmated mismatch (" +
           a.black.checkmated +
           " vs " +
-          b.black.checkmated
+          b.black.checkmated +
+          ")"
       );
       return false;
     }
+
+    // compare team
     if (a.black.team !== undefined && a.black.team !== b.black.team) {
       console.log(
-        "black team mismatch (" + a.black.team + " vs " + b.black.team
+        "black team mismatch (" + a.black.team + " vs " + b.black.team + ")"
       );
       return false;
     }
+
+    // compare pieces
     if (
       a.black.pieces !== undefined &&
       a.black.pieces.length !== b.black.pieces.length
     )
+      return false;
+
+    if (a.black.pieces !== undefined)
       for (let i = 0; i < a.black.pieces.length; i++) {
         if (
           a.black.pieces[i].location[0] !== b.black.pieces[i].location[0] ||
@@ -690,10 +722,15 @@ export function bCompareState(
           return false;
         }
       }
+
+    // compare taken
     if (
       a.black.taken !== undefined &&
       a.black.taken.length !== b.black.taken.length
     )
+      return false;
+
+    if (a.black.taken !== undefined)
       for (let i = 0; i < a.black.taken.length; i++) {
         if (
           a.black.taken[i].location[0] !== b.black.taken[i].location[0] ||
@@ -806,8 +843,8 @@ export function simulatePGNGame(PGNString: string): ChessterGame {
         let file: number | undefined = undefined;
         let fileX: boolean | undefined = undefined;
         let captureMove = move.includes("x");
-        let checkMove = move.includes("+");
         let checkmateMove = move.includes("#");
+        let checkMove = checkmateMove || move.includes("+"); // if checkmate, check is implied
 
         move = move.replace(/[x+#]/g, "");
 
@@ -915,7 +952,20 @@ export function simulatePGNGame(PGNString: string): ChessterGame {
                 )
                   throw new Error("capture move mismatch");
 
-                // sanity check p2
+                // sanity check for checkmate
+                if (
+                  (checkmateMove &&
+                    !(player.team === WHITE
+                      ? game.black.checkmated
+                      : game.white.checkmated)) ||
+                  (!checkmateMove &&
+                    (player.team === WHITE
+                      ? game.black.checkmated
+                      : game.white.checkmated))
+                )
+                  throw new Error("checkmate move mismatch");
+
+                // sanity check for check
                 if (
                   (checkMove &&
                     !(player.team === WHITE

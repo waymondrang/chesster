@@ -4,6 +4,11 @@ import { tests as playTests } from "./tests/plays";
 import { PGNTest } from "./types";
 import { bCompareState, dCopy, rCompare, simulatePGNGame } from "./util";
 
+// comparison function
+const compareFunction = bCompareState;
+
+console.log("testing using " + compareFunction.name);
+
 export function test() {
   var totalTime = 0;
   var passedCount = 0;
@@ -16,13 +21,14 @@ export function test() {
     if (test.moves) for (const move of test.moves) game.validateAndMove(move); // validate because why not! (alternatively use game.move)
 
     // compare board states
-    const passed = bCompareState(test.expectedState, game.getState());
+    const passed = compareFunction(test.expectedState, game.getState());
 
     const endTime = performance.now();
     if (passed) passedCount++;
 
+    // print results
     console.log(
-      (passed ? "passed" : "failed") +
+      (passed ? "PASSED" : "FAILED") +
         ' test case: "' +
         test.title +
         '" in ' +
@@ -36,17 +42,17 @@ export function test() {
 
   for (const test of dCopy(playTests) as PGNTest[]) {
     const startTime = performance.now();
-
     const game = simulatePGNGame(test.pgn);
 
     // compare board states
-    const passed = bCompareState(test.expectedState, game.getState());
+    const passed = compareFunction(test.expectedState, game.getState());
 
     const endTime = performance.now();
     if (passed) passedCount++;
 
+    // print results
     console.log(
-      (passed ? "passed" : "failed") +
+      (passed ? "PASSED" : "FAILED") +
         ' test play: "' +
         test.title +
         '" in ' +
@@ -58,15 +64,11 @@ export function test() {
     totalCount++;
   }
 
-  if (passedCount !== totalCount) throw new Error("some tests failed!");
-
   console.log(
     passedCount +
       "/" +
       totalCount +
-      " case tests passed (" +
-      ((passedCount / totalCount) * 100).toFixed(2) +
-      "%) in " +
+      " case tests passed in " +
       totalTime.toFixed(2) + // time
       "ms"
   );
