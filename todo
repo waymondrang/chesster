@@ -1,0 +1,2 @@
+- implement rCompareState, similar to how rCopyState is implemented
+    this would allow more granular comparison for testing
