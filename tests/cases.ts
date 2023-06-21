@@ -81,7 +81,7 @@ const kingRook: ChessterPiece[] = [
   },
 ];
 
-const enPassant: ChessterPiece[] = [
+const enPassantWhite: ChessterPiece[] = [
   {
     string: "♟︎",
     team: BLACK,
@@ -93,6 +93,21 @@ const enPassant: ChessterPiece[] = [
     team: WHITE,
     location: [2, 4],
     moved: true,
+  },
+];
+
+const enPassantBlack: ChessterPiece[] = [
+  {
+    string: "♟︎",
+    team: BLACK,
+    location: [4, 3],
+    moved: true,
+  },
+  {
+    string: "♙",
+    team: WHITE,
+    location: [3, 1],
+    moved: false,
   },
 ];
 
@@ -167,9 +182,9 @@ export const tests: Test[] = [
     },
   },
   {
-    title: "en passant",
+    title: "en passant (white)",
     initialState: {
-      board: pieceArrayToBoard(enPassant),
+      board: pieceArrayToBoard(enPassantWhite),
       turn: BLACK,
     },
     moves: [
@@ -198,9 +213,77 @@ export const tests: Test[] = [
       ]),
       black: {
         pieces: [],
+        taken: [],
       },
       white: {
-        taken: [enPassant[0]],
+        taken: [
+          {
+            string: "♟︎",
+            team: BLACK,
+            location: [3, 4],
+            moved: true,
+          },
+        ],
+        pieces: [
+          {
+            string: "♙",
+            team: WHITE,
+            location: [3, 5],
+            moved: true,
+          },
+        ],
+      },
+    },
+  },
+  {
+    title: "en passant (black)",
+    initialState: {
+      board: pieceArrayToBoard(enPassantBlack),
+      turn: WHITE,
+    },
+    moves: [
+      {
+        from: [3, 1],
+        to: [3, 3],
+        type: moveTypes.MOVE,
+      },
+      {
+        from: [4, 3],
+        to: [3, 2],
+        type: moveTypes.EN_PASSANT,
+        capture: [3, 3],
+      },
+    ],
+    expectedState: {
+      board: pieceArrayToBoard([
+        {
+          string: "♟︎",
+          team: BLACK,
+          location: [3, 2],
+          moved: true,
+        },
+      ]),
+      black: {
+        pieces: [
+          {
+            string: "♟︎",
+            team: BLACK,
+            location: [3, 2],
+            moved: true,
+          },
+        ],
+        taken: [
+          {
+            string: "♙",
+            team: WHITE,
+            location: [3, 3],
+            moved: true,
+          },
+        ],
+      },
+      white: {
+        taken: [],
+        pieces: [],
       },
     },
   },

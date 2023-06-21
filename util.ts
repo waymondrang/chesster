@@ -9,6 +9,7 @@ import {
   ChessterPiece,
   ChessterPieceString,
   ChessterPlayer,
+  PartialChessterGameState,
   RecursivePartial,
   WHITE,
 } from "./types";
@@ -43,6 +44,20 @@ export function calculateTeam(piece: ChessterPieceString) {
     default:
       throw new Error("Invalid piece: " + piece);
   }
+}
+
+export function rotateRight(board: ChessterBoard): ChessterBoard {
+  const newBoard: ChessterBoard = new Array(8)
+    .fill(undefined)
+    .map(() => new Array(8).fill(undefined));
+
+  for (let i = 0; i < 8; i++) {
+    for (let j = 7; j >= 0; j--) {
+      newBoard[i][7 - j] = board[j][i];
+    }
+  }
+
+  return newBoard;
 }
 
 export function pieceArrayToBoard(pieces: ChessterPiece[]): ChessterBoard {
@@ -133,6 +148,12 @@ function sCopy(input: any) {
   }
 }
 
+/**
+ * Recursively copy a value (inferior performance to dCopyState)
+ * @param input
+ * @param copy
+ * @returns
+ */
 export function dCopy(input: any, copy?: any) {
   switch (typeOf(input)) {
     case "array":
@@ -168,10 +189,19 @@ function dCopyArray(input: any, copy: any) {
   return nInput;
 }
 
+/**
+ * Recursively compare two values (will print "stack trace" of differences)
+ * @param a
+ * @param b
+ * @returns
+ */
 export function rCompare(a: any, b: any) {
   if (a === undefined) return true;
 
-  if (typeOf(a) !== typeOf(b)) return false;
+  if (typeOf(a) !== typeOf(b)) {
+    console.log("typeOf(a) !== typeOf(b)", typeOf(a), typeOf(b));
+    return false;
+  }
 
   switch (typeOf(a)) {
     case "array":
@@ -184,25 +214,46 @@ export function rCompare(a: any, b: any) {
 }
 
 function rCompareObject(a: any, b: any) {
-  if (a.constructor !== b.constructor) return false;
+  if (a.constructor !== b.constructor) {
+    console.log(
+      "a.constructor !== b.constructor",
+      a.constructor,
+      b.constructor
+    );
+    return false;
+  }
 
   for (let key in a) {
-    if (!rCompare(a[key], b[key])) return false;
+    if (!rCompare(a[key], b[key])) {
+      console.log("!rCompare(a[key], b[key])", a[key], b[key]);
+      return false;
+    }
   }
 
   return true;
 }
 
 function rCompareArray(a: any, b: any) {
-  if (a.length !== b.length) return false;
+  if (a.length !== b.length) {
+    console.log("a.length !== b.length", a.length, b.length);
+    return false;
+  }
 
   for (let i = 0; i < a.length; i++) {
-    if (!rCompare(a[i], b[i])) return false;
+    if (!rCompare(a[i], b[i])) {
+      console.log("!rCompare(a[i], b[i])", a[i], b[i]);
+      return false;
+    }
   }
 
   return true;
 }
 
+/**
+ * Deep copy a ChessterGameState without recursion (best option for performance)
+ * @param state
+ * @returns
+ */
 export function dCopyState(state: ChessterGameState): ChessterGameState {
   let newBoard: ChessterPiece[][] = [[], [], [], [], [], [], [], []];
   for (let i = 0; i < 8; i++) {
@@ -312,6 +363,395 @@ export function dCopyState(state: ChessterGameState): ChessterGameState {
     history: newHistory,
     simulation: state.simulation,
   };
+}
+
+/**
+ * Compare two ChessterGameState objects (negligible performance compared to rCompare but is better for debugging)
+ * @param a
+ * @param b
+ * @returns
+ */
+export function bCompareState(
+  a: PartialChessterGameState,
+  b: ChessterGameState
+): boolean {
+  // compare board
+  if (a.turn !== undefined && a.turn !== b.turn) {
+    console.log("turn mismatch (" + a.turn + " vs " + b.turn + ")");
+    return false;
+  }
+
+  if (a.board !== undefined) {
+    for (let i = 0; i < 8; i++) {
+      for (let j = 0; j < 8; j++) {
+        // base cases
+        if (a.board[i][j] === undefined && b.board[i][j] === undefined)
+          continue;
+        if (
+          (a.board[i][j] === undefined && b.board[i][j] !== undefined) ||
+          (a.board[i][j] !== undefined && b.board[i][j] === undefined)
+        ) {
+          console.log(
+            "board mismatch at [" + i + ", " + j + "] (" + a.board[i][j] + ")"
+          );
+          return false;
+        }
+
+        if (
+          a.board[i][j]!.location![0] !== b.board[i][j]!.location[0] ||
+          a.board[i][j]!.location![1] !== b.board[i][j]!.location[1]
+        ) {
+          console.log(
+            "board mismatch at [" +
+              i +
+              ", " +
+              j +
+              "] (location: " +
+              a.board[i][j]!.location +
+              " vs " +
+              b.board[i][j]!.location +
+              ")"
+          );
+          return false;
+        }
+        if (
+          a.board[i][j]!.string !== undefined &&
+          a.board[i][j]!.string !== b.board[i][j]!.string
+        ) {
+          console.log(
+            "board mismatch at [" +
+              i +
+              ", " +
+              j +
+              "] (string: " +
+              a.board[i][j]!.string +
+              " vs " +
+              b.board[i][j]!.string +
+              ")"
+          );
+          return false;
+        }
+        if (
+          a.board[i][j]!.team !== undefined &&
+          a.board[i][j]!.team !== b.board[i][j]!.team
+        ) {
+          console.log(
+            "board mismatch at [" +
+              i +
+              ", " +
+              j +
+              "] (team: " +
+              a.board[i][j]!.team +
+              " vs " +
+              b.board[i][j]!.team +
+              ")"
+          );
+          return false;
+        }
+        if (
+          a.board[i][j]!.moved !== undefined &&
+          a.board[i][j]!.moved !== b.board[i][j]!.moved
+        ) {
+          console.log(
+            "board mismatch at [" +
+              i +
+              ", " +
+              j +
+              "] (moved: " +
+              a.board[i][j]!.moved +
+              " vs " +
+              b.board[i][j]!.moved +
+              ")"
+          );
+          return false;
+        }
+      }
+    }
+  }
+
+  // compare white
+  if (a.white !== undefined) {
+    if (a.white.checked !== undefined && a.white.checked !== b.white.checked) {
+      console.log(
+        "white checked mismatch (" + a.white.checked + " vs " + b.white.checked
+      );
+      return false;
+    }
+    if (
+      a.white.checkmated !== undefined &&
+      a.white.checkmated !== b.white.checkmated
+    ) {
+      console.log(
+        "white checkmated mismatch (" +
+          a.white.checkmated +
+          " vs " +
+          b.white.checkmated
+      );
+      return false;
+    }
+    if (a.white.team !== undefined && a.white.team !== b.white.team) {
+      console.log(
+        "white team mismatch (" + a.white.team + " vs " + b.white.team
+      );
+      return false;
+    }
+    if (
+      a.white.pieces !== undefined &&
+      a.white.pieces.length !== b.white.pieces.length
+    )
+      for (let i = 0; i < a.white.pieces.length; i++) {
+        if (
+          a.white.pieces[i].location[0] !== b.white.pieces[i].location[0] ||
+          a.white.pieces[i].location[1] !== b.white.pieces[i].location[1]
+        ) {
+          console.log(
+            "white piece mismatch at [" +
+              i +
+              "] (location: " +
+              a.white.pieces[i].location +
+              " vs " +
+              b.white.pieces[i].location +
+              ")"
+          );
+          return false;
+        }
+        if (a.white.pieces[i].string !== b.white.pieces[i].string) {
+          console.log(
+            "white piece mismatch at [" +
+              i +
+              "] (string: " +
+              a.white.pieces[i].string +
+              " vs " +
+              b.white.pieces[i].string +
+              ")"
+          );
+          return false;
+        }
+        if (a.white.pieces[i].team !== b.white.pieces[i].team) {
+          console.log(
+            "white piece mismatch at [" +
+              i +
+              "] (team: " +
+              a.white.pieces[i].team +
+              " vs " +
+              b.white.pieces[i].team +
+              ")"
+          );
+          return false;
+        }
+        if (a.white.pieces[i].moved !== b.white.pieces[i].moved) {
+          console.log(
+            "white piece mismatch at [" +
+              i +
+              "] (moved: " +
+              a.white.pieces[i].moved +
+              " vs " +
+              b.white.pieces[i].moved +
+              ")"
+          );
+          return false;
+        }
+      }
+    if (
+      a.white.taken !== undefined &&
+      a.white.taken.length !== b.white.taken.length
+    )
+      for (let i = 0; i < a.white.taken.length; i++) {
+        if (
+          a.white.taken[i].location[0] !== b.white.taken[i].location[0] ||
+          a.white.taken[i].location[1] !== b.white.taken[i].location[1]
+        ) {
+          console.log(
+            "white taken mismatch at [" +
+              i +
+              "] (location: " +
+              a.white.taken[i].location +
+              " vs " +
+              b.white.taken[i].location +
+              ")"
+          );
+          return false;
+        }
+        if (a.white.taken[i].string !== b.white.taken[i].string) {
+          console.log(
+            "white taken mismatch at [" +
+              i +
+              "] (string: " +
+              a.white.taken[i].string +
+              " vs " +
+              b.white.taken[i].string +
+              ")"
+          );
+          return false;
+        }
+        if (a.white.taken[i].team !== b.white.taken[i].team) {
+          console.log(
+            "white taken mismatch at [" +
+              i +
+              "] (team: " +
+              a.white.taken[i].team +
+              " vs " +
+              b.white.taken[i].team +
+              ")"
+          );
+          return false;
+        }
+        if (a.white.taken[i].moved !== b.white.taken[i].moved) {
+          console.log(
+            "white taken mismatch at [" +
+              i +
+              "] (moved: " +
+              a.white.taken[i].moved +
+              " vs " +
+              b.white.taken[i].moved +
+              ")"
+          );
+          return false;
+        }
+      }
+  }
+
+  // compare black
+  if (a.black !== undefined) {
+    if (a.black.checked !== undefined && a.black.checked !== b.black.checked)
+      return false;
+    if (
+      a.black.checkmated !== undefined &&
+      a.black.checkmated !== b.black.checkmated
+    ) {
+      console.log(
+        "black checkmated mismatch (" +
+          a.black.checkmated +
+          " vs " +
+          b.black.checkmated
+      );
+      return false;
+    }
+    if (a.black.team !== undefined && a.black.team !== b.black.team) {
+      console.log(
+        "black team mismatch (" + a.black.team + " vs " + b.black.team
+      );
+      return false;
+    }
+    if (
+      a.black.pieces !== undefined &&
+      a.black.pieces.length !== b.black.pieces.length
+    )
+      for (let i = 0; i < a.black.pieces.length; i++) {
+        if (
+          a.black.pieces[i].location[0] !== b.black.pieces[i].location[0] ||
+          a.black.pieces[i].location[1] !== b.black.pieces[i].location[1]
+        ) {
+          console.log(
+            "black piece mismatch at [" +
+              i +
+              "] (location: " +
+              a.black.pieces[i].location +
+              " vs " +
+              b.black.pieces[i].location +
+              ")"
+          );
+          return false;
+        }
+        if (a.black.pieces[i].string !== b.black.pieces[i].string) {
+          console.log(
+            "black piece mismatch at [" +
+              i +
+              "] (string: " +
+              a.black.pieces[i].string +
+              " vs " +
+              b.black.pieces[i].string +
+              ")"
+          );
+          return false;
+        }
+        if (a.black.pieces[i].team !== b.black.pieces[i].team) {
+          console.log(
+            "black piece mismatch at [" +
+              i +
+              "] (team: " +
+              a.black.pieces[i].team +
+              " vs " +
+              b.black.pieces[i].team +
+              ")"
+          );
+          return false;
+        }
+        if (a.black.pieces[i].moved !== b.black.pieces[i].moved) {
+          console.log(
+            "black piece mismatch at [" +
+              i +
+              "] (moved: " +
+              a.black.pieces[i].moved +
+              " vs " +
+              b.black.pieces[i].moved +
+              ")"
+          );
+          return false;
+        }
+      }
+    if (
+      a.black.taken !== undefined &&
+      a.black.taken.length !== b.black.taken.length
+    )
+      for (let i = 0; i < a.black.taken.length; i++) {
+        if (
+          a.black.taken[i].location[0] !== b.black.taken[i].location[0] ||
+          a.black.taken[i].location[1] !== b.black.taken[i].location[1]
+        ) {
+          console.log(
+            "black taken mismatch at [" +
+              i +
+              "] (location: " +
+              a.black.taken[i].location +
+              " vs " +
+              b.black.taken[i].location +
+              ")"
+          );
+          return false;
+        }
+        if (a.black.taken[i].string !== b.black.taken[i].string) {
+          console.log(
+            "black taken mismatch at [" +
+              i +
+              "] (string: " +
+              a.black.taken[i].string +
+              " vs " +
+              b.black.taken[i].string +
+              ")"
+          );
+          return false;
+        }
+        if (a.black.taken[i].team !== b.black.taken[i].team) {
+          console.log(
+            "black taken mismatch at [" +
+              i +
+              "] (team: " +
+              a.black.taken[i].team +
+              " vs " +
+              b.black.taken[i].team +
+              ")"
+          );
+          return false;
+        }
+        if (a.black.taken[i].moved !== b.black.taken[i].moved) {
+          console.log(
+            "black taken mismatch at [" +
+              i +
+              "] (moved: " +
+              a.black.taken[i].moved +
+              " vs " +
+              b.black.taken[i].moved +
+              ")"
+          );
+          return false;
+        }
+      }
+  }
+
+  // TODO: compare history
+
+  return true;
 }
 
 export function PGNSquareNameToChessterLocation(

@@ -63,6 +63,15 @@ export type ChessterGameState = {
   simulation: boolean;
 };
 
+export type PartialChessterGameState = {
+  board?: (Partial<ChessterPiece> | undefined)[][];
+  white?: Partial<ChessterPlayer>;
+  black?: Partial<ChessterPlayer>;
+  history?: ChessterHistory;
+  turn?: ChessterTeam;
+  simulation?: boolean;
+};
+
 export type ChessterPiece = {
   string: ChessterPieceString;
   team: ChessterTeam;
@@ -83,13 +92,13 @@ export type RecursivePartial<T> = {
 
 export type Test = {
   title: string;
-  initialState: RecursivePartial<ChessterGameState>;
-  expectedState: RecursivePartial<ChessterGameState>;
+  initialState: PartialChessterGameState;
+  expectedState: PartialChessterGameState;
   moves?: ChessterMove[];
 };
 
 export type PGNTest = {
   title: string;
   pgn: string;
-  expectedState: RecursivePartial<ChessterGameState>;
+  expectedState: PartialChessterGameState;
 };

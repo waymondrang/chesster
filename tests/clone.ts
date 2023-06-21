@@ -4,7 +4,12 @@ import {
   ChessterBoardString,
   ChessterPieceString,
 } from "../types";
-import { boardStringToBoard, dCopy, dCopyState, rCompare } from "../util";
+import {
+  bCompareState,
+  boardStringToBoard,
+  dCopyState,
+  rotateRight,
+} from "../util";
 
 // test parameters
 const tests = [1, 10, 100, 1000, 10000];
@@ -80,6 +85,9 @@ for (let x = 0; x < tests.length; x++) {
     for (let i = 0; i < tests[x]; i++) {
       let board = createRandomBoard();
       game.init({ board: boardStringToBoard(board) });
+      let state = dCopyState(game.getState());
+
+      state.board = rotateRight(state.board);
 
       let startTime = performance.now();
 
@@ -87,7 +95,10 @@ for (let x = 0; x < tests.length; x++) {
       //    function to test    //
       ////////////////////////////
 
-      game.updateChecked();
+      //   game.updateChecked();
+      let compare = bCompareState(state, game.getState());
+
+      if (compare) throw new Error("state expected to be different");
 
       let endTime = performance.now();
 
@@ -97,8 +108,8 @@ for (let x = 0; x < tests.length; x++) {
 
     if (averageTime < bestTime) bestTime = averageTime;
 
-    console.log("Completed test", p + 1, "of", perTest, "for", tests[x]);
+    console.log("completed test", p + 1, "of", perTest, "for", tests[x]);
   }
 
-  console.log("Best time for", tests[x], ":", bestTime);
+  console.log("best time for", tests[x], ":", bestTime);
 }

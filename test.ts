@@ -1,21 +1,24 @@
 import { ChessterGame } from "./game";
 import { tests as caseTests } from "./tests/cases";
 import { tests as playTests } from "./tests/plays";
-import { rCompare, simulatePGNGame } from "./util";
+import { PGNTest } from "./types";
+import { bCompareState, dCopy, rCompare, simulatePGNGame } from "./util";
 
 export function test() {
   var totalTime = 0;
   var passedCount = 0;
+  var totalCount = 0;
 
-  for (const test of caseTests) {
-    let startTime = performance.now();
-    let game = new ChessterGame(test.initialState);
+  for (const test of dCopy(caseTests)) {
+    const startTime = performance.now();
+    const game = new ChessterGame(test.initialState);
 
-    if (test.moves) for (let move of test.moves) game.validateAndMove(move); // validate because why not! (alternatively use game.move)
+    if (test.moves) for (const move of test.moves) game.validateAndMove(move); // validate because why not! (alternatively use game.move)
 
     // compare board states
-    let passed = rCompare(test.expectedState, game.getState());
-    let endTime = performance.now();
+    const passed = bCompareState(test.expectedState, game.getState());
+
+    const endTime = performance.now();
     if (passed) passedCount++;
 
     console.log(
@@ -28,16 +31,18 @@ export function test() {
     );
 
     totalTime += endTime - startTime;
+    totalCount++;
   }
 
-  for (const test of playTests) {
-    let startTime = performance.now();
+  for (const test of dCopy(playTests) as PGNTest[]) {
+    const startTime = performance.now();
 
-    let game = simulatePGNGame(test.pgn);
+    const game = simulatePGNGame(test.pgn);
 
     // compare board states
-    let passed = rCompare(test.expectedState, game.getState());
-    let endTime = performance.now();
+    const passed = bCompareState(test.expectedState, game.getState());
+
+    const endTime = performance.now();
     if (passed) passedCount++;
 
     console.log(
@@ -48,18 +53,25 @@ export function test() {
         (endTime - startTime).toFixed(2) +
         "ms"
     );
+
+    totalTime += endTime - startTime;
+    totalCount++;
   }
+
+  if (passedCount !== totalCount) throw new Error("some tests failed!");
 
   console.log(
     passedCount +
       "/" +
-      caseTests.length +
+      totalCount +
       " case tests passed (" +
-      ((passedCount / (caseTests.length + playTests.length)) * 100).toFixed(2) +
+      ((passedCount / totalCount) * 100).toFixed(2) +
       "%) in " +
       totalTime.toFixed(2) + // time
       "ms"
   );
+
+  return totalTime;
 }
 
 test();
