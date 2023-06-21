@@ -45,16 +45,13 @@ app.post("/getMoves", (request, response) => {
 
 app.post("/move", (request, response) => {
   const data: ChessterMove = request.body;
-  const result = game.validateAndMove(data);
 
-  if (!result) {
-    throw new Error("Invalid move");
-  }
+  game.validateAndMove(data);
 
-  console.log("White in check: " + game.white.checked);
-  console.log("Black in check: " + game.black.checked);
-  console.log("White in checkmate: " + game.white.checkmated);
-  console.log("Black in checkmate: " + game.black.checkmated);
+  // console.log("White in check: " + game.white.checked);
+  // console.log("Black in check: " + game.black.checked);
+  // console.log("White in checkmate: " + game.white.checkmated);
+  // console.log("Black in checkmate: " + game.black.checkmated);
 
   response.send({ board: game.board, turn: game.turn });
 });

@@ -41,13 +41,10 @@ export type ChessterPlayer = {
 };
 
 export type ChessterMove = {
-  piece: ChessterPiece;
   from: ChessterLocation;
   to: ChessterLocation;
   type: (typeof moveTypes)[keyof typeof moveTypes];
-  capture?: {
-    piece: ChessterPiece;
-  };
+  capture?: ChessterLocation;
   castle?: {
     from: ChessterLocation;
     to: ChessterLocation;
@@ -85,8 +82,14 @@ export type RecursivePartial<T> = {
 };
 
 export type Test = {
-  testCase: string;
+  title: string;
   initialState: RecursivePartial<ChessterGameState>;
   expectedState: RecursivePartial<ChessterGameState>;
   moves?: ChessterMove[];
+};
+
+export type PGNTest = {
+  title: string;
+  pgn: string;
+  expectedState: RecursivePartial<ChessterGameState>;
 };

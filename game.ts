@@ -12,7 +12,12 @@ import {
   WHITE,
   moveTypes,
 } from "./types";
-import { calculateTeam, dCopy, defaultBoard } from "./util";
+import {
+  boardStringToBoard,
+  calculateTeam,
+  dCopyState,
+  defaultBoard,
+} from "./util";
 
 export class ChessterGame {
   board: ChessterBoard = [[], [], [], [], [], [], [], []];
@@ -34,21 +39,16 @@ export class ChessterGame {
   history: ChessterHistory = [];
   simulation: boolean = false;
 
+  /**
+   * Creates a new ChessterGame instance. (including init())
+   */
   constructor(state?: RecursivePartial<ChessterGameState>) {
     this.init(state);
   }
 
   init(state?: RecursivePartial<ChessterGameState>) {
-    this.board = <ChessterBoard>state?.board || [
-      [],
-      [],
-      [],
-      [],
-      [],
-      [],
-      [],
-      [],
-    ];
+    this.board =
+      <ChessterBoard>state?.board || boardStringToBoard(defaultBoard);
     this.white = {
       team: WHITE,
       pieces: [],
@@ -93,6 +93,7 @@ export class ChessterGame {
     // handle special moves
     if (move.type === moveTypes.CASTLE) {
       if (!move.castle) throw new Error('Castle move has no "castle" property');
+
       // move logic for castle
       this.board[move.castle.from[0]][move.castle.from[1]] = undefined;
       move.castle.piece.moved = true;
@@ -106,6 +107,7 @@ export class ChessterGame {
             p.location[0] !== move.castle!.from[0] ||
             p.location[1] !== move.castle!.from[1]
         );
+
         this.white.pieces.push(move.castle.piece);
       } else {
         this.black.pieces = this.black.pieces.filter(
@@ -113,6 +115,7 @@ export class ChessterGame {
             p.location[0] !== move.castle!.from[0] ||
             p.location[1] !== move.castle!.from[1]
         );
+
         this.black.pieces.push(move.castle.piece);
       }
     } else if (
@@ -121,25 +124,27 @@ export class ChessterGame {
     ) {
       if (!move.capture)
         throw new Error('Capture move has no "capture" property');
-      this.board[move.capture.piece.location[0]][
-        move.capture.piece.location[1]
-      ] = undefined;
-      if (move.capture.piece.team === WHITE) {
-        this.black.taken.push(move.capture.piece);
+
+      let capturedPiece = this.board[move.capture[0]][move.capture[1]]!;
+
+      this.board[move.capture[0]][move.capture[1]] = undefined;
+
+      if (capturedPiece.team === WHITE) {
+        this.black.taken.push(capturedPiece);
 
         // remove capture piece using filter and location
         this.white.pieces = this.white.pieces.filter(
           (p) =>
-            p.location[0] !== move.capture!.piece.location[0] ||
-            p.location[1] !== move.capture!.piece.location[1]
+            p.location[0] !== move.capture![0] ||
+            p.location[1] !== move.capture![1]
         );
       } else {
-        this.white.taken.push(move.capture.piece);
+        this.white.taken.push(capturedPiece);
 
         this.black.pieces = this.black.pieces.filter(
           (p) =>
-            p.location[0] !== move.capture!.piece.location[0] ||
-            p.location[1] !== move.capture!.piece.location[1]
+            p.location[0] !== move.capture![0] ||
+            p.location[1] !== move.capture![1]
         );
       }
     }
@@ -165,20 +170,19 @@ export class ChessterGame {
    * @param moveData The move data to validate and move
    * @returns Whether the move was valid and the piece was moved
    */
-  validateAndMove(moveData: ChessterMove): boolean {
+  validateAndMove(moveData: ChessterMove): void {
     const { from, to, type } = moveData;
     const validatePiece = this.board[from[0]][from[1]];
 
-    if (!validatePiece) return false; // no piece at from location
+    if (!validatePiece) throw new Error("No piece at from location");
 
     const move = this.getAvailableMoves(validatePiece).find((move) => {
       return move.to[0] === to[0] && move.to[1] === to[1] && move.type === type;
     });
 
-    if (!move) return false; // move not available
+    if (!move) throw new Error("Invalid move");
 
     this.move(move);
-    return true;
   }
 
   /**
@@ -206,10 +210,12 @@ export class ChessterGame {
       moveString += " castle to: [" + move.castle?.to.join(",") + "]";
     } else if (move.type === moveTypes.CAPTURE) {
       moveString += "capture:";
-      moveString += " piece: [" + move.capture?.piece.string + "]";
+      moveString +=
+        " piece: [" + this.board[move.capture![0]][move.capture![1]] + "]";
     } else if (move.type === moveTypes.EN_PASSANT) {
       moveString += "capture (en passant):";
-      moveString += " piece: [" + move.capture?.piece.string + "]";
+      moveString +=
+        " piece: [" + this.board[move.capture![0]][move.capture![1]] + "]";
     } else {
       moveString += "move:";
     }
@@ -238,8 +244,8 @@ export class ChessterGame {
       for (let move of moves) {
         if (
           move.type === moveTypes.CAPTURE &&
-          (move.capture?.piece.string === "♚" ||
-            move.capture?.piece.string === "♔")
+          (this.board[move.capture![0]][move.capture![1]]?.string === "♚" || // TODO: this is sorta naive, maybe track location of king?
+            this.board[move.capture![0]][move.capture![1]]?.string === "♔")
         ) {
           return true;
         }
@@ -329,11 +335,12 @@ export class ChessterGame {
 
     const simulator = new ChessterGame();
     const finalMoves = [...moves];
+    const gameState = this.getState();
 
     if (!this.simulation) {
       for (let move of moves) {
         simulator.init({
-          ...dCopy(this.getState()),
+          ...dCopyState(gameState),
           simulation: true,
         });
 
@@ -371,20 +378,16 @@ export class ChessterGame {
         if (!moveLocation) {
           // distinguish move and capture
           moves.push({
-            piece: piece,
             from: piece.location,
             to: [piece.location[0] + i, piece.location[1] + j],
             type: moveTypes.MOVE,
           });
         } else if (piece.team !== moveLocation.team) {
           moves.push({
-            piece: piece,
             from: piece.location,
             to: [piece.location[0] + i, piece.location[1] + j],
             type: moveTypes.CAPTURE,
-            capture: {
-              piece: moveLocation,
-            },
+            capture: [piece.location[0] + i, piece.location[1] + j],
           });
         }
       }
@@ -402,14 +405,19 @@ export class ChessterGame {
       if (left?.string === "♖" && left.moved === false) {
         if (!this.board[1][0] && !this.board[2][0] && !this.board[3][0]) {
           moves.push({
-            piece: piece,
             from: piece.location,
             to: [2, 0],
             type: moveTypes.CASTLE,
             castle: {
               from: [0, 0],
               to: [3, 0],
-              piece: dCopy(left),
+              // piece: dCopy(left),
+              piece: {
+                string: "♖",
+                team: WHITE,
+                location: [0, 0],
+                moved: false,
+              },
             },
           });
         }
@@ -417,14 +425,19 @@ export class ChessterGame {
       if (right?.string === "♖" && right.moved === false) {
         if (!this.board[5][0] && !this.board[6][0]) {
           moves.push({
-            piece: piece,
             from: piece.location,
             to: [6, 0],
             type: moveTypes.CASTLE,
             castle: {
               from: [7, 0],
               to: [5, 0],
-              piece: dCopy(right),
+              // piece: dCopy(right),
+              piece: {
+                string: "♖",
+                team: WHITE,
+                location: [7, 0],
+                moved: false,
+              },
             },
           });
         }
@@ -443,14 +456,19 @@ export class ChessterGame {
       if (left?.string === "♜" && left.moved === false) {
         if (!this.board[1][7] && !this.board[2][7] && !this.board[3][7]) {
           moves.push({
-            piece: piece,
             from: piece.location,
             to: [2, 7],
             type: moveTypes.CASTLE,
             castle: {
               from: [0, 7],
               to: [3, 7],
-              piece: dCopy(left),
+              // piece: dCopy(left),
+              piece: {
+                string: "♜",
+                team: BLACK,
+                location: [0, 7],
+                moved: false,
+              },
             },
           });
         }
@@ -459,14 +477,19 @@ export class ChessterGame {
       if (right?.string === "♜" && right.moved === false) {
         if (!this.board[5][7] && !this.board[6][7]) {
           moves.push({
-            piece: piece,
             from: piece.location,
             to: [6, 7],
             type: moveTypes.CASTLE,
             castle: {
               from: [7, 7],
               to: [5, 7],
-              piece: dCopy(right),
+              // piece: dCopy(right),
+              piece: {
+                string: "♜",
+                team: BLACK,
+                location: [7, 7],
+                moved: false,
+              },
             },
           });
         }
@@ -492,20 +515,16 @@ export class ChessterGame {
           this.board[piece.location[0] + i][piece.location[1] + j];
         if (!location)
           moves.push({
-            piece: piece,
             from: piece.location,
             to: [piece.location[0] + i, piece.location[1] + j],
             type: moveTypes.MOVE,
           });
         else if (location.team !== piece.team)
           moves.push({
-            piece: piece,
             from: piece.location,
             to: [piece.location[0] + i, piece.location[1] + j],
             type: moveTypes.CAPTURE,
-            capture: {
-              piece: location,
-            },
+            capture: [piece.location[0] + i, piece.location[1] + j],
           });
       }
     }
@@ -522,20 +541,16 @@ export class ChessterGame {
       let location = this.board[piece.location[0] + i][piece.location[1]];
       if (!location)
         moves.push({
-          piece: piece,
           from: piece.location,
           to: [piece.location[0] + i, piece.location[1]],
           type: moveTypes.MOVE,
         });
       else if (location.team !== piece.team) {
         moves.push({
-          piece: piece,
           from: piece.location,
           to: [piece.location[0] + i, piece.location[1]],
           type: moveTypes.CAPTURE,
-          capture: {
-            piece: location,
-          },
+          capture: [piece.location[0] + i, piece.location[1]],
         });
         break;
       } else break;
@@ -547,20 +562,16 @@ export class ChessterGame {
       let location = this.board[piece.location[0] - i][piece.location[1]];
       if (!location)
         moves.push({
-          piece: piece,
           from: piece.location,
           to: [piece.location[0] - i, piece.location[1]],
           type: moveTypes.MOVE,
         });
       else if (location.team !== piece.team) {
         moves.push({
-          piece: piece,
           from: piece.location,
           to: [piece.location[0] - i, piece.location[1]],
           type: moveTypes.CAPTURE,
-          capture: {
-            piece: location,
-          },
+          capture: [piece.location[0] - i, piece.location[1]],
         });
         break;
       } else break;
@@ -572,20 +583,16 @@ export class ChessterGame {
       let location = this.board[piece.location[0]][piece.location[1] + i];
       if (!location)
         moves.push({
-          piece: piece,
           from: piece.location,
           to: [piece.location[0], piece.location[1] + i],
           type: moveTypes.MOVE,
         });
       else if (location.team !== piece.team) {
         moves.push({
-          piece: piece,
           from: piece.location,
           to: [piece.location[0], piece.location[1] + i],
           type: moveTypes.CAPTURE,
-          capture: {
-            piece: location,
-          },
+          capture: [piece.location[0], piece.location[1] + i],
         });
         break;
       } else break;
@@ -597,20 +604,16 @@ export class ChessterGame {
       let location = this.board[piece.location[0]][piece.location[1] - i];
       if (!location)
         moves.push({
-          piece: piece,
           from: piece.location,
           to: [piece.location[0], piece.location[1] - i],
           type: moveTypes.MOVE,
         });
       else if (location.team !== piece.team) {
         moves.push({
-          piece: piece,
           from: piece.location,
           to: [piece.location[0], piece.location[1] - i],
           type: moveTypes.CAPTURE,
-          capture: {
-            piece: location,
-          },
+          capture: [piece.location[0], piece.location[1] - i],
         });
         break;
       } else break;
@@ -628,20 +631,16 @@ export class ChessterGame {
       let location = this.board[piece.location[0] + i][piece.location[1] + i];
       if (!location)
         moves.push({
-          piece: piece,
           from: piece.location,
           to: [piece.location[0] + i, piece.location[1] + i],
           type: moveTypes.MOVE,
         });
       else if (location.team !== piece.team) {
         moves.push({
-          piece: piece,
           from: piece.location,
           to: [piece.location[0] + i, piece.location[1] + i],
           type: moveTypes.CAPTURE,
-          capture: {
-            piece: location,
-          },
+          capture: [piece.location[0] + i, piece.location[1] + i],
         });
         break;
       } else break;
@@ -653,20 +652,16 @@ export class ChessterGame {
       let location = this.board[piece.location[0] + i][piece.location[1] - i];
       if (!location)
         moves.push({
-          piece: piece,
           from: piece.location,
           to: [piece.location[0] + i, piece.location[1] - i],
           type: moveTypes.MOVE,
         });
       else if (location.team !== piece.team) {
         moves.push({
-          piece: piece,
           from: piece.location,
           to: [piece.location[0] + i, piece.location[1] - i],
           type: moveTypes.CAPTURE,
-          capture: {
-            piece: location,
-          },
+          capture: [piece.location[0] + i, piece.location[1] - i],
         });
         break;
       } else break;
@@ -679,20 +674,16 @@ export class ChessterGame {
 
       if (!location)
         moves.push({
-          piece: piece,
           from: piece.location,
           to: [piece.location[0] - i, piece.location[1] + i],
           type: moveTypes.MOVE,
         });
       else if (location.team !== piece.team) {
         moves.push({
-          piece: piece,
           from: piece.location,
           to: [piece.location[0] - i, piece.location[1] + i],
           type: moveTypes.CAPTURE,
-          capture: {
-            piece: location,
-          },
+          capture: [piece.location[0] - i, piece.location[1] + i],
         });
         break;
       } else break;
@@ -704,20 +695,16 @@ export class ChessterGame {
       let location = this.board[piece.location[0] - i][piece.location[1] - i];
       if (!location)
         moves.push({
-          piece: piece,
           from: piece.location,
           to: [piece.location[0] - i, piece.location[1] - i],
           type: moveTypes.MOVE,
         });
       else if (location.team !== piece.team) {
         moves.push({
-          piece: piece,
           from: piece.location,
           to: [piece.location[0] - i, piece.location[1] - i],
           type: moveTypes.CAPTURE,
-          capture: {
-            piece: location,
-          },
+          capture: [piece.location[0] - i, piece.location[1] - i],
         });
         break;
       } else break;
@@ -735,20 +722,16 @@ export class ChessterGame {
       let location = this.board[piece.location[0] + i][piece.location[1]];
       if (!location)
         moves.push({
-          piece: piece,
           from: piece.location,
           to: [piece.location[0] + i, piece.location[1]],
           type: moveTypes.MOVE,
         });
       else if (location.team !== piece.team) {
         moves.push({
-          piece: piece,
           from: piece.location,
           to: [piece.location[0] + i, piece.location[1]],
           type: moveTypes.CAPTURE,
-          capture: {
-            piece: location,
-          },
+          capture: [piece.location[0] + i, piece.location[1]],
         });
         break;
       } else break;
@@ -760,20 +743,16 @@ export class ChessterGame {
       let location = this.board[piece.location[0] - i][piece.location[1]];
       if (!location)
         moves.push({
-          piece: piece,
           from: piece.location,
           to: [piece.location[0] - i, piece.location[1]],
           type: moveTypes.MOVE,
         });
       else if (location.team !== piece.team) {
         moves.push({
-          piece: piece,
           from: piece.location,
           to: [piece.location[0] - i, piece.location[1]],
           type: moveTypes.CAPTURE,
-          capture: {
-            piece: location,
-          },
+          capture: [piece.location[0] - i, piece.location[1]],
         });
         break;
       } else break;
@@ -785,20 +764,16 @@ export class ChessterGame {
       let location = this.board[piece.location[0]][piece.location[1] + i];
       if (!location)
         moves.push({
-          piece: piece,
           from: piece.location,
           to: [piece.location[0], piece.location[1] + i],
           type: moveTypes.MOVE,
         });
       else if (location.team !== piece.team) {
         moves.push({
-          piece: piece,
           from: piece.location,
           to: [piece.location[0], piece.location[1] + i],
           type: moveTypes.CAPTURE,
-          capture: {
-            piece: location,
-          },
+          capture: [piece.location[0], piece.location[1] + i],
         });
         break;
       } else break;
@@ -810,20 +785,16 @@ export class ChessterGame {
       let location = this.board[piece.location[0]][piece.location[1] - i];
       if (!location)
         moves.push({
-          piece: piece,
           from: piece.location,
           to: [piece.location[0], piece.location[1] - i],
           type: moveTypes.MOVE,
         });
       else if (location.team !== piece.team) {
         moves.push({
-          piece: piece,
           from: piece.location,
           to: [piece.location[0], piece.location[1] - i],
           type: moveTypes.CAPTURE,
-          capture: {
-            piece: location,
-          },
+          capture: [piece.location[0], piece.location[1] - i],
         });
         break;
       } else break;
@@ -835,20 +806,16 @@ export class ChessterGame {
       let location = this.board[piece.location[0] + i][piece.location[1] + i];
       if (!location)
         moves.push({
-          piece: piece,
           from: piece.location,
           to: [piece.location[0] + i, piece.location[1] + i],
           type: moveTypes.MOVE,
         });
       else if (location.team !== piece.team) {
         moves.push({
-          piece: piece,
           from: piece.location,
           to: [piece.location[0] + i, piece.location[1] + i],
           type: moveTypes.CAPTURE,
-          capture: {
-            piece: location,
-          },
+          capture: [piece.location[0] + i, piece.location[1] + i],
         });
         break;
       } else break;
@@ -860,20 +827,16 @@ export class ChessterGame {
       let location = this.board[piece.location[0] - i][piece.location[1] - i];
       if (!location)
         moves.push({
-          piece: piece,
           from: piece.location,
           to: [piece.location[0] - i, piece.location[1] - i],
           type: moveTypes.MOVE,
         });
       else if (location.team !== piece.team) {
         moves.push({
-          piece: piece,
           from: piece.location,
           to: [piece.location[0] - i, piece.location[1] - i],
           type: moveTypes.CAPTURE,
-          capture: {
-            piece: location,
-          },
+          capture: [piece.location[0] - i, piece.location[1] - i],
         });
         break;
       } else break;
@@ -886,20 +849,16 @@ export class ChessterGame {
 
       if (!location)
         moves.push({
-          piece: piece,
           from: piece.location,
           to: [piece.location[0] - i, piece.location[1] + i],
           type: moveTypes.MOVE,
         });
       else if (location.team !== piece.team) {
         moves.push({
-          piece: piece,
           from: piece.location,
           to: [piece.location[0] - i, piece.location[1] + i],
           type: moveTypes.CAPTURE,
-          capture: {
-            piece: location,
-          },
+          capture: [piece.location[0] - i, piece.location[1] + i],
         });
         break;
       } else break;
@@ -911,20 +870,16 @@ export class ChessterGame {
       let location = this.board[piece.location[0] + i][piece.location[1] - i];
       if (!location)
         moves.push({
-          piece: piece,
           from: piece.location,
           to: [piece.location[0] + i, piece.location[1] - i],
           type: moveTypes.MOVE,
         });
       else if (location.team !== piece.team) {
         moves.push({
-          piece: piece,
           from: piece.location,
           to: [piece.location[0] + i, piece.location[1] - i],
           type: moveTypes.CAPTURE,
-          capture: {
-            piece: location,
-          },
+          capture: [piece.location[0] + i, piece.location[1] - i],
         });
         break;
       } else break;
@@ -945,7 +900,6 @@ export class ChessterGame {
       !this.board[piece.location[0]][piece.location[1] + direction]
     ) {
       moves.push({
-        piece: piece,
         from: piece.location,
         to: [piece.location[0], piece.location[1] + direction],
         type: moveTypes.MOVE,
@@ -957,7 +911,6 @@ export class ChessterGame {
         !this.board[piece.location[0]][piece.location[1] + direction * 2]
       ) {
         moves.push({
-          piece: piece,
           from: piece.location,
           to: [piece.location[0], piece.location[1] + direction * 2],
           type: moveTypes.MOVE,
@@ -975,13 +928,10 @@ export class ChessterGame {
         this.board[piece.location[0] + 1][piece.location[1] + direction];
       if (location && location.team !== piece.team)
         moves.push({
-          piece: piece,
           from: piece.location,
           to: [piece.location[0] + 1, piece.location[1] + direction],
           type: moveTypes.CAPTURE,
-          capture: {
-            piece: location,
-          },
+          capture: [piece.location[0] + 1, piece.location[1] + direction],
         });
     }
 
@@ -995,13 +945,10 @@ export class ChessterGame {
         this.board[piece.location[0] - 1][piece.location[1] + direction];
       if (location && location.team !== piece.team)
         moves.push({
-          piece: piece,
           from: piece.location,
           to: [piece.location[0] - 1, piece.location[1] + direction],
           type: moveTypes.CAPTURE,
-          capture: {
-            piece: location,
-          },
+          capture: [piece.location[0] - 1, piece.location[1] + direction],
         });
     }
 
@@ -1012,20 +959,17 @@ export class ChessterGame {
       lastMove &&
       piece.team == WHITE &&
       piece.location[1] === 4 &&
-      lastMove.piece.string === "♟︎" &&
+      this.board[lastMove.to[0]][lastMove.to[1]]!.string === "♟︎" &&
       lastMove.from[1] === 6 &&
       lastMove.to[1] === 4 &&
       (lastMove.to[0] === piece.location[0] + 1 ||
         lastMove.to[0] === piece.location[0] - 1)
     ) {
       moves.push({
-        piece: piece,
         from: piece.location,
         to: [lastMove.to[0], lastMove.to[1] + 1],
         type: moveTypes.EN_PASSANT,
-        capture: {
-          piece: lastMove.piece,
-        },
+        capture: [lastMove.to[0], lastMove.to[1]],
       });
     }
 
@@ -1033,20 +977,17 @@ export class ChessterGame {
       lastMove &&
       piece.team == BLACK &&
       piece.location[1] === 3 &&
-      lastMove.piece.string === "♙" &&
+      this.board[lastMove.to[0]][lastMove.to[1]]!.string === "♙" &&
       lastMove.from[1] === 1 &&
       lastMove.to[1] === 3 &&
       (lastMove.to[0] === piece.location[0] + 1 ||
         lastMove.to[0] === piece.location[0] - 1)
     ) {
       moves.push({
-        piece: piece,
         from: piece.location,
         to: [lastMove.to[0], lastMove.to[1] - 1],
         type: moveTypes.EN_PASSANT,
-        capture: {
-          piece: lastMove.piece,
-        },
+        capture: [lastMove.to[0], lastMove.to[1]],
       });
     }
 

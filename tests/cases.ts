@@ -81,16 +81,30 @@ const kingRook: ChessterPiece[] = [
   },
 ];
 
+const enPassant: ChessterPiece[] = [
+  {
+    string: "♟︎",
+    team: BLACK,
+    location: [3, 6],
+    moved: false,
+  },
+  {
+    string: "♙",
+    team: WHITE,
+    location: [2, 4],
+    moved: true,
+  },
+];
+
 export const tests: Test[] = [
   {
-    testCase: "lawnmover mate",
+    title: "lawnmover mate",
     initialState: {
       board: pieceArrayToBoard(twoRooks),
       turn: WHITE,
     },
     moves: [
       {
-        piece: twoRooks[0],
         from: [6, 5],
         to: [6, 7],
         type: moveTypes.MOVE,
@@ -108,20 +122,18 @@ export const tests: Test[] = [
     },
   },
   {
-    testCase: "king queen mate",
+    title: "king queen mate",
     initialState: {
       board: pieceArrayToBoard(kingQueen),
       turn: BLACK,
     },
     moves: [
       {
-        piece: kingQueen[2],
         from: [7, 0],
         to: [7, 1],
         type: moveTypes.MOVE,
       },
       {
-        piece: kingQueen[1],
         from: [6, 4],
         to: [6, 1],
         type: moveTypes.MOVE,
@@ -139,7 +151,7 @@ export const tests: Test[] = [
     },
   },
   {
-    testCase: "king rook mate",
+    title: "king rook mate",
     initialState: {
       board: pieceArrayToBoard(kingRook),
     },
@@ -151,6 +163,44 @@ export const tests: Test[] = [
       white: {
         checked: false,
         checkmated: false,
+      },
+    },
+  },
+  {
+    title: "en passant",
+    initialState: {
+      board: pieceArrayToBoard(enPassant),
+      turn: BLACK,
+    },
+    moves: [
+      {
+        // black's move
+        from: [3, 6],
+        to: [3, 4],
+        type: moveTypes.MOVE,
+      },
+      {
+        // white's move
+        from: [2, 4],
+        to: [3, 5],
+        type: moveTypes.EN_PASSANT,
+        capture: [3, 4],
+      },
+    ],
+    expectedState: {
+      board: pieceArrayToBoard([
+        {
+          string: "♙",
+          team: WHITE,
+          location: [3, 5],
+          moved: true,
+        },
+      ]),
+      black: {
+        pieces: [],
+      },
+      white: {
+        taken: [enPassant[0]],
       },
     },
   },
