@@ -1,6 +1,9 @@
 const chessboard = document.querySelector("#chessboard");
 const turn_span = document.querySelector("#turn");
 const restart = document.querySelector("#restart");
+const promotion_close = document.querySelector("#promotion-close");
+const promotion = document.querySelector("#promotion");
+const promotion_options = document.querySelector("#promotion-options");
 
 const WHITE = "WHITE";
 const BLACK = "BLACK";
@@ -59,6 +62,34 @@ function reloadBoard(boardOfData, boardOfElements) {
   }
 }
 
+promotion_close.addEventListener("click", () => {
+  promotion.classList.add("hidden");
+  promotion_options.replaceChildren();
+  chessboard.classList.remove("disabled");
+});
+
+async function showPromotionModal(moves) {
+  return new Promise((resolve, reject) => {
+    promotion.classList.remove("hidden");
+    chessboard.classList.add("disabled");
+    for (let move of moves) {
+      let button = document.createElement("button");
+      button.textContent = move.promotion;
+
+      button.addEventListener("click", async () => {
+        console.log("clicked", move.promotion);
+
+        promotion.classList.add("hidden");
+        promotion_options.replaceChildren();
+        chessboard.classList.remove("disabled");
+
+        resolve(move);
+      });
+      promotion_options.appendChild(button);
+    }
+  });
+}
+
 (async () => {
   var boardOfElements = [[], [], [], [], [], [], [], []];
   var selectedElement = null;
@@ -107,12 +138,27 @@ function reloadBoard(boardOfData, boardOfElements) {
         element.addEventListener("click", async () => {
           console.log("clicked", i, j);
 
-          let move = selectedElementMoves.find(
+          let foundMoves = selectedElementMoves.filter(
             (move) =>
               move.to[0] == i &&
               move.to[1] == j &&
               element.classList.contains(move.type)
           );
+
+          let move = foundMoves[0];
+
+          if (foundMoves.length > 1) {
+            if (foundMoves[0].type !== moveTypes.PROMOTION)
+              throw new Error("invalid move type with multiple moves");
+
+            let selectedPromotion = await showPromotionModal(foundMoves);
+
+            if (!selectedPromotion) return;
+
+            console.log("selectedPromotion", selectedPromotion);
+
+            move = selectedPromotion;
+          }
 
           if (move) {
             console.log("move", move);

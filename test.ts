@@ -4,8 +4,8 @@ import { tests as playTests } from "./tests/plays";
 import { PGNTest } from "./types";
 import { bCompareState, dCopy, rCompare, simulatePGNGame } from "./util";
 
-// comparison function
-const compareFunction = bCompareState;
+// comparison function (rCompare recommended)
+const compareFunction = rCompare;
 
 console.log("testing using " + compareFunction.name);
 

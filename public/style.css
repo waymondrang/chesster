@@ -5,6 +5,10 @@
     src: url("fonts/PPNeueMontreal-Regular.woff2");
 }
 
+:root {
+    --primary-font-size: 1.25rem;
+}
+
 body {
     font-family: 'PPNeueMontreal-Regular', serif;
     margin: 0;
@@ -22,7 +26,7 @@ h6 {
 }
 
 h1 {
-    font-size: 2rem;
+    font-size: var(--primary-font-size, 1rem);
     color: #fefefe;
     font-weight: 400;
     font-style: normal;
@@ -62,7 +66,7 @@ nav {
     align-items: center;
     justify-content: space-between;
     width: 100%;
-    padding: 1rem;
+    overflow: hidden;
     box-sizing: border-box;
     border-radius: calc(var(--border-size, 0.25rem) * 2);
     margin-bottom: 1rem;
@@ -72,9 +76,8 @@ nav {
 
 #turn {
     transition: all 0.25s cubic-bezier(0, 0, .01, 1);
-    height: 32px;
-    width: 32px;
-    border-radius: 0.2rem;
+    height: calc(var(--chessboard-size, 400px) / 8);
+    width: calc(var(--chessboard-size, 400px) / 8);
     margin: 0;
     padding: 0;
     position: relative;
@@ -108,18 +111,23 @@ nav {
 }
 
 #restart {
-    height: 32px;
-    width: 32px;
+    height: calc(var(--chessboard-size, 400px) / 8);
+    width: calc(var(--chessboard-size, 400px) / 8);
     position: relative;
     background-color: #F25116;
     border: solid transparent;
-    border-radius: 0.25rem;
     box-sizing: border-box;
     color: #ffffff;
     cursor: pointer;
     margin: 0;
     padding: 0;
+    transition: all 0.2s cubic-bezier(0, 0, .01, 1);
     box-shadow: 0 6px 12px rgba(242, 81, 22, 0.1), 0 6px 12px rgba(242, 81, 22, 0.1);
+}
+
+#restart:hover {
+    background-color: #ffffff;
+    color: #F25116;
 }
 
 #restart span {
@@ -159,12 +167,66 @@ nav {
     border-bottom-right-radius: calc(var(--border-size, 0.25rem) * 2);
 }
 
+#chessboard.disabled {
+    pointer-events: none;
+    cursor: not-allowed;
+    opacity: 0.5;
+}
+
+#promotion {
+    height: calc(var(--chessboard-size, 400px) / 8);
+    background-color: #6e791b;
+    justify-content: space-between;
+    display: flex;
+    align-items: center;
+    overflow: hidden;
+    padding: 0;
+    border: none;
+    margin-bottom: 1rem;
+    box-sizing: border-box;
+    border-radius: calc(var(--border-size, 0.25rem) * 2);
+    box-shadow: 0 19px 38px rgba(0, 0, 0, 0.30), 0 15px 12px rgba(0, 0, 0, 0.22);
+    z-index: 999;
+    transition: height 0.25s cubic-bezier(0, 0, .01, 1), margin-bottom 0.25s step-start;
+}
+
+#promotion.hidden {
+    height: 0;
+    margin-bottom: 0;
+    transition: height 0.25s cubic-bezier(0, 0, .01, 1), margin-bottom 0.5s cubic-bezier(0.75, 0, 0.25, 1);
+}
+
+#promotion button {
+    font-size: var(--primary-font-size);
+    height: calc(var(--chessboard-size, 400px) / 8);
+    width: calc(var(--chessboard-size, 400px) / 8);
+    background-color: transparent;
+    color: #fefefe;
+    border: none;
+    cursor: pointer;
+    transition: all 0.1s cubic-bezier(0, 0, .01, 1);
+}
+
+#promotion button:hover {
+    background-color: #fefefe;
+    color: #6e791b;
+}
+
+#promotion button#promotion-close {
+    color: #fefefe;
+}
+
+#promotion button#promotion-close:hover {
+    background-color: #fefefe;
+    color: #6e791b;
+}
+
 .cell {
     display: flex;
     justify-content: center;
     align-items: center;
     cursor: pointer;
-    font-size: 2.25rem;
+    font-size: var(--primary-font-size);
     overflow: hidden;
     -webkit-user-select: none;
     -ms-user-select: none;
@@ -173,11 +235,11 @@ nav {
 }
 
 .cell.variant1 {
-    background-color: #A69185;
+    background-color: #fefefe;
 }
 
 .cell.variant2 {
-    background-color: #fefefe;
+    background-color: #A69185;
 }
 
 .cell.selected {
@@ -200,6 +262,10 @@ nav {
     background-color: #CDA3A7;
 }
 
+.cell.PROMOTION {
+    background-color: #6e791b;
+}
+
 .cell:hover {
     border: var(--border-size, 0.25rem) solid #F25116;
 }
@@ -207,4 +273,16 @@ nav {
 .material-symbols-outlined {
     font-size: 18px;
     line-height: initial;
+}
+
+@media (min-width: 600px) and (min-height: 600px) {
+    :root {
+        --primary-font-size: 1.5rem;
+    }
+}
+
+@media (min-width: 800px) and (min-height: 800px) {
+    :root {
+        --primary-font-size: 2rem;
+    }
 }

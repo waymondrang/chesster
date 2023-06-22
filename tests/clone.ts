@@ -1,3 +1,7 @@
+/**
+ * this file can create a random board
+ * and test the speed of a function
+ */
 import { ChessterGame } from "../game";
 import {
   ChessterBoard,
@@ -85,6 +89,7 @@ for (let x = 0; x < tests.length; x++) {
     for (let i = 0; i < tests[x]; i++) {
       let board = createRandomBoard();
       game.init({ board: boardStringToBoard(board) });
+      game.init();
       let state = dCopyState(game.getState());
 
       state.board = rotateRight(state.board);

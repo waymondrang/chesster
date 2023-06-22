@@ -8,7 +8,7 @@ import {
   WHITE,
   moveTypes,
 } from "../types";
-import { pieceArrayToBoard } from "../util";
+import { partialPieceArrayToBoard, pieceArrayToBoard } from "../util";
 
 // (black) ♜ ♞ ♝ ♛ ♚ ♟︎ (white) ♙ ♖ ♘ ♗ ♕ ♔
 
@@ -284,6 +284,98 @@ export const tests: Test[] = [
       white: {
         taken: [],
         pieces: [],
+      },
+    },
+  },
+  {
+    title: "promotion",
+    initialState: {
+      board: pieceArrayToBoard([
+        {
+          string: "♙",
+          team: WHITE,
+          location: [7, 6],
+          moved: true,
+        },
+        {
+          string: "♔",
+          team: WHITE,
+          location: [6, 3],
+          moved: true,
+        },
+        {
+          string: "♚",
+          team: BLACK,
+          location: [0, 0],
+          moved: true,
+        },
+      ]),
+    },
+    moves: [
+      {
+        from: [7, 6],
+        to: [7, 7],
+        type: moveTypes.PROMOTION,
+        promotion: "♕",
+      },
+      {
+        from: [0, 0],
+        to: [1, 0],
+        type: moveTypes.MOVE,
+      },
+      {
+        from: [7, 7],
+        to: [1, 7],
+        type: moveTypes.MOVE,
+      },
+    ],
+    expectedState: {
+      board: partialPieceArrayToBoard([
+        {
+          string: "♕",
+          location: [1, 7],
+          moved: true,
+        },
+        {
+          string: "♚",
+          location: [1, 0],
+          moved: true,
+        },
+        {
+          string: "♔",
+          location: [6, 3],
+          moved: true,
+        },
+      ]),
+      black: {
+        checked: true,
+        checkmated: false,
+        pieces: [
+          {
+            string: "♚",
+            location: [1, 0],
+            moved: true,
+            team: BLACK,
+          },
+        ],
+      },
+      white: {
+        checked: false,
+        checkmated: false,
+        pieces: [
+          {
+            string: "♔",
+            team: WHITE,
+            location: [6, 3],
+            moved: true,
+          },
+          {
+            string: "♕",
+            location: [1, 7],
+            moved: true,
+            team: WHITE,
+          },
+        ],
       },
     },
   },

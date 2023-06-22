@@ -190,7 +190,7 @@ function dCopyArray(input: any, copy: any) {
 }
 
 /**
- * Recursively compare two values (will print "stack trace" of differences)
+ * Recursively compare two values (more useful than bCompareState)
  * @param a
  * @param b
  * @returns
@@ -344,14 +344,7 @@ export function dCopyState(state: ChessterGameState): ChessterGameState {
             },
           }
         : undefined,
-      promotion: move.promotion
-        ? {
-            location: [move.promotion.location[0], move.promotion.location[1]],
-            string: move.promotion.string,
-            team: move.promotion.team,
-            moved: move.promotion.moved,
-          }
-        : undefined,
+      promotion: move.promotion,
     });
   }
 
@@ -366,7 +359,7 @@ export function dCopyState(state: ChessterGameState): ChessterGameState {
 }
 
 /**
- * Compare two ChessterGameState objects (negligible performance compared to rCompare but is better for debugging)
+ * Compare two ChessterGameState objects (negligible performance compared to rCompare)
  * @param a
  * @param b
  * @returns
@@ -511,8 +504,16 @@ export function bCompareState(
     if (
       a.white.pieces !== undefined &&
       a.white.pieces.length !== b.white.pieces.length
-    )
+    ) {
+      console.log(
+        "white pieces mismatch (" +
+          a.white.pieces.length +
+          " vs " +
+          b.white.pieces.length +
+          ")"
+      );
       return false;
+    }
 
     if (a.white.pieces !== undefined)
       for (let i = 0; i < a.white.pieces.length; i++) {
@@ -573,8 +574,16 @@ export function bCompareState(
     if (
       a.white.taken !== undefined &&
       a.white.taken.length !== b.white.taken.length
-    )
+    ) {
+      console.log(
+        "white taken mismatch (" +
+          a.white.taken.length +
+          " vs " +
+          b.white.taken.length +
+          ")"
+      );
       return false;
+    }
 
     if (a.white.taken !== undefined)
       for (let i = 0; i < a.white.taken.length; i++) {
@@ -635,8 +644,16 @@ export function bCompareState(
   // compare black
   if (a.black !== undefined) {
     // compare checked
-    if (a.black.checked !== undefined && a.black.checked !== b.black.checked)
+    if (a.black.checked !== undefined && a.black.checked !== b.black.checked) {
+      console.log(
+        "black checked mismatch (" +
+          a.black.checked +
+          " vs " +
+          b.black.checked +
+          ")"
+      );
       return false;
+    }
 
     // compare checkmated
     if (
@@ -665,8 +682,16 @@ export function bCompareState(
     if (
       a.black.pieces !== undefined &&
       a.black.pieces.length !== b.black.pieces.length
-    )
+    ) {
+      console.log(
+        "black piece mismatch (" +
+          a.black.pieces.length +
+          " vs " +
+          b.black.pieces.length +
+          ")"
+      );
       return false;
+    }
 
     if (a.black.pieces !== undefined)
       for (let i = 0; i < a.black.pieces.length; i++) {
@@ -727,8 +752,16 @@ export function bCompareState(
     if (
       a.black.taken !== undefined &&
       a.black.taken.length !== b.black.taken.length
-    )
+    ) {
+      console.log(
+        "black taken mismatch (" +
+          a.black.taken.length +
+          " vs " +
+          b.black.taken.length +
+          ")"
+      );
       return false;
+    }
 
     if (a.black.taken !== undefined)
       for (let i = 0; i < a.black.taken.length; i++) {

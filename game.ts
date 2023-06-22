@@ -1,9 +1,9 @@
 import {
   BLACK,
   ChessterBoard,
-  ChessterBoardString,
   ChessterGameState,
   ChessterHistory,
+  ChessterLocation,
   ChessterMove,
   ChessterPiece,
   ChessterPlayer,
@@ -12,12 +12,7 @@ import {
   WHITE,
   moveTypes,
 } from "./types";
-import {
-  boardStringToBoard,
-  calculateTeam,
-  dCopyState,
-  defaultBoard,
-} from "./util";
+import { boardStringToBoard, dCopyState, defaultBoard } from "./util";
 
 export class ChessterGame {
   board: ChessterBoard = [[], [], [], [], [], [], [], []];
@@ -86,13 +81,13 @@ export class ChessterGame {
     let piece = this.board[move.from[0]][move.from[1]];
 
     // validate move
-    if (!piece) throw new Error("No piece at from location");
+    if (!piece) throw new Error("no piece at from location while moving");
     if (!this.simulation && piece.team !== this.turn)
       throw new Error("Wrong team");
 
     // handle special moves
     if (move.type === moveTypes.CASTLE) {
-      if (!move.castle) throw new Error('Castle move has no "castle" property');
+      if (!move.castle) throw new Error('castle move has no "castle" property');
 
       // move logic for castle
       this.board[move.castle.from[0]][move.castle.from[1]] = undefined;
@@ -123,7 +118,7 @@ export class ChessterGame {
       move.type === moveTypes.EN_PASSANT
     ) {
       if (!move.capture)
-        throw new Error('Capture move has no "capture" property');
+        throw new Error('capture move has no "capture" property');
 
       let capturedPiece = this.board[move.capture[0]][move.capture[1]]!;
 
@@ -146,6 +141,26 @@ export class ChessterGame {
             p.location[0] !== move.capture![0] ||
             p.location[1] !== move.capture![1]
         );
+      }
+    } else if (move.type === moveTypes.PROMOTION) {
+      if (!move.promotion)
+        throw new Error('promotion move has no "promotion" property');
+      piece.string = move.promotion;
+
+      if (piece.team === WHITE) {
+        this.white.pieces = this.white.pieces.filter(
+          (p) =>
+            p.location[0] !== move.from[0] || p.location[1] !== move.from[1]
+        );
+
+        this.white.pieces.push(piece);
+      } else {
+        this.black.pieces = this.black.pieces.filter(
+          (p) =>
+            p.location[0] !== move.from[0] || p.location[1] !== move.from[1]
+        );
+
+        this.black.pieces.push(piece);
       }
     }
 
@@ -177,7 +192,12 @@ export class ChessterGame {
     if (!validatePiece) throw new Error("No piece at from location");
 
     const move = this.getAvailableMoves(validatePiece).find((move) => {
-      return move.to[0] === to[0] && move.to[1] === to[1] && move.type === type;
+      return (
+        move.to[0] === to[0] &&
+        move.to[1] === to[1] &&
+        move.type === type &&
+        move.promotion === moveData.promotion
+      );
     });
 
     if (!move) throw new Error("Invalid move");
@@ -899,22 +919,56 @@ export class ChessterGame {
       ) &&
       !this.board[piece.location[0]][piece.location[1] + direction]
     ) {
-      moves.push({
-        from: piece.location,
-        to: [piece.location[0], piece.location[1] + direction],
-        type: moveTypes.MOVE,
-      });
-
-      // advancing two squares requires two vacant squares
+      // check promotion here
       if (
-        (piece.location[1] === 1 || piece.location[1] === 6) &&
-        !this.board[piece.location[0]][piece.location[1] + direction * 2]
+        (piece.team === WHITE && piece.location[1] === 6) ||
+        (piece.team === BLACK && piece.location[1] === 1)
       ) {
+        moves.push(
+          {
+            from: piece.location,
+            to: [piece.location[0], piece.location[1] + direction],
+            type: moveTypes.PROMOTION,
+            promotion: piece.team === WHITE ? "♕" : "♛",
+          },
+          {
+            from: piece.location,
+            to: [piece.location[0], piece.location[1] + direction],
+            type: moveTypes.PROMOTION,
+            promotion: piece.team === WHITE ? "♖" : "♜",
+          },
+          {
+            from: piece.location,
+            to: [piece.location[0], piece.location[1] + direction],
+            type: moveTypes.PROMOTION,
+            promotion: piece.team === WHITE ? "♗" : "♝",
+          },
+          {
+            from: piece.location,
+            to: [piece.location[0], piece.location[1] + direction],
+            type: moveTypes.PROMOTION,
+            promotion: piece.team === WHITE ? "♘" : "♞",
+          }
+        );
+      } else {
         moves.push({
           from: piece.location,
-          to: [piece.location[0], piece.location[1] + direction * 2],
+          to: [piece.location[0], piece.location[1] + direction],
           type: moveTypes.MOVE,
         });
+
+        // advancing two squares requires two vacant squares
+        if (
+          ((piece.team === WHITE && piece.location[1] === 1) ||
+            (piece.team === BLACK && piece.location[1] === 6)) &&
+          !this.board[piece.location[0]][piece.location[1] + direction * 2]
+        ) {
+          moves.push({
+            from: piece.location,
+            to: [piece.location[0], piece.location[1] + direction * 2],
+            type: moveTypes.MOVE,
+          });
+        }
       }
     }
 
@@ -992,5 +1046,24 @@ export class ChessterGame {
     }
 
     return moves;
+  }
+
+  countPiecesInBoundary(
+    boundary1: ChessterLocation,
+    boundary2: ChessterLocation,
+    options?: { team?: ChessterTeam }
+  ) {
+    let count = 0;
+    for (let i = boundary1[0]; i <= boundary2[0]; i++) {
+      for (let j = boundary1[1]; j <= boundary2[1]; j++) {
+        if (
+          this.board[i][j] &&
+          (options === undefined || this.board[i][j]!.team === options.team)
+        ) {
+          count++;
+        }
+      }
+    }
+    return count;
   }
 }

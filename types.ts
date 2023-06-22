@@ -50,7 +50,7 @@ export type ChessterMove = {
     to: ChessterLocation;
     piece: ChessterPiece;
   };
-  promotion?: ChessterPiece;
+  promotion?: ChessterPieceString;
   // en passant is a type of capture
 };
 
