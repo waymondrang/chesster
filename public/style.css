@@ -270,6 +270,14 @@ nav {
     border: var(--border-size, 0.25rem) solid #F25116;
 }
 
+.cell.moved_from {
+    border: var(--border-size, 0.25rem) solid #A882DD;
+}
+
+.cell.moved_to {
+    border: var(--border-size, 0.25rem) solid #A882DD;
+}
+
 .material-symbols-outlined {
     font-size: 18px;
     line-height: initial;
@@ -281,8 +289,14 @@ nav {
     }
 }
 
-@media (min-width: 800px) and (min-height: 800px) {
+@media (min-width: 700px) and (min-height: 700px) {
     :root {
         --primary-font-size: 2rem;
+    }
+}
+
+@media (min-width: 900px) and (min-height: 900px) {
+    :root {
+        --primary-font-size: 2.5rem;
     }
 }

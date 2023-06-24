@@ -1,1 +1,2 @@
 - use faster data structure for player pieces
+- cannot castle out of check

@@ -50,6 +50,16 @@ function clearAllHighlights(boardOfElements) {
   }
 }
 
+function clearLastMove(boardOfElements) {
+  for (let i = 0; i < 8; i++) {
+    for (let j = 0; j < 8; j++) {
+      for (let modifier of ["moved_from", "moved_to"]) {
+        boardOfElements[i][j].classList.remove(modifier);
+      }
+    }
+  }
+}
+
 function reloadBoard(boardOfData, boardOfElements) {
   clearAllHighlights(boardOfElements);
 
@@ -163,6 +173,12 @@ async function showPromotionModal(moves) {
           if (move) {
             console.log("move", move);
 
+            // change turn color instantly
+            turn_span.classList.remove(WHITE);
+            turn_span.classList.remove(BLACK);
+            turn_span.classList.add(turn == WHITE ? BLACK : WHITE);
+
+            // send move request
             let data = await fetch("/move", {
               method: "POST",
               headers: {
@@ -182,6 +198,18 @@ async function showPromotionModal(moves) {
             selectedElement = null;
             selectedElementMoves = [];
             reloadBoard(board, boardOfElements);
+            clearLastMove(boardOfElements);
+
+            if (json.moved) {
+              // mark moved spots
+              boardOfElements[7 - json.moved.from[1]][
+                json.moved.from[0]
+              ].classList.add("moved_from");
+              boardOfElements[7 - json.moved.to[1]][
+                json.moved.to[0]
+              ].classList.add("moved_to");
+            }
+
             return;
           }
 
@@ -248,6 +276,7 @@ async function showPromotionModal(moves) {
     selectedElement = null;
     selectedElementMoves = [];
     reloadBoard(board, boardOfElements);
+    clearLastMove(boardOfElements);
     return;
   });
 })();

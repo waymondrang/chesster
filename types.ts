@@ -25,6 +25,9 @@ export const WHITE = "WHITE";
 
 export const BLACK = "BLACK";
 
+export const MAX_PLAYER = 0;
+export const MIN_PLAYER = 1;
+
 export type ChessterBoard = (ChessterPiece | undefined)[][];
 export type ChessterBoardString = (ChessterPieceString | undefined)[][];
 

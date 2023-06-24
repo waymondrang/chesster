@@ -13,18 +13,18 @@ import { ChessterAI } from "./ai";
 const app = express();
 const game = new ChessterGame();
 
-const newBoard: ChessterBoardString = [
-  ["♜", "♞", "♝", "♛", "♚", "♝", "", ""],
-  ["♟︎", "♟︎", "♟︎", "♟︎", "♟︎", "♟︎", "", "♙"],
-  new Array(8).fill(undefined),
-  new Array(8).fill(undefined),
-  new Array(8).fill(undefined),
-  new Array(8).fill(undefined),
-  ["♙", "♙", "♙", "♙", "♙", "♙", "♙", "♙"],
-  ["♖", "♘", "♗", "♕", "♔", "♗", "♘", "♖"],
-];
+// const newBoard: ChessterBoardString = [
+//   ["♜", "♞", "♝", "♛", "♚", "♝", "", ""],
+//   ["♟︎", "♟︎", "♟︎", "♟︎", "♟︎", "♟︎", "", "♙"],
+//   new Array(8).fill(undefined),
+//   new Array(8).fill(undefined),
+//   new Array(8).fill(undefined),
+//   new Array(8).fill(undefined),
+//   ["♙", "♙", "♙", "♙", "♙", "♙", "♙", "♙"],
+//   ["♖", "♘", "♗", "♕", "♔", "♗", "♘", "♖"],
+// ];
 
-game.init({ board: boardStringToBoard(newBoard) });
+// game.init({ board: boardStringToBoard(newBoard) });
 
 app.use(express.static("public"));
 app.use(express.json());
@@ -79,7 +79,17 @@ app.post("/move", (request, response) => {
       throw new Error("ai returned undefined move");
     }
 
-    response.send({ board: game.board, turn: game.turn });
+    console.log("turn: " + game.turn);
+    console.log("white in check: " + game.white.checked);
+    console.log("black in check: " + game.black.checked);
+    console.log("white in checkmate: " + game.white.checkmated);
+    console.log("black in checkmate: " + game.black.checkmated);
+
+    response.send({
+      board: game.board,
+      moved: game.history.at(-1),
+      turn: game.turn,
+    });
   }
 });
 

@@ -33,6 +33,7 @@ export class ChessterGame {
   turn: ChessterTeam = WHITE;
   history: ChessterHistory = [];
   simulation: boolean = false;
+  zobristHash: number = 0;
 
   /**
    * Creates a new ChessterGame instance. (including init())
@@ -74,6 +75,19 @@ export class ChessterGame {
     }
 
     this.updateChecked();
+
+    // // todo: implement zobrist hashing
+    // var zobrist = new Uint32Array(13 * 2 * 64 * 2);
+    // for (let i = 0; i < zobrist.length; i++) {
+    //   zobrist[i] = Math.floor(Math.random() * 1000000000);
+    // }
+
+    // var table = new Uint32Array(3 * tablesize);
+  }
+
+  updateZobristHash() {
+    // todo: implement zobrist hashing
+    return;
   }
 
   move(move: ChessterMove) {
@@ -200,7 +214,7 @@ export class ChessterGame {
       );
     });
 
-    if (!move) throw new Error("Invalid move");
+    if (!move) throw new Error("Invalid move: " + JSON.stringify(moveData));
 
     this.move(move);
   }
