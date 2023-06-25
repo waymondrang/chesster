@@ -1,2 +1,3 @@
 node_modules/
 public/fonts/*.woff2
+public/bundle.js

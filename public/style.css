@@ -242,6 +242,14 @@ nav {
     background-color: #A69185;
 }
 
+.cell.moved_from {
+    background-color: #A882DD;
+}
+
+.cell.moved_to {
+    background-color: #A882DD;
+}
+
 .cell.selected {
     background-color: #F25116;
 }
@@ -268,14 +276,6 @@ nav {
 
 .cell:hover {
     border: var(--border-size, 0.25rem) solid #F25116;
-}
-
-.cell.moved_from {
-    border: var(--border-size, 0.25rem) solid #A882DD;
-}
-
-.cell.moved_to {
-    border: var(--border-size, 0.25rem) solid #A882DD;
 }
 
 .material-symbols-outlined {

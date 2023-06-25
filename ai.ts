@@ -91,7 +91,7 @@ export class ChessterAI {
 
   constructor(game: ChessterGame) {
     // game.turn will indicate the AI's team
-    this.game = new ChessterGame(dCopyState(game.getState()));
+    this.game = game;
     this.self = this.game.turn === WHITE ? this.game.white : this.game.black;
     this.root = new ChessterAINode(
       dCopyState(this.game.getState()),

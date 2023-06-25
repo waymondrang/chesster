@@ -9,95 +9,70 @@ import {
 } from "./types";
 import { boardStringToBoard } from "./util";
 import { ChessterAI } from "./ai";
+import { Server, Socket } from "socket.io";
+import { createServer } from "http";
 
 const app = express();
-const game = new ChessterGame();
-
-// const newBoard: ChessterBoardString = [
-//   ["♜", "♞", "♝", "♛", "♚", "♝", "", ""],
-//   ["♟︎", "♟︎", "♟︎", "♟︎", "♟︎", "♟︎", "", "♙"],
-//   new Array(8).fill(undefined),
-//   new Array(8).fill(undefined),
-//   new Array(8).fill(undefined),
-//   new Array(8).fill(undefined),
-//   ["♙", "♙", "♙", "♙", "♙", "♙", "♙", "♙"],
-//   ["♖", "♘", "♗", "♕", "♔", "♗", "♘", "♖"],
-// ];
-
-// game.init({ board: boardStringToBoard(newBoard) });
+const server = createServer(app);
+const io = new Server(server);
 
 app.use(express.static("public"));
 app.use(express.json());
 
-app.get("/chessboard", (request, response) => {
-  response.send({ board: game.board, turn: game.turn });
-});
+io.on("connection", (socket: Socket) => {
+  const game = new ChessterGame();
+  socket.emit("initState", game.getState());
 
-app.get("/moveTypes", (request, response) => {
-  response.send(moveTypes);
-});
+  socket.on("move", (data: ChessterMove) => {
+    game.validateAndMove(data);
 
-app.post("/getMoves", (request, response) => {
-  let data = request.body;
-  let piece = game.board[data.x][data.y];
-
-  if (!piece) {
-    response.send([]);
-    return;
-  }
-
-  let moves = game.getAvailableMoves(piece);
-  response.send(moves);
-});
-
-app.post("/move", (request, response) => {
-  const data: ChessterMove = request.body;
-
-  console.log("move: " + JSON.stringify(data));
-
-  game.validateAndMove(data);
-
-  console.log("turn: " + game.turn);
-  console.log("white in check: " + game.white.checked);
-  console.log("black in check: " + game.black.checked);
-  console.log("white in checkmate: " + game.white.checkmated);
-  console.log("black in checkmate: " + game.black.checkmated);
-
-  if (
-    (game.turn === WHITE && game.white.checkmated) ||
-    (game.turn === BLACK && game.black.checkmated)
-  ) {
-    console.log("checkmate (game over)");
-    response.send({ board: game.board, turn: game.turn, checkmate: true });
-  } else {
-    const ai = new ChessterAI(game);
-    const aiMove = ai.getNextMove();
-
-    if (aiMove) {
-      game.validateAndMove(aiMove);
+    if (
+      (game.turn === WHITE && game.white.checkmated) ||
+      (game.turn === BLACK && game.black.checkmated)
+    ) {
+      console.log("checkmate (game over)");
+      socket.emit("gameOver");
     } else {
-      throw new Error("ai returned undefined move");
+      const ai = new ChessterAI(game); // maybe move this to the top?
+      const aiMove = ai.getNextMove();
+
+      if (aiMove) {
+        game.validateAndMove(aiMove);
+      } else {
+        throw new Error("ai returned undefined move");
+      }
+
+      console.log("turn: " + game.turn);
+      console.log("white in check: " + game.white.checked);
+      console.log("black in check: " + game.black.checked);
+      console.log("white in checkmate: " + game.white.checkmated);
+      console.log("black in checkmate: " + game.black.checkmated);
+
+      socket.emit("aiMove", aiMove);
     }
+  });
 
-    console.log("turn: " + game.turn);
-    console.log("white in check: " + game.white.checked);
-    console.log("black in check: " + game.black.checked);
-    console.log("white in checkmate: " + game.white.checkmated);
-    console.log("black in checkmate: " + game.black.checkmated);
+  // socket.on("getMoves", (data: { x: number; y: number }) => {
+  //   let piece = game.board[data.x][data.y];
 
-    response.send({
-      board: game.board,
-      moved: game.history.at(-1),
-      turn: game.turn,
-    });
-  }
+  //   if (!piece) {
+  //     socket.emit("updateMoves", []);
+  //     return;
+  //   }
+
+  //   socket.emit("updateMoves", game.getAvailableMoves(piece));
+  // });
+
+  socket.on("disconnect", () => {
+    console.log("user disconnected");
+  });
 });
 
-app.post("/restart", (request, response) => {
-  game.init();
-  response.send({ board: game.board, turn: game.turn });
-});
+// app.post("/restart", (request, response) => {
+//   game.init();
+//   response.send({ board: game.board, turn: game.turn });
+// });
 
-app.listen(3000, () => {
+server.listen(3000, () => {
   console.log("chesster server listening at http://localhost:3000");
 });
