@@ -1,2 +1,3 @@
 - use faster data structure for player pieces
 - cannot castle out of check
+- create more comprehensive performance tests involving the AI, the number of iterations per unit time perhaps?
