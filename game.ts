@@ -303,13 +303,110 @@ export class ChessterGame {
     return true;
   }
 
+  /**
+   * now incorporates dCopyState
+   * @returns
+   */
   getState(): ChessterGameState {
+    let newBoard: ChessterPiece[][] = [[], [], [], [], [], [], [], []];
+    for (let i = 0; i < 8; i++) {
+      for (let j = 0; j < 8; j++) {
+        if (this.board[i][j])
+          newBoard[i][j] = {
+            location: [
+              this.board[i][j]!.location[0],
+              this.board[i][j]!.location[1],
+            ],
+            string: this.board[i][j]!.string,
+            team: this.board[i][j]!.team,
+            moved: this.board[i][j]!.moved,
+          };
+      }
+    }
+    let newWhite: ChessterPlayer = {
+      pieces: [],
+      taken: [],
+      checked: this.white.checked,
+      checkmated: this.white.checkmated,
+      team: WHITE,
+    };
+    let newBlack: ChessterPlayer = {
+      pieces: [],
+      taken: [],
+      checked: this.black.checked,
+      checkmated: this.black.checkmated,
+      team: BLACK,
+    };
+
+    for (let piece of this.white.pieces) {
+      newWhite.pieces.push({
+        location: [piece.location[0], piece.location[1]],
+        string: piece.string,
+        team: piece.team,
+        moved: piece.moved,
+      });
+    }
+
+    for (let piece of this.white.taken) {
+      newWhite.taken.push({
+        location: [piece.location[0], piece.location[1]],
+        string: piece.string,
+        team: piece.team,
+        moved: piece.moved,
+      });
+    }
+
+    for (let piece of this.black.pieces) {
+      newBlack.pieces.push({
+        location: [piece.location[0], piece.location[1]],
+        string: piece.string,
+        team: piece.team,
+        moved: piece.moved,
+      });
+    }
+
+    for (let piece of this.black.taken) {
+      newBlack.taken.push({
+        location: [piece.location[0], piece.location[1]],
+        string: piece.string,
+        team: piece.team,
+        moved: piece.moved,
+      });
+    }
+
+    let newHistory: ChessterMove[] = [];
+
+    for (let move of this.history) {
+      newHistory.push({
+        from: [move.from[0], move.from[1]],
+        to: [move.to[0], move.to[1]],
+        type: move.type,
+        capture: move.capture ? [move.capture[0], move.capture[1]] : undefined,
+        castle: move.castle
+          ? {
+              from: [move.castle.from[0], move.castle.from[1]],
+              to: [move.castle.to[0], move.castle.to[1]],
+              piece: {
+                location: [
+                  move.castle.piece.location[0],
+                  move.castle.piece.location[1],
+                ],
+                string: move.castle.piece.string,
+                team: move.castle.piece.team,
+                moved: move.castle.piece.moved,
+              },
+            }
+          : undefined,
+        promotion: move.promotion,
+      });
+    }
+
     return {
-      board: this.board,
+      board: newBoard,
       turn: this.turn,
-      white: this.white,
-      black: this.black,
-      history: this.history,
+      white: newWhite,
+      black: newBlack,
+      history: newHistory,
       simulation: this.simulation,
     };
   }

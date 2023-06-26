@@ -7,13 +7,7 @@
 /////////////////////
 
 import { ChessterGame } from "./game";
-import {
-  ChessterGameState,
-  ChessterLocation,
-  ChessterMove,
-  ChessterPiece,
-  ChessterPieceString,
-} from "./types";
+import { ChessterGameState, ChessterMove, ChessterPieceString } from "./types";
 import { io } from "socket.io-client";
 
 ////////////////////////////////
