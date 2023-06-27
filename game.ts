@@ -14,8 +14,19 @@ import {
 } from "./types";
 import { boardStringToBoard, dCopyState, defaultBoard } from "./util";
 
+const boardSize = 64;
+
 export class ChessterGame {
-  board: ChessterBoard = [[], [], [], [], [], [], [], []];
+  r0: number; // row 0 (bottom)
+  r1: number;
+  r2: number;
+  r3: number;
+  r4: number;
+  r5: number;
+  r6: number;
+  r7: number; // row 7 (top)
+  board: Uint8Array;
+  buffer: ArrayBuffer;
   white: ChessterPlayer = {
     team: WHITE,
     pieces: [],
@@ -43,8 +54,16 @@ export class ChessterGame {
   }
 
   init(state?: RecursivePartial<ChessterGameState>) {
-    this.board =
-      <ChessterBoard>state?.board || boardStringToBoard(defaultBoard);
+    this.r0 = 0b00000000000000000000000000000000;
+    this.r1 = 0b00000000000000000000000000000000;
+    this.r1 = 0b00000000000000000000000000000000;
+    this.r1 = 0b00000000000000000000000000000000;
+    this.r1 = 0b00000000000000000000000000000000;
+    this.r1 = 0b00000000000000000000000000000000;
+    this.r1 = 0b00000000000000000000000000000000;
+    this.r1 = 0b00000000000000000000000000000000;
+    this.buffer = new ArrayBuffer(boardSize);
+    this.board = new Uint8Array(this.buffer);
     this.white = {
       team: WHITE,
       pieces: [],
@@ -88,6 +107,10 @@ export class ChessterGame {
   updateZobristHash() {
     // todo: implement zobrist hashing
     return;
+  }
+
+  isSpaceEmpty(value: number) {
+    return (value & 0b1110) === 0;
   }
 
   move(move: ChessterMove) {
