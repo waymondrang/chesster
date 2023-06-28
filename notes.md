@@ -11,6 +11,18 @@
 | king       | 110         |
 | (unused)   | 111         |
 
+| move                | bit pattern |
+| ------------------- | ----------- |
+| move                | 0000        |
+| capture             | 0001        |
+| castle (king side)  | 0010        |
+| castle (queen side) | 0011        |
+| en passant          | 0100        |
+| promotion (queen)   | 0101        |
+| promotion (knight)  | 0110        |
+| promotion (bishop)  | 0111        |
+| promotion (rook)    | 1000        |
+
 | team  | bit value |
 | ----- | --------- |
 | white | 0         |
@@ -18,19 +30,96 @@
 
 \[piece (3 bits)\]\[team (1 bit)\]
 
+### move bit representation
+
+\[move location (6 bits from 0 to 63)\]\[move type (4 bits)\]\[original piece (4 bits)\]
+
 ### default starting position representation
 
-|      |      |      |      |      |      |      |      |
-| ---- | ---- | ---- | ---- | ---- | ---- | ---- | ---- |
-| 1001 | 0101 | 0111 | 1011 | 1101 | 0111 | 0101 | 1001 |
-| 1001 | 1001 | 1001 | 1001 | 1001 | 1001 | 1001 | 1001 |
-| 0000 | 0000 | 0000 | 0000 | 0000 | 0000 | 0000 | 0000 |
-| 0000 | 0000 | 0000 | 0000 | 0000 | 0000 | 0000 | 0000 |
-| 0000 | 0000 | 0000 | 0000 | 0000 | 0000 | 0000 | 0000 |
-| 0000 | 0000 | 0000 | 0000 | 0000 | 0000 | 0000 | 0000 |
-| 0000 | 0000 | 0000 | 0000 | 0000 | 0000 | 0000 | 0000 |
-| 0000 | 0000 | 0000 | 0000 | 0000 | 0000 | 0000 | 0000 |
-| 0000 | 0000 | 0000 | 0000 | 0000 | 0000 | 0000 | 0000 |
-| 0000 | 0000 | 0000 | 0000 | 0000 | 0000 | 0000 | 0000 |
-| 1000 | 1000 | 1000 | 1000 | 1000 | 1000 | 1000 | 1000 |
-| 1000 | 0100 | 0110 | 1010 | 1100 | 0110 | 0100 | 1000 |
+| 0    | 1    | 2    | 3    | 4    | 5    | 6    | 7 ... |
+| ---- | ---- | ---- | ---- | ---- | ---- | ---- | ----- |
+| 1001 | 0101 | 0111 | 1011 | 1101 | 0111 | 0101 | 1001  |
+| 1001 | 1001 | 1001 | 1001 | 1001 | 1001 | 1001 | 1001  |
+| 0000 | 0000 | 0000 | 0000 | 0000 | 0000 | 0000 | 0000  |
+| 0000 | 0000 | 0000 | 0000 | 0000 | 0000 | 0000 | 0000  |
+| 0000 | 0000 | 0000 | 0000 | 0000 | 0000 | 0000 | 0000  |
+| 0000 | 0000 | 0000 | 0000 | 0000 | 0000 | 0000 | 0000  |
+| 0000 | 0000 | 0000 | 0000 | 0000 | 0000 | 0000 | 0000  |
+| 0000 | 0000 | 0000 | 0000 | 0000 | 0000 | 0000 | 0000  |
+| 0000 | 0000 | 0000 | 0000 | 0000 | 0000 | 0000 | 0000  |
+| 0000 | 0000 | 0000 | 0000 | 0000 | 0000 | 0000 | 0000  |
+| 1000 | 1000 | 1000 | 1000 | 1000 | 1000 | 1000 | 1000  |
+| 1000 | 0100 | 0110 | 1010 | 1100 | 0110 | 0100 | 1000  |
+
+### board bit representation
+
+| 0      | 1      | 2      | 3      | 4      | 5      | 6      | 7 ...  |
+| ------ | ------ | ------ | ------ | ------ | ------ | ------ | ------ |
+| 000000 | 000001 | 000010 | 000011 | 000100 | 000101 | 000110 | 000111 |
+| 001000 | 001001 | 001010 | 001011 | 001100 | 001101 | 001110 | 001111 |
+| 010000 | 010001 | 010010 | 010011 | 010100 | 010101 | 010110 | 010111 |
+| 011000 | 011001 | 011010 | 011011 | 011100 | 011101 | 011110 | 011111 |
+| 100000 | 100001 | 100010 | 100011 | 100100 | 100101 | 100110 | 100111 |
+| 101000 | 101001 | 101010 | 101011 | 101100 | 101101 | 101110 | 101111 |
+| 110000 | 110001 | 110010 | 110011 | 110100 | 110101 | 110110 | 110111 |
+| 111000 | 111001 | 111010 | 111011 | 111100 | 111101 | 111110 | 111111 |
+
+### iteration/data type results
+
+```
+uint8: 658.7679600119591ms
+uint32: 661.0946100115776ms
+buffer: 652.7213200330734ms
+arrayFor: 622.7894200086594ms
+arrayWhile: 607.817779994011ms
+nestedArrayTestWhile: 723.1028299808502ms
+chessterBoard: 0ms
+```
+
+```
+uint8: 683.5581399798393ms
+uint32: 672.319019985199ms
+buffer: 677.8230999946594ms
+arrayFor: 648.0823300004006ms
+arrayWhile: 619.2686400175095ms
+arrayPushWhile: 643.2715700149536ms
+nestedArrayTestWhile: 716.3691900014877ms
+```
+
+arrayWhile is clearly the winner!
+
+### getWhihteKingMoves
+
+using only if statements
+
+```
+liveGenerateMoveTest: 1000000 iterations took 6626.551499962807ms
+liveGenerateMoveTest: 1000000 iterations took 6988.545799970627ms
+liveGenerateMoveTest: 1000000 iterations took 6437.332000017166ms
+liveGenerateMoveTest: 1000000 iterations took 6421.122200012207ms
+liveGenerateMoveTest: 1000000 iterations took 6447.907799959183ms
+liveGenerateMoveTest: 1000000 iterations took 6424.315500020981ms
+liveGenerateMoveTest: 1000000 iterations took 6474.685600042343ms
+liveGenerateMoveTest: 1000000 iterations took 6424.331400036812ms
+liveGenerateMoveTest: 1000000 iterations took 6411.646800041199ms
+liveGenerateMoveTest: 1000000 iterations took 6536.028600096703ms
+preGenerate: 0ms
+liveGenerate: 6519.246720016003ms
+```
+
+using bitwise and loop
+
+```
+liveGenerateMoveTest: 1000000 iterations took 6689.716600060463ms
+liveGenerateMoveTest: 1000000 iterations took 6601.729099988937ms
+liveGenerateMoveTest: 1000000 iterations took 6713.074100017548ms
+liveGenerateMoveTest: 1000000 iterations took 6500.011300086975ms
+liveGenerateMoveTest: 1000000 iterations took 6548.257400035858ms
+liveGenerateMoveTest: 1000000 iterations took 6611.903599977493ms
+liveGenerateMoveTest: 1000000 iterations took 6514.960600018501ms
+liveGenerateMoveTest: 1000000 iterations took 6569.82539999485ms
+liveGenerateMoveTest: 1000000 iterations took 6515.367999911308ms
+liveGenerateMoveTest: 1000000 iterations took 6565.6209000349045ms
+preGenerate: 0ms
+liveGenerate: 6583.046700012684ms
+```

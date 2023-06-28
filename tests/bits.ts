@@ -1,10 +1,6 @@
 // first 3 bits represent piece, next bit represents team
 // team: 0 represents white, 1 represents black
 
-function dec2bin(dec: number) {
-  return (dec >>> 0).toString(2);
-}
-
 const pieces = [
   0b0000, // king
   0b0001, // queen

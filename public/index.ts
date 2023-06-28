@@ -6,8 +6,8 @@
 //     imports     //
 /////////////////////
 
-import { ChessterGame } from "./game";
-import { ChessterGameState, ChessterMove, ChessterPieceString } from "./types";
+import { ChessterGame } from "../game";
+import { ChessterGameState, ChessterMove, ChessterPieceString } from "../types";
 import { io } from "socket.io-client";
 
 ////////////////////////////////
@@ -127,7 +127,7 @@ function updateBoard(gameState: GameState) {
 function updateTurnIndicator(gameState: GameState) {
   turn_span.classList.remove(WHITE);
   turn_span.classList.remove(BLACK);
-  turn_span.classList.add(gameState.turn);
+  turn_span.classList.add(gameState.turn.toString());
 }
 
 promotion_close.addEventListener("click", () => {

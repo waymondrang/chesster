@@ -1,3 +1,37 @@
+export const boardSize = 64,
+  boardLength = 8,
+  boardWidth = 8,
+  WHITE = 0,
+  BLACK = 1,
+  MAX_PLAYER = 0,
+  MIN_PLAYER = 1,
+  moveTypes = {
+    MOVE: 0b0000,
+    CAPTURE: 0b0001,
+    CASTLE_KINGSIDE: 0b0010,
+    CASTLE_QUEENSIDE: 0b0011,
+    EN_PASSANT: 0b0100,
+    PROMOTION_QUEEN: 0b0101,
+    PROMOTION_KNIGHT: 0b0110,
+    PROMOTION_BISHOP: 0b0111,
+    PROMOTION_ROOK: 0b1000,
+  },
+  defaultBoardString: ChessterBoardString = [
+    ["♜", "♞", "♝", "♛", "♚", "♝", "♞", "♜"],
+    ["♟︎", "♟︎", "♟︎", "♟︎", "♟︎", "♟︎", "♟︎", "♟︎"],
+    new Array(8).fill(undefined),
+    new Array(8).fill(undefined),
+    new Array(8).fill(undefined),
+    new Array(8).fill(undefined),
+    ["♙", "♙", "♙", "♙", "♙", "♙", "♙", "♙"],
+    ["♖", "♘", "♗", "♕", "♔", "♗", "♘", "♖"],
+  ],
+  defaultBoard = [
+    9, 5, 7, 11, 13, 7, 5, 9, 3, 3, 3, 3, 3, 3, 3, 3, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+    0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 2, 2,
+    2, 2, 2, 2, 2, 2, 8, 4, 6, 10, 12, 6, 4, 8,
+  ];
+
 export type ChessterPieceString =
   | "♔"
   | "♕"
@@ -13,22 +47,8 @@ export type ChessterPieceString =
   | "♟︎"
   | "♞";
 
-export const moveTypes = {
-  MOVE: "MOVE",
-  CAPTURE: "CAPTURE",
-  CASTLE: "CASTLE",
-  EN_PASSANT: "EN_PASSANT",
-  PROMOTION: "PROMOTION",
-};
+export type ChessterBoard = Array<number>;
 
-export const WHITE = "WHITE";
-
-export const BLACK = "BLACK";
-
-export const MAX_PLAYER = 0;
-export const MIN_PLAYER = 1;
-
-export type ChessterBoard = (ChessterPiece | undefined)[][];
 export type ChessterBoardString = (ChessterPieceString | undefined)[][];
 
 export type ChessterTeam = typeof WHITE | typeof BLACK;
@@ -36,29 +56,16 @@ export type ChessterTeam = typeof WHITE | typeof BLACK;
 export type ChessterLocation = [number, number];
 
 export type ChessterPlayer = {
-  team: ChessterTeam;
   pieces: ChessterPiece[];
   taken: ChessterPiece[];
   checked: boolean;
   checkmated: boolean;
 };
 
-export type ChessterMove = {
-  from: ChessterLocation;
-  to: ChessterLocation;
-  type: (typeof moveTypes)[keyof typeof moveTypes];
-  capture?: ChessterLocation;
-  castle?: {
-    from: ChessterLocation;
-    to: ChessterLocation;
-    piece: ChessterPiece;
-  };
-  promotion?: ChessterPieceString;
-  // en passant is a type of capture
-};
+export type ChessterMove = number;
 
 export type ChessterGameState = {
-  board: ChessterBoard;
+  board: Array<number>;
   white: ChessterPlayer;
   black: ChessterPlayer;
   history: ChessterHistory;
@@ -75,13 +82,7 @@ export type PartialChessterGameState = {
   simulation?: boolean;
 };
 
-export type ChessterPiece = {
-  string: ChessterPieceString;
-  team: ChessterTeam;
-  moved: boolean;
-  location: ChessterLocation;
-};
-
+export type ChessterPiece = number;
 export type ChessterHistory = ChessterMove[];
 
 // https://stackoverflow.com/a/51365037
