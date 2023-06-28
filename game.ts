@@ -1,11 +1,13 @@
 import {
   BLACK,
   ChessterBoard,
+  ChessterBoardString,
   ChessterGameState,
   ChessterHistory,
   ChessterLocation,
   ChessterMove,
   ChessterPiece,
+  ChessterPieceString,
   ChessterPlayer,
   ChessterTeam,
   RecursivePartial,
@@ -89,9 +91,11 @@ export class ChessterGame {
    * Given a valid fen string (currently, the params (w/b, etc) at the end aren't supported)
    * return a ChessterBoardString of the fen string
    */
-  readFenString(fen: string) {
+  static readFenString(fen: string): ChessterBoardString {
     // conversions for fen characters to Chesster string pieces
-    let fenToPiece = {
+    const fenToPiece: {
+      [key: string]: ChessterPieceString;
+    } = {
       p: "♟︎",
       r: "♜",
       n: "♞",
@@ -107,13 +111,14 @@ export class ChessterGame {
     };
 
     // split by lines
-    let lines = fen.split("/");
+    const lines = fen.split("/");
     // characters read into current_line, appended to board once reaches size of 8
-    let newBoard = [];
-    let currentLine = [];
+    let newBoard: ChessterBoardString = [];
+    let currentLine: ChessterPieceString[] = [];
 
     for (let i = 0; i < lines.length; i++) {
-      let line = lines[i];
+      const line = lines[i];
+
       for (let j = 0; j < line.length; j++) {
         let ch = line[j];
         let spaceCount = parseInt(ch);
