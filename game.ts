@@ -89,52 +89,52 @@ export class ChessterGame {
    * Given a valid fen string (currently, the params (w/b, etc) at the end aren't supported)
    * return a ChessterBoardString of the fen string
    */
-  read_fen_string(fen: string) {
+  readFenString(fen: string) {
     // conversions for fen characters to Chesster string pieces
-    let fen_to_piece = {
-      "p": "♟︎",
-      "r": "♜",
-      "n": "♞",
-      "b": "♝",
-      "q": "♛",
-      "k": "♚",
-      "P": "♙",
-      "R": "♖",
-      "N": "♘",
-      "B": "♗",
-      "Q": "♕",
-      "K": "♔",
-    }
+    let fenToPiece = {
+      p: "♟︎",
+      r: "♜",
+      n: "♞",
+      b: "♝",
+      q: "♛",
+      k: "♚",
+      P: "♙",
+      R: "♖",
+      N: "♘",
+      B: "♗",
+      Q: "♕",
+      K: "♔",
+    };
 
     // split by lines
-    let lines = fen.split("/")
+    let lines = fen.split("/");
     // characters read into current_line, appended to board once reaches size of 8
-    let board = []
-    let current_line = []
+    let newBoard = [];
+    let currentLine = [];
 
     for (let i = 0; i < lines.length; i++) {
-        let line = lines[i]
-        for (let j = 0; j < line.length; j++) {
-            let ch = line[j]
-            let space_count = parseInt(ch)
-            
-            if (isNaN(space_count)) {
-              // if is not a number, try to read in as a piece
-              current_line.push(fen_to_piece[ch])
-            } else {
-              // otherwise skip as many spaces
-              current_line = current_line.concat(Array(space_count).fill(undefined))
-            }
+      let line = lines[i];
+      for (let j = 0; j < line.length; j++) {
+        let ch = line[j];
+        let spaceCount = parseInt(ch);
 
-            // if line is full, start a new one
-            if (current_line.length == 8) {
-              board.push(current_line)
-              current_line = []
-            }
+        if (isNaN(spaceCount)) {
+          // if is not a number, try to read in as a piece
+          currentLine.push(fenToPiece[ch]);
+        } else {
+          // otherwise skip as many spaces
+          currentLine = currentLine.concat(Array(spaceCount).fill(undefined));
         }
+
+        // if line is full, start a new one
+        if (currentLine.length == 8) {
+          newBoard.push(currentLine);
+          currentLine = [];
+        }
+      }
     }
 
-    return board
+    return newBoard;
   }
 
   updateZobristHash() {
@@ -579,6 +579,7 @@ export class ChessterGame {
     // castling
     if (
       piece.team === WHITE &&
+      this.white.checked === false &&
       piece.location[1] === 0 &&
       piece.location[0] === 4 &&
       piece.moved === false
@@ -629,6 +630,7 @@ export class ChessterGame {
 
     if (
       piece.team === BLACK &&
+      this.black.checked === false &&
       piece.location[1] === 7 &&
       piece.location[0] === 4 &&
       piece.moved === false
