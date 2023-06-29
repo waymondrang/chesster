@@ -7,8 +7,21 @@
 /////////////////////
 
 import { ChessterGame } from "../game";
-import { ChessterGameState, ChessterMove, ChessterPieceString } from "../types";
+import {
+  BLACK,
+  ChessterBoard,
+  ChessterGameState,
+  ChessterHistory,
+  ChessterMove,
+  ChessterPieceString,
+  ChessterPlayer,
+  ChessterTeam,
+  WHITE,
+  boardSize,
+  moveTypes,
+} from "../types";
 import { io } from "socket.io-client";
+import { getBinaryString, getKeyByValue, numberToPieceString } from "../util";
 
 ////////////////////////////////
 //     constant variables     //
@@ -21,18 +34,6 @@ const promotion_close = document.querySelector("#promotion-close")!;
 const promotion = document.querySelector("#promotion")!;
 const promotion_options = document.querySelector("#promotion-options")!;
 
-const WHITE = "WHITE";
-const BLACK = "BLACK";
-const moveTypes: {
-  [key: string]: string;
-} = {
-  MOVE: "MOVE",
-  CAPTURE: "CAPTURE",
-  CASTLE: "CASTLE",
-  EN_PASSANT: "EN_PASSANT",
-  PROMOTION: "PROMOTION",
-};
-
 const socket = io();
 const game = new ChessterGame();
 
@@ -40,15 +41,14 @@ const game = new ChessterGame();
 //     types     //
 ///////////////////
 
-type ElementBoard = HTMLElement[][];
-type GameState = Omit<ChessterGameState, "white" | "black">;
+type ElementBoard = HTMLElement[];
 
 ////////////////////////////////
 //     variable variables     //
 ////////////////////////////////
 
 // contains the board's positions as elements
-var elementBoard: ElementBoard = [[], [], [], [], [], [], [], []];
+var elementBoard: ElementBoard = [];
 
 // contains game data, mini version of game state
 // var gameState: GameState;
@@ -82,52 +82,43 @@ function calculateTeam(piece: ChessterPieceString) {
 }
 
 function clearMoveHighlights() {
-  for (let i = 0; i < 8; i++) {
-    for (let j = 0; j < 8; j++) {
-      for (let modifier of [
-        ...Object.keys(moveTypes).map((moveType) => moveTypes[moveType]),
-        "selected",
-      ]) {
-        elementBoard[i][j].classList.remove(modifier);
-      }
+  for (let i = 0; i < boardSize; i++) {
+    for (let modifier of [...Object.keys(moveTypes), "selected"]) {
+      elementBoard[i].classList.remove(modifier);
     }
   }
 }
 
-function updateLastMove(gameState: GameState) {
+function updateLastMove(gameHistory: ChessterHistory) {
   for (let i = 0; i < 8; i++) {
-    for (let j = 0; j < 8; j++) {
-      for (let modifier of ["moved_from", "moved_to"]) {
-        elementBoard[i][j].classList.remove(modifier);
-      }
+    for (let modifier of ["moved_from", "moved_to"]) {
+      elementBoard[i].classList.remove(modifier);
     }
   }
 
-  if (gameState.history.length > 0) {
-    let lastMove = gameState.history[gameState.history.length - 1];
-    let from = lastMove.from;
-    let to = lastMove.to;
-    elementBoard[7 - from[1]][from[0]].classList.add("moved_from");
-    elementBoard[7 - to[1]][to[0]].classList.add("moved_to");
+  if (gameHistory.length > 0) {
+    let lastMove = gameHistory[gameHistory.length - 1];
+    let from = (lastMove >> 14) & 0b111111;
+    let to = (lastMove >> 8) & 0b111111;
+    elementBoard[from].classList.add("moved_from");
+    elementBoard[to].classList.add("moved_to");
   }
 }
 
-function updateBoard(gameState: GameState) {
+function updateBoard(gameBoard: ChessterBoard) {
   clearMoveHighlights();
 
-  for (let i = 0; i < 8; i++) {
-    for (let j = 0; j < 8; j++) {
-      let piece = gameState.board[j][i];
-      elementBoard[7 - i][j].innerHTML = "";
-      if (piece) elementBoard[7 - i][j].textContent = piece.string;
-    }
+  for (let i = 0; i < boardSize; i++) {
+    elementBoard[i].innerHTML = "";
+    if (gameBoard[i] !== 0)
+      elementBoard[i].textContent = numberToPieceString(gameBoard[i]);
   }
 }
 
-function updateTurnIndicator(gameState: GameState) {
-  turn_span.classList.remove(WHITE);
-  turn_span.classList.remove(BLACK);
-  turn_span.classList.add(gameState.turn.toString());
+function updateTurnIndicator(gameTurn: ChessterTeam) {
+  turn_span.classList.remove(WHITE.toString());
+  turn_span.classList.remove(BLACK.toString());
+  turn_span.classList.add(gameTurn.toString());
 }
 
 promotion_close.addEventListener("click", () => {
@@ -136,41 +127,17 @@ promotion_close.addEventListener("click", () => {
   chessboard.classList.remove("disabled");
 });
 
-async function showPromotionModal(moves: ChessterMove[]) {
-  return new Promise((resolve, reject) => {
-    promotion.classList.remove("hidden");
-    chessboard.classList.add("disabled");
-    for (let move of moves) {
-      let button = document.createElement("button");
-      button.textContent = move.promotion || "";
-
-      button.addEventListener("click", async () => {
-        console.log("clicked", move.promotion);
-
-        promotion.classList.add("hidden");
-        promotion_options.replaceChildren();
-        chessboard.classList.remove("disabled");
-
-        resolve(move);
-      });
-      promotion_options.appendChild(button);
-    }
-  });
-}
-
 function clientMove(move: ChessterMove) {
   aiMove(move);
-  socket.emit("move", move);
+  socket.emit("move", getBinaryString(move));
 }
 
 function aiMove(move: ChessterMove) {
   game.move(move);
 
-  const gameState = game.getState();
-
-  updateBoard(gameState);
-  updateTurnIndicator(gameState);
-  updateLastMove(gameState);
+  updateBoard(game.board);
+  updateTurnIndicator(game.turn as ChessterTeam);
+  updateLastMove(game.history);
   clearMoveHighlights();
 
   selectedPieceElement = null;
@@ -181,102 +148,120 @@ function aiMove(move: ChessterMove) {
 //     initialize board     //
 //////////////////////////////
 
-for (let i = 0; i < 8; i++) {
-  for (let j = 0; j < 8; j++) {
-    const cell = document.createElement("div");
+let pattern = 1;
 
-    cell.classList.add("cell");
-    cell.classList.add((i + j) % 2 == 0 ? "variant1" : "variant2");
+for (let i = 0; i < boardSize; i++) {
+  const cell = document.createElement("div");
 
-    chessboard.appendChild(cell);
+  cell.classList.add("cell");
 
-    elementBoard[i].push(cell);
+  if (i % 8 == 0) pattern ^= 1;
+  cell.classList.add(i % 2 === pattern ? "variant1" : "variant2");
 
-    (() => {
-      cell.addEventListener("click", (event) => {
-        // toggle selected cell
-        event.preventDefault();
+  chessboard.appendChild(cell);
 
-        if (selectedPieceElement === cell) {
-          console.log("deselecting piece");
-          clearMoveHighlights();
-          selectedPieceElement = null;
-          selectedPieceMoves = [];
-          return;
-        }
+  elementBoard.push(cell);
 
-        let selectedMoves = selectedPieceMoves.filter(
-          (move) => move.to[0] === j && move.to[1] === 7 - i
-        );
+  (() => {
+    cell.addEventListener("click", (event) => {
+      // toggle selected cell
+      event.preventDefault();
 
-        if (selectedMoves.length > 0) {
-          console.log("selectedMoves", selectedMoves);
+      console.log("selected piece: " + getBinaryString(game.board[i]));
 
-          if (selectedMoves.length > 1) {
-            if (selectedMoves[0].type !== moveTypes.PROMOTION)
-              throw new Error(
-                "invalid multi-move type: " + selectedMoves[0].type
-              );
-
-            // make promotion modal visible
-            promotion.classList.remove("hidden");
-            chessboard.classList.add("disabled");
-
-            for (let move of selectedMoves) {
-              let button = document.createElement("button");
-
-              button.textContent = move.promotion || "";
-
-              button.addEventListener("click", async () => {
-                promotion.classList.add("hidden");
-                promotion_options.replaceChildren(); // clear buttons
-                chessboard.classList.remove("disabled");
-
-                clientMove(move);
-              });
-
-              promotion_options.appendChild(button);
-            }
-          } else {
-            clientMove(selectedMoves[0]);
-          }
-
-          return;
-        }
-
+      if (selectedPieceElement === cell) {
+        console.log("deselecting piece");
         clearMoveHighlights();
         selectedPieceElement = null;
         selectedPieceMoves = [];
+        return;
+      }
 
-        if (
-          game.board[j][7 - i] === undefined ||
-          game.board[j][7 - i].team !== game.turn
-        )
-          return;
+      let selectedMoves = selectedPieceMoves.filter(
+        (move) => ((move >> 1) & 0b111) === i
+      );
 
-        cell.classList.toggle("selected");
+      if (selectedMoves.length > 0) {
+        console.log("selectedMoves", selectedMoves);
 
-        const moves = game.getAvailableMoves(game.board[j][7 - i]);
+        if (selectedMoves.length > 1) {
+          if (((selectedMoves[0] >> 8) & 0b1) !== 1)
+            throw new Error(
+              "invalid multi-move type: " + getBinaryString(selectedMoves[0])
+            );
 
-        for (let move of moves) {
-          elementBoard[7 - move.to[1]][move.to[0]].classList.add(move.type);
+          // make promotion modal visible
+          promotion.classList.remove("hidden");
+          chessboard.classList.add("disabled");
+
+          for (let move of selectedMoves) {
+            let button = document.createElement("button");
+
+            // button.textContent = move.promotion || "";
+
+            switch ((move >> 4) & 0b1111) {
+              case moveTypes.PROMOTION_QUEEN:
+                button.textContent = move & 0b1 ? "♛" : "♕";
+                break;
+              case moveTypes.PROMOTION_ROOK:
+                button.textContent = move & 0b1 ? "♜" : "♖";
+                break;
+              case moveTypes.PROMOTION_BISHOP:
+                button.textContent = move & 0b1 ? "♝" : "♗";
+                break;
+              case moveTypes.PROMOTION_KNIGHT:
+                button.textContent = move & 0b1 ? "♞" : "♘";
+                break;
+            }
+
+            button.addEventListener("click", async () => {
+              promotion.classList.add("hidden");
+              promotion_options.replaceChildren(); // clear buttons
+              chessboard.classList.remove("disabled");
+
+              clientMove(move);
+            });
+
+            promotion_options.appendChild(button);
+          }
+        } else {
+          clientMove(selectedMoves[0]);
         }
 
-        selectedPieceElement = cell;
-        selectedPieceMoves = moves;
-      });
-    })();
-  }
+        return;
+      }
+
+      clearMoveHighlights();
+      selectedPieceElement = null;
+      selectedPieceMoves = [];
+
+      if (game.board[i] === undefined || (game.board[i] & 0b1) !== game.turn)
+        return;
+
+      cell.classList.toggle("selected");
+
+      const moves = game.getAvailableMoves(i);
+
+      for (let move of moves) {
+        elementBoard[(move >> 8) & 0b111111].classList.add(
+          getKeyByValue(moveTypes, (move >> 4) & 0b1111) as string
+        );
+      }
+
+      selectedPieceElement = cell;
+      selectedPieceMoves = moves;
+    });
+  })();
 }
 
-socket.on("initState", (data: GameState) => {
+socket.on("initState", (data: ChessterGameState) => {
   game.init(data);
-  updateBoard(data);
-  updateTurnIndicator(data);
-  updateLastMove(data);
+  updateBoard(data.board);
+  updateTurnIndicator(data.turn as ChessterTeam);
+  updateLastMove(data.history);
 });
 
-socket.on("aiMove", (move: ChessterMove) => {
+socket.on("aiMove", (move: ChessterMove, location: number) => {
   console.log("aiMove", move);
   aiMove(move);
 });

@@ -19,11 +19,15 @@ export function generateRandomInteger(min: number, max: number) {
   return Math.floor(Math.random() * (max - min + 1)) + min;
 }
 
+export function getKeyByValue(object: any, value: any) {
+  return Object.keys(object).find((key) => object[key] === value);
+}
+
 /**
  * Given a valid fen string (currently, the params (w/b, etc) at the end aren't supported)
  * return a ChessterBoardString of the fen string
  */
-export function fenStringToBoard(fen: string): Array<number> {
+export function fenStringToBoard(fen: string): number[] {
   // conversions for fen characters to Chesster string pieces
   let fenToPiece = {
     p: 0b0011,
@@ -83,7 +87,9 @@ export function generateRandomPieceString(): ChessterPieceString {
   return pieceStrings[generateRandomInteger(0, pieceStrings.length - 1)];
 }
 
-export function pieceStringToNumber(pieceString: ChessterPieceString): number {
+export function pieceStringToNumber(
+  pieceString: ChessterPieceString | ""
+): number {
   let number = 0b0000;
   switch (pieceString) {
     case "♟︎":

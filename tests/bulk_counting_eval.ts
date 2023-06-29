@@ -10,36 +10,25 @@ import {
   ChessterMove,
   ChessterPieceString,
   WHITE,
+  boardSize,
 } from "../types";
-import {
-  bCompareState,
-  boardStringToBoard,
-  dCopyState,
-  rotateRight,
-} from "../util";
 
 const game = new ChessterGame();
 
-function countBulkPositions(
-  gameState: ChessterGameState,
-  depth: number
-): number {
+function countBulkPositions(game: ChessterGame, depth: number): number {
   if (depth <= 0) return 1;
 
-  const pieces =
-    gameState.turn === WHITE ? gameState.white.pieces : gameState.black.pieces;
-
-  let moves: ChessterMove[] = [];
+  const moves: ChessterMove[] = [];
   let count = 0;
 
-  for (let piece of pieces) {
-    moves.push(...game.getAvailableMoves(piece));
-  }
-
-  for (let move of moves) {
-    game.init(dCopyState(gameState));
-    game.move(move);
-    count += countBulkPositions(game.getState(), depth - 1);
+  for (let i = 0; i < boardSize; i++) {
+    if (game.board[i] !== 0 && (game.board[i] & 0b1) === game.turn) {
+      const moves = game.getAvailableMoves(i);
+      for (let j = 0; j < moves.length; j++) {
+        game.move(moves[j], i);
+        count += countBulkPositions(game, depth - 1);
+      }
+    }
   }
 
   return count;
@@ -50,7 +39,7 @@ function measureCountBulkPositions(depth: number) {
 
   game.init();
 
-  const count = countBulkPositions(game.getState(), depth);
+  const count = countBulkPositions(game, depth);
   console.log(
     "Depth: " +
       depth +

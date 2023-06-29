@@ -14,14 +14,17 @@
 | move                | bit pattern |
 | ------------------- | ----------- |
 | move                | 0000        |
-| capture             | 0001        |
-| castle (king side)  | 0010        |
-| castle (queen side) | 0011        |
-| en passant          | 0100        |
-| promotion (queen)   | 0101        |
-| promotion (knight)  | 0110        |
-| promotion (bishop)  | 0111        |
-| promotion (rook)    | 1000        |
+| double pawn push    | 0001        |
+| capture             | 0010        |
+| castle (king side)  | 0011        |
+| castle (queen side) | 0100        |
+| en passant (white)  | 0101        |
+| en passant (black)  | 0110        |
+| (unused)            | 0111        |
+| promotion (queen)   | 1000        |
+| promotion (knight)  | 1001        |
+| promotion (bishop)  | 1010        |
+| promotion (rook)    | 1011        |
 
 | team  | bit value |
 | ----- | --------- |
@@ -32,7 +35,32 @@
 
 ### move bit representation
 
-\[move location (6 bits from 0 to 63)\]\[move type (4 bits)\]\[original piece (4 bits)\]
+location: 6 bits (0 to 63)
+
+total: (20 bits)
+\[move from (6 bits from 0 to 63)\]
+\[move to (6 bits from 0 to 63)\]
+\[move type (4 bits)\]
+\[original piece (4 bits)\]
+
+1111001101000000
+
+(in history)
+\[bcc (2 bits)\] (31)
+\[wcc (2 bits)\] (29)
+\[bcm\] (28)
+\[wcm\] (27)
+\[bc\] (26)
+\[wc\] (25)
+\[turn bit\] (24)
+\[captured piece, if any (4 bits)\] (20)
+\[move from (6 bits from 0 to 63)\] (14)
+\[move to (6 bits from 0 to 63)\] (8)
+\[move type (4 bits)\] (4)
+\[original piece (4 bits)\] (0)
+
+(not used)
+\[will check (1 bit)\]\[move location (6 bits from 0 to 63)\]\[move type (4 bits)\]\[original piece (4 bits)\]
 
 ### default starting position representation
 
@@ -53,16 +81,16 @@
 
 ### board bit representation
 
-| 0      | 1      | 2      | 3      | 4      | 5      | 6      | 7 ...  |
-| ------ | ------ | ------ | ------ | ------ | ------ | ------ | ------ |
-| 000000 | 000001 | 000010 | 000011 | 000100 | 000101 | 000110 | 000111 |
-| 001000 | 001001 | 001010 | 001011 | 001100 | 001101 | 001110 | 001111 |
-| 010000 | 010001 | 010010 | 010011 | 010100 | 010101 | 010110 | 010111 |
-| 011000 | 011001 | 011010 | 011011 | 011100 | 011101 | 011110 | 011111 |
-| 100000 | 100001 | 100010 | 100011 | 100100 | 100101 | 100110 | 100111 |
-| 101000 | 101001 | 101010 | 101011 | 101100 | 101101 | 101110 | 101111 |
-| 110000 | 110001 | 110010 | 110011 | 110100 | 110101 | 110110 | 110111 |
-| 111000 | 111001 | 111010 | 111011 | 111100 | 111101 | 111110 | 111111 |
+|     | 0      | 1      | 2      | 3      | 4      | 5      | 6      | 7 ...  |
+| --- | ------ | ------ | ------ | ------ | ------ | ------ | ------ | ------ |
+| 0   | 000000 | 000001 | 000010 | 000011 | 000100 | 000101 | 000110 | 000111 |
+| 8   | 001000 | 001001 | 001010 | 001011 | 001100 | 001101 | 001110 | 001111 |
+| 16  | 010000 | 010001 | 010010 | 010011 | 010100 | 010101 | 010110 | 010111 |
+| 24  | 011000 | 011001 | 011010 | 011011 | 011100 | 011101 | 011110 | 011111 |
+| 32  | 100000 | 100001 | 100010 | 100011 | 100100 | 100101 | 100110 | 100111 |
+| 40  | 101000 | 101001 | 101010 | 101011 | 101100 | 101101 | 101110 | 101111 |
+| 48  | 110000 | 110001 | 110010 | 110011 | 110100 | 110101 | 110110 | 110111 |
+| 56  | 111000 | 111001 | 111010 | 111011 | 111100 | 111101 | 111110 | 111111 |
 
 ### iteration/data type results
 
@@ -123,3 +151,7 @@ liveGenerateMoveTest: 1000000 iterations took 6565.6209000349045ms
 preGenerate: 0ms
 liveGenerate: 6583.046700012684ms
 ```
+
+### todo tests
+
+- compare (location & 0b111000) !== 0b111000 vs (location >> 3) !== 7

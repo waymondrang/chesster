@@ -24,14 +24,11 @@ export class ChessterGame {
   bc: boolean; // black check
   wcm: boolean; // white checkmate
   bcm: boolean; // black checkmate
-  wckc: number; // white can castle kingside
-  wcqc: number; // white can castle queenside
-  bckc: number; // black can castle kingside
-  bcqc: number; // black can castle queenside
-  turn: ChessterTeam = WHITE;
-  history: ChessterHistory = [];
-  simulation: boolean = false;
-  zobristHash: number = 0;
+  wcc: number; // white can castle
+  bcc: number; // black can castle
+  turn: number;
+  history: ChessterHistory;
+  simulation: boolean;
 
   /**
    * Creates a new ChessterGame instance. (including init())
@@ -42,162 +39,166 @@ export class ChessterGame {
 
   init(state?: RecursivePartial<ChessterGameState>) {
     this.board = <ChessterBoard>state?.board || defaultBoard;
-    this.wc = false; // white check
-    this.bc = false; // black check
-    this.wcm = false; // white checkmate
-    this.bcm = false; // black checkmate
-    this.wckc = 0b0011; // [king moved, rook moved, bishop clear, knight clear]
-    this.wcqc = 0b00111; // [king moved, rook moved, bishop clear, knight clear, queen clear]
-    this.bckc = 0b0011; // [king moved, rook moved, bishop clear, knight clear]
-    this.bcqc = 0b00111; // [king moved, rook moved, bishop clear, knight clear, queen clear]
     this.turn = <ChessterTeam>state?.turn || WHITE;
     this.history = <ChessterHistory>state?.history || [];
     this.simulation = <boolean>state?.simulation || false;
 
+    this.wc = false; // white check
+    this.bc = false; // black check
+    this.wcm = false; // white checkmate
+    this.bcm = false; // black checkmate
+    this.wcc = 0b00; // [king moved, rook moved]
+    this.bcc = 0b00; // [king moved, rook moved]
+
+    console.log(this.boardToString());
+
     this.updateChecked();
-
-    // // todo: implement zobrist hashing
-    // var zobrist = new Uint32Array(13 * 2 * 64 * 2);
-    // for (let i = 0; i < zobrist.length; i++) {
-    //   zobrist[i] = Math.floor(Math.random() * 1000000000);
-    // }
-
-    // var table = new Uint32Array(3 * tablesize);
   }
 
-  updateZobristHash() {
-    // todo: implement zobrist hashing
-    return;
+  undo() {
+    if (this.history.length > 0) {
+      const move = this.history.pop();
+      if (move) {
+        this.bcc = (move >> 31) & 0b11;
+        this.wcc = (move >> 29) & 0b11;
+        this.bcm = ((move >> 28) & 0b1) === 1;
+        this.wcm = ((move >> 27) & 0b1) === 1;
+        this.bc = ((move >> 26) & 0b1) === 1;
+        this.wc = ((move >> 25) & 0b1) === 1;
+        this.turn = (move >> 24) & 0b1;
+
+        switch ((move >> 4) & 0b1111) {
+          case moveTypes.CAPTURE:
+            this.board[(move >> 8) & 0b111111] = (move >> 20) & 0b1111;
+            this.board[(move >> 14) & 0b111111] = move & 0b1111;
+            break;
+          case moveTypes.CASTLE_KINGSIDE:
+            this.board[(move >> 14) & 0b111111] = move & 0b1111;
+            this.board[((move >> 14) & 0b111111) + 2] = 0;
+            this.board[((move >> 14) & 0b111111) + 3] =
+              this.board[((move >> 14) & 0b111111) + 1];
+            this.board[((move >> 14) & 0b111111) + 1] = 0;
+            break;
+          case moveTypes.CASTLE_QUEENSIDE:
+            this.board[(move >> 14) & 0b111111] = move & 0b1111;
+            this.board[((move >> 14) & 0b111111) - 2] = 0;
+            this.board[((move >> 14) & 0b111111) - 4] =
+              this.board[((move >> 14) & 0b111111) - 1];
+            this.board[((move >> 14) & 0b111111) - 1] = 0;
+            break;
+          case moveTypes.EN_PASSANT_WHITE:
+            this.board[(move >> 14) & 0b111111] = move & 0b1111;
+            this.board[((move >> 8) & 0b111111) + 8] = (move >> 20) & 0b1111;
+            this.board[(move >> 8) & 0b111111] = 0;
+            break;
+          case moveTypes.EN_PASSANT_BLACK:
+            this.board[(move >> 14) & 0b111111] = move & 0b1111;
+            this.board[((move >> 8) & 0b111111) - 8] = (move >> 20) & 0b1111;
+            this.board[(move >> 8) & 0b111111] = 0;
+            break;
+          default:
+            this.board[(move >> 14) & 0b111111] = move & 0b1111;
+            this.board[(move >> 8) & 0b111111] = 0;
+            break;
+        }
+      }
+    }
   }
 
-  // move(move: ChessterMove) {
-  //   // check if move is piece's team turn
-  //   let piece = this.board[move.from[0]][move.from[1]];
+  move(move: ChessterMove) {
+    let history =
+      (this.bcc << 31) |
+      (this.wcc << 29) |
+      (this.bcm ? 1 << 28 : 0) |
+      (this.wcm ? 1 << 27 : 0) |
+      (this.bc ? 1 << 26 : 0) |
+      (this.wc ? 1 << 25 : 0) |
+      (this.turn << 24);
 
-  //   // validate move
-  //   if (!piece) throw new Error("no piece at from location while moving");
-  //   if (!this.simulation && piece.team !== this.turn)
-  //     throw new Error("Wrong team");
+    switch ((move >> 4) & 0b1111) {
+      case moveTypes.CAPTURE:
+        history |= this.board[(move >> 8) & 0b111111] << 20;
+        this.board[(move >> 14) & 0b111111] = 0;
+        this.board[(move >> 8) & 0b111111] = move & 0b1111;
+        break;
+      case moveTypes.CASTLE_KINGSIDE:
+        this.board[(move >> 14) & 0b111111] = 0;
+        this.board[(move >> 14) & (0b111111 + 2)] = move & 0b1111;
+        this.board[(move >> 14) & (0b111111 + 1)] =
+          this.board[(move >> 14) & (0b111111 + 3)];
+        this.board[(move >> 14) & (0b111111 + 3)] = 0;
+        break;
+      case moveTypes.CASTLE_QUEENSIDE:
+        this.board[(move >> 14) & 0b111111] = 0;
+        this.board[(move >> 14) & (0b111111 - 2)] = move & 0b1111;
+        this.board[(move >> 14) & (0b111111 - 1)] =
+          this.board[(move >> 14) & (0b111111 - 4)];
+        this.board[(move >> 14) & (0b111111 - 4)] = 0;
+        break;
+      case moveTypes.EN_PASSANT_WHITE: // what exactly is this again
+        history |= this.board[((move >> 8) & 0b111111) - 8] << 20;
+        this.board[(move >> 14) & 0b111111] = 0;
+        this.board[(move >> 8) & 0b111111] = move & 0b1111;
+        this.board[((move >> 8) & 0b111111) - 8] = 0;
+        break;
+      case moveTypes.EN_PASSANT_BLACK:
+        history |= this.board[((move >> 8) & 0b111111) + 8] << 20;
+        this.board[(move >> 14) & 0b111111] = 0;
+        this.board[(move >> 8) & 0b111111] = move & 0b1111;
+        this.board[((move >> 8) & 0b111111) + 8] = 0;
+        break;
+      case moveTypes.PROMOTION_QUEEN:
+        this.board[(move >> 14) & 0b111111] = 0;
+        this.board[(move >> 8) & 0b111111] = (move & 0b0001) | 0b1010;
+        break;
+      case moveTypes.PROMOTION_ROOK:
+        this.board[(move >> 14) & 0b111111] = 0;
+        this.board[(move >> 8) & 0b111111] = (move & 0b0001) | 0b1000;
+        break;
+      case moveTypes.PROMOTION_BISHOP:
+        this.board[(move >> 14) & 0b111111] = 0;
+        this.board[(move >> 8) & 0b111111] = (move & 0b0001) | 0b0110;
+        break;
+      case moveTypes.PROMOTION_KNIGHT:
+        this.board[(move >> 14) & 0b111111] = 0;
+        this.board[(move >> 8) & 0b111111] = (move & 0b0001) | 0b0100;
+        break;
+      case moveTypes.MOVE:
+        this.board[(move >> 14) & 0b111111] = 0;
+        this.board[(move >> 8) & 0b111111] = move & 0b1111;
+        break;
+      default:
+        throw new Error("invalid move type:" + getBinaryString(move));
+    }
 
-  //   // handle special moves
-  //   if (move.type === moveTypes.CASTLE) {
-  //     if (!move.castle) throw new Error('castle move has no "castle" property');
+    history |= move; // move is 20 bits
 
-  //     // move logic for castle
-  //     this.board[move.castle.from[0]][move.castle.from[1]] = undefined;
-  //     move.castle.piece.moved = true;
-  //     move.castle.piece.location = move.castle.to;
-  //     this.board[move.castle.to[0]][move.castle.to[1]] = move.castle.piece;
-
-  //     // update player pieces
-  //     if (move.castle.piece.team === WHITE) {
-  //       this.white.pieces = this.white.pieces.filter(
-  //         (p) =>
-  //           p.location[0] !== move.castle!.from[0] ||
-  //           p.location[1] !== move.castle!.from[1]
-  //       );
-
-  //       this.white.pieces.push(move.castle.piece);
-  //     } else {
-  //       this.black.pieces = this.black.pieces.filter(
-  //         (p) =>
-  //           p.location[0] !== move.castle!.from[0] ||
-  //           p.location[1] !== move.castle!.from[1]
-  //       );
-
-  //       this.black.pieces.push(move.castle.piece);
-  //     }
-  //   } else if (
-  //     move.type === moveTypes.CAPTURE ||
-  //     move.type === moveTypes.EN_PASSANT
-  //   ) {
-  //     if (!move.capture)
-  //       throw new Error('capture move has no "capture" property');
-
-  //     let capturedPiece = this.board[move.capture[0]][move.capture[1]]!;
-
-  //     this.board[move.capture[0]][move.capture[1]] = undefined;
-
-  //     if (capturedPiece.team === WHITE) {
-  //       this.black.taken.push(capturedPiece);
-
-  //       // remove capture piece using filter and location
-  //       this.white.pieces = this.white.pieces.filter(
-  //         (p) =>
-  //           p.location[0] !== move.capture![0] ||
-  //           p.location[1] !== move.capture![1]
-  //       );
-  //     } else {
-  //       this.white.taken.push(capturedPiece);
-
-  //       this.black.pieces = this.black.pieces.filter(
-  //         (p) =>
-  //           p.location[0] !== move.capture![0] ||
-  //           p.location[1] !== move.capture![1]
-  //       );
-  //     }
-  //   } else if (move.type === moveTypes.PROMOTION) {
-  //     if (!move.promotion)
-  //       throw new Error('promotion move has no "promotion" property');
-  //     piece.string = move.promotion;
-
-  //     if (piece.team === WHITE) {
-  //       this.white.pieces = this.white.pieces.filter(
-  //         (p) =>
-  //           p.location[0] !== move.from[0] || p.location[1] !== move.from[1]
-  //       );
-
-  //       this.white.pieces.push(piece);
-  //     } else {
-  //       this.black.pieces = this.black.pieces.filter(
-  //         (p) =>
-  //           p.location[0] !== move.from[0] || p.location[1] !== move.from[1]
-  //       );
-
-  //       this.black.pieces.push(piece);
-  //     }
-  //   }
-
-  //   // set piece to move, set respective squares to undefined
-  //   this.board[move.from[0]][move.from[1]] = undefined;
-  //   piece.moved = true;
-  //   piece.location = move.to;
-  //   this.board[move.to[0]][move.to[1]] = piece;
-
-  //   // add move to history
-  //   this.history.push(move);
-
-  //   // update checked
-  //   this.updateChecked();
-
-  //   // update turn
-  //   this.turn = this.turn === WHITE ? BLACK : WHITE;
-  // }
+    this.updateChecked();
+    this.turn = this.turn ^ 1;
+    this.history.push(history);
+  }
 
   /**
    * Checks that the given move is valid and moves the piece if it is
-   * @param moveData The move data to validate and move
+   * @param vm The move data to validate and move
    * @returns Whether the move was valid and the piece was moved
    */
-  // validateAndMove(moveData: ChessterMove): void {
-  //   const { from, to, type } = moveData;
-  //   const validatePiece = this.board[from[0]][from[1]];
+  validateAndMove(vm: ChessterMove): void {
+    const vp = this.board[(vm >> 14) & 0b111111];
 
-  //   if (!validatePiece) throw new Error("No piece at from location");
+    if (!vp)
+      throw new Error(
+        "no piece at from location:" + getBinaryString((vm >> 14) & 0b111111)
+      );
 
-  //   const move = this.getAvailableMoves(validatePiece).find((move) => {
-  //     return (
-  //       move.to[0] === to[0] &&
-  //       move.to[1] === to[1] &&
-  //       move.type === type &&
-  //       move.promotion === moveData.promotion
-  //     );
-  //   });
+    const move = this.getAvailableMoves((vm >> 14) & 0b111111).find(
+      (m) => m === vm
+    );
 
-  //   if (!move) throw new Error("Invalid move: " + JSON.stringify(moveData));
+    if (!move) throw new Error("invalid move: " + getBinaryString(vm));
 
-  //   this.move(move);
-  // }
+    this.move(vm);
+  }
 
   /**
    * Creates a printable string of the board
@@ -206,7 +207,7 @@ export class ChessterGame {
   boardToString(): string {
     let boardString = "";
     for (let i = 0; i < boardSize; i++) {
-      boardString += numberToPieceString(this.board[i]) || " ";
+      boardString += (numberToPieceString(this.board[i]) || " ") + " ";
       if (i % 8 === 7) boardString += "\n";
     }
     return boardString;
@@ -217,8 +218,9 @@ export class ChessterGame {
   }
 
   updateChecked() {
+    console.log("[debug] updating checked", this.simulation);
     this.wc = this.isChecked(WHITE);
-    this.wc = this.isChecked(BLACK);
+    this.bc = this.isChecked(BLACK);
     // updateChecked runs after turn is updated
     if (this.wc) this.wcm = this.isCheckmated(WHITE);
     if (this.bc) this.bcm = this.isCheckmated(BLACK);
@@ -230,15 +232,31 @@ export class ChessterGame {
    * @returns Whether the given team is checked
    */
   isChecked(team: ChessterTeam): boolean {
-    for (let i = 0; i < boardSize; i++)
-      if ((this.board[i] & 0b1) !== team) {
-        let moves = this.getAvailableMoves(this.board[i], i);
-        for (let j = 0; j < moves.length; j++)
-          if ((moves[j] & 0b11110000) >> 4 === 0b1)
-            if (this.board[(moves[j] & 0b11111100000000) >> 8] === 0b110)
+    // console.log("[debug] checking if team is checked (team: " + team + ")");
+    for (let i = 0; i < boardSize; i++) {
+      if (this.board[i] !== 0 && (this.board[i] & 0b1) !== team) {
+        let moves = this.getAllMoves(i);
+        // console.log(moves);
+        for (let j = 0; j < moves.length; j++) {
+          if (((moves[j] >> 4) & 0b1111) === moveTypes.CAPTURE) {
+            console.log(
+              "[debug] capture move found",
+              getBinaryString(moves[j])
+            );
+            if (
+              this.board[(moves[j] >> 8) & 0b111111] ===
+              (0b1100 & (team ^ 1))
+            ) {
+              // 0b110 is king value
+              console.log("[debug] king is checked");
+              console.log(this.boardToString());
               return true;
+            }
+          }
+        }
       }
-    return true;
+    }
+    return false;
   }
 
   /**
@@ -248,119 +266,27 @@ export class ChessterGame {
    * @todo Implement this
    */
   isCheckmated(team: ChessterTeam): boolean {
+    // console.log("[debug] checking if team is checkmated (team: " + team + ")");
     for (let i = 0; i < boardSize; i++)
-      if ((this.board[i] & 0b1) === team)
-        if (this.getAvailableMoves(this.board[i], i).length > 0) return false;
+      if (this.board[i] !== 0 && (this.board[i] & 0b1) === team)
+        if (this.getAvailableMoves(i).length > 0) return false;
     return true;
   }
 
-  /**
-   * now incorporates dCopyState
-   * @returns
-   */
-  // getState(): ChessterGameState {
-  //   let newBoard: ChessterPiece[][] = [[], [], [], [], [], [], [], []];
-  //   for (let i = 0; i < 8; i++) {
-  //     for (let j = 0; j < 8; j++) {
-  //       if (this.board[i][j])
-  //         newBoard[i][j] = {
-  //           location: [
-  //             this.board[i][j]!.location[0],
-  //             this.board[i][j]!.location[1],
-  //           ],
-  //           string: this.board[i][j]!.string,
-  //           team: this.board[i][j]!.team,
-  //           moved: this.board[i][j]!.moved,
-  //         };
-  //     }
-  //   }
-  //   let newWhite: ChessterPlayer = {
-  //     pieces: [],
-  //     taken: [],
-  //     checked: this.white.checked,
-  //     checkmated: this.white.checkmated,
-  //     team: WHITE,
-  //   };
-  //   let newBlack: ChessterPlayer = {
-  //     pieces: [],
-  //     taken: [],
-  //     checked: this.black.checked,
-  //     checkmated: this.black.checkmated,
-  //     team: BLACK,
-  //   };
-
-  //   for (let piece of this.white.pieces) {
-  //     newWhite.pieces.push({
-  //       location: [piece.location[0], piece.location[1]],
-  //       string: piece.string,
-  //       team: piece.team,
-  //       moved: piece.moved,
-  //     });
-  //   }
-
-  //   for (let piece of this.white.taken) {
-  //     newWhite.taken.push({
-  //       location: [piece.location[0], piece.location[1]],
-  //       string: piece.string,
-  //       team: piece.team,
-  //       moved: piece.moved,
-  //     });
-  //   }
-
-  //   for (let piece of this.black.pieces) {
-  //     newBlack.pieces.push({
-  //       location: [piece.location[0], piece.location[1]],
-  //       string: piece.string,
-  //       team: piece.team,
-  //       moved: piece.moved,
-  //     });
-  //   }
-
-  //   for (let piece of this.black.taken) {
-  //     newBlack.taken.push({
-  //       location: [piece.location[0], piece.location[1]],
-  //       string: piece.string,
-  //       team: piece.team,
-  //       moved: piece.moved,
-  //     });
-  //   }
-
-  //   let newHistory: ChessterMove[] = [];
-
-  //   for (let move of this.history) {
-  //     newHistory.push({
-  //       from: [move.from[0], move.from[1]],
-  //       to: [move.to[0], move.to[1]],
-  //       type: move.type,
-  //       capture: move.capture ? [move.capture[0], move.capture[1]] : undefined,
-  //       castle: move.castle
-  //         ? {
-  //             from: [move.castle.from[0], move.castle.from[1]],
-  //             to: [move.castle.to[0], move.castle.to[1]],
-  //             piece: {
-  //               location: [
-  //                 move.castle.piece.location[0],
-  //                 move.castle.piece.location[1],
-  //               ],
-  //               string: move.castle.piece.string,
-  //               team: move.castle.piece.team,
-  //               moved: move.castle.piece.moved,
-  //             },
-  //           }
-  //         : undefined,
-  //       promotion: move.promotion,
-  //     });
-  //   }
-
-  //   return {
-  //     board: newBoard,
-  //     turn: this.turn,
-  //     white: newWhite,
-  //     black: newBlack,
-  //     history: newHistory,
-  //     simulation: this.simulation,
-  //   };
-  // }
+  getState(): ChessterGameState {
+    return {
+      board: [...this.board],
+      turn: this.turn,
+      history: [...this.history],
+      wc: this.wc,
+      bc: this.bc,
+      wcm: this.wcm,
+      bcm: this.bcm,
+      wcc: this.wcc,
+      bcc: this.bcc,
+      simulation: this.simulation,
+    };
+  }
 
   /**
    *
@@ -368,65 +294,72 @@ export class ChessterGame {
    * @param location 6-bit integer representing the location of the piece
    * @returns
    */
-  getAllMoves(piece: number, location: number): number[] {
+  getAllMoves(location: number): number[] {
     let moves: number[] = [];
-    switch ((piece & 0b1110) >> 1) {
+    switch ((this.board[location] >> 1) & 0b111) {
       // case 0b001:
-      //   moves = this.getPawnMoves(piece, location);
+      //   moves = this.getPawnMoves(this.board[location], location);
       //   break;
       // case 0b010:
-      //   moves = this.getKnightMoves(piece, location);
+      //   moves = this.getKnightMoves(this.board[location], location);
       //   break;
-      // case 0b011:
-      //   moves = this.getBishopMoves(piece, location);
-      //   break;
+      case 0b011:
+        moves = this.getBishopMoves(this.board[location], location);
+        break;
       // case 0b100:
-      //   moves = this.getRookMoves(piece, location);
+      //   moves = this.getRookMoves(this.board[location], location);
       //   break;
-      // case 0b101:
-      //   moves = this.getQueenMoves(piece, location);
-      //   break;
+      case 0b101:
+        moves = this.getQueenMoves(this.board[location], location);
+        break;
       case 0b110:
-        moves = this.getKingMoves(piece, location);
+        moves = this.getKingMoves(this.board[location], location);
         break;
       default:
-        console.log("[debug] switch state incomplete in getAllMoves()");
-      // throw new Error(
-      //   "invalid piece while getting available moves: " + piece + " (decimal)"
-      // );
+        console.log("invalid piece: " + this.board[location] + " (decimal)");
+        return [];
+        throw new Error(
+          "invalid piece while getting available moves: " +
+            this.board[location] +
+            " (decimal)"
+        );
     }
+
+    console.log(
+      "[debug] available moves for " +
+        getBinaryString(this.board[location]) +
+        " at " +
+        location +
+        ":",
+      moves.map(getBinaryString)
+    );
     return moves;
   }
 
   /**
-   * Returns available moves for the given piece, accounting for check
+   * Returns available moves for the given location, accounting for check
    * @returns
    */
-  getAvailableMoves(piece: number, location: number): number[] {
-    const moves = this.getAllMoves(piece, location);
+  getAvailableMoves(location: number): number[] {
+    const moves = this.getAllMoves(location);
 
-    // const simulator = new ChessterGame();
     const finalMoves = [...moves];
 
-    // todo: implement this
-    // if (!this.simulation) {
-    //   for (let move of moves) {
-    //     simulator.init({
-    //       ...dCopyState(gameState),
-    //       simulation: true,
-    //     });
+    if (!this.simulation) {
+      for (let move of moves) {
+        this.move(move);
 
-    //     simulator.move(move);
+        if (
+          ((this.board[location] & 0b1) === WHITE && this.wc) ||
+          ((this.board[location] & 0b1) === BLACK && this.bc)
+        ) {
+          // if white continues to be checked, remove move
+          finalMoves.splice(finalMoves.indexOf(move), 1);
+        }
 
-    //     if (
-    //       (piece.team === WHITE && simulator.white.checked) ||
-    //       (piece.team === BLACK && simulator.black.checked)
-    //     ) {
-    //       // if white continues to be checked, remove move
-    //       finalMoves.splice(finalMoves.indexOf(move), 1);
-    //     }
-    //   }
-    // }
+        this.undo();
+      }
+    }
 
     return finalMoves;
   }
@@ -446,22 +379,51 @@ export class ChessterGame {
 
     // bottom row (if not bottom row)
     if ((location & 0b111000) !== 0b111000) {
+      // console.log("[debug] not bottom row");
       // if location contains enemy piece
       if (this.board[location + 8] === 0) {
-        moves.push(((location + 8) << 8) & (moveTypes.MOVE << 4) & piece);
+        moves.push(
+          (location << 14) |
+            ((location + 8) << 8) |
+            (moveTypes.MOVE << 4) |
+            piece
+        );
       } else if ((this.board[location + 8] & 0b1) !== (piece & 0b1)) {
-        moves.push(((location + 8) << 8) & (moveTypes.CAPTURE << 4) & piece);
+        moves.push(
+          (location << 14) |
+            ((location + 8) << 8) |
+            (moveTypes.CAPTURE << 4) |
+            piece
+        );
       }
       // else location contains friendly piece, do not push any move
     }
 
     // top row
     if ((location & 0b111000) !== 0) {
+      // console.log("[debug] not top row");
       // if location contains enemy piece
       if (this.board[location - 8] === 0) {
-        moves.push(((location - 8) << 8) & (moveTypes.MOVE << 4) & piece);
+        moves.push(
+          (location << 14) |
+            ((location - 8) << 8) |
+            (moveTypes.MOVE << 4) |
+            piece
+        );
       } else if ((this.board[location - 8] & 0b1) !== (piece & 0b1)) {
-        moves.push(((location - 8) << 8) & (moveTypes.CAPTURE << 4) & piece);
+        // console.log(
+        //   "[debug] pushing capture move",
+        //   ((location - 8) << 8) | (moveTypes.CAPTURE << 4) | piece,
+        //   getBinaryString(
+        //     ((location - 8) << 8) | (moveTypes.CAPTURE << 4) | piece
+        //   )
+        // );
+        moves.push(
+          (location << 14) |
+            ((location - 8) << 8) |
+            (moveTypes.CAPTURE << 4) |
+            piece
+        );
       }
       // else location contains friendly piece, do not push any move
     }
@@ -469,17 +431,38 @@ export class ChessterGame {
     // right-most column
     if ((location & 0b111) !== 0b111) {
       if (this.board[location + 1] === 0) {
-        moves.push(((location + 1) << 8) & (moveTypes.MOVE << 4) & piece);
+        moves.push(
+          (location << 14) |
+            ((location + 1) << 8) |
+            (moveTypes.MOVE << 4) |
+            piece
+        );
       } else if ((this.board[location + 1] & 0b1) !== (piece & 0b1)) {
-        moves.push(((location + 1) << 8) & (moveTypes.CAPTURE << 4) & piece);
+        moves.push(
+          (location << 14) |
+            ((location + 1) << 8) |
+            (moveTypes.CAPTURE << 4) |
+            piece
+        );
       }
 
       // bottom row
       if ((location & 0b111000) !== 0b111000) {
+        // alternatively could do < 56
         if (this.board[location + 9] === 0) {
-          moves.push(((location + 9) << 8) & (moveTypes.MOVE << 4) & piece);
+          moves.push(
+            (location << 14) |
+              ((location + 9) << 8) |
+              (moveTypes.MOVE << 4) |
+              piece
+          );
         } else if ((this.board[location + 9] & 0b1) !== (piece & 0b1)) {
-          moves.push(((location + 9) << 8) & (moveTypes.CAPTURE << 4) & piece);
+          moves.push(
+            (location << 14) |
+              ((location + 9) << 8) |
+              (moveTypes.CAPTURE << 4) |
+              piece
+          );
         }
       }
 
@@ -487,9 +470,19 @@ export class ChessterGame {
       if ((location & 0b111000) !== 0) {
         // moves.push(-7);
         if (this.board[location - 7] === 0) {
-          moves.push(((location - 7) << 8) & (moveTypes.MOVE << 4) & piece);
+          moves.push(
+            (location << 14) |
+              ((location - 7) << 8) |
+              (moveTypes.MOVE << 4) |
+              piece
+          );
         } else if ((this.board[location - 7] & 0b1) !== (piece & 0b1)) {
-          moves.push(((location - 7) << 8) & (moveTypes.CAPTURE << 4) & piece);
+          moves.push(
+            (location << 14) |
+              ((location - 7) << 8) |
+              (moveTypes.CAPTURE << 4) |
+              piece
+          );
         }
       }
     }
@@ -498,18 +491,38 @@ export class ChessterGame {
       // left-most column
       // moves.push(-1);
       if (this.board[location - 1] === 0) {
-        moves.push(((location - 1) << 8) & (moveTypes.MOVE << 4) & piece);
+        moves.push(
+          (location << 14) |
+            ((location - 1) << 8) |
+            (moveTypes.MOVE << 4) |
+            piece
+        );
       } else if ((this.board[location - 1] & 0b1) !== (piece & 0b1)) {
-        moves.push(((location - 1) << 8) & (moveTypes.CAPTURE << 4) & piece);
+        moves.push(
+          (location << 14) |
+            ((location - 1) << 8) |
+            (moveTypes.CAPTURE << 4) |
+            piece
+        );
       }
 
       // top row
       if ((location & 0b111000) !== 0) {
         // moves.push(-9);
         if (this.board[location - 9] === 0) {
-          moves.push(((location - 9) << 8) & (moveTypes.MOVE << 4) & piece);
+          moves.push(
+            (location << 14) |
+              ((location - 9) << 8) |
+              (moveTypes.MOVE << 4) |
+              piece
+          );
         } else if ((this.board[location - 9] & 0b1) !== (piece & 0b1)) {
-          moves.push(((location - 9) << 8) & (moveTypes.CAPTURE << 4) & piece);
+          moves.push(
+            (location << 14) |
+              ((location - 9) << 8) |
+              (moveTypes.CAPTURE << 4) |
+              piece
+          );
         }
       }
 
@@ -517,9 +530,19 @@ export class ChessterGame {
       if ((location & 0b111000) !== 0b111000) {
         // moves.push(7);
         if (this.board[location + 7] === 0) {
-          moves.push(((location + 7) << 8) & (moveTypes.MOVE << 4) & piece);
+          moves.push(
+            (location << 14) |
+              ((location + 7) << 8) |
+              (moveTypes.MOVE << 4) |
+              piece
+          );
         } else if ((this.board[location + 7] & 0b1) !== (piece & 0b1)) {
-          moves.push(((location + 7) << 8) & (moveTypes.CAPTURE << 4) & piece);
+          moves.push(
+            (location << 14) |
+              ((location + 7) << 8) |
+              (moveTypes.CAPTURE << 4) |
+              piece
+          );
         }
       }
     }
@@ -527,563 +550,730 @@ export class ChessterGame {
     // castling
     if ((piece & 0b1) === 0 && this.wc === false) {
       // white king-side
-      if (this.wckc === 0)
+      if (
+        this.wcc === 0 &&
+        this.board[location + 1] === 0 &&
+        this.board[location + 2] === 0
+      )
         moves.push(
-          ((location + 2) << 8) & (moveTypes.CASTLE_KINGSIDE << 4) & piece
+          // ((location + 2) << 8) | (moveTypes.CASTLE_KINGSIDE << 4) | piece
+          (location << 14) | (moveTypes.CASTLE_KINGSIDE << 4) | piece
         );
 
       // white queen-side
-      if (this.wcqc === 0)
+      if (
+        this.wcc === 0 &&
+        this.board[location - 1] === 0 &&
+        this.board[location - 2] === 0 &&
+        this.board[location - 3] === 0
+      )
         moves.push(
-          ((location - 2) << 8) & (moveTypes.CASTLE_QUEENSIDE << 4) & piece
+          // ((location - 2) << 8) | (moveTypes.CASTLE_QUEENSIDE << 4) | piece
+          (location << 14) | (moveTypes.CASTLE_QUEENSIDE << 4) | piece
         );
     }
 
     if ((piece & 0b1) === 1 && this.bc === false) {
       // black king-side
-      if (this.bckc === 0)
+      if (
+        this.bcc === 0 &&
+        this.board[location + 1] === 0 &&
+        this.board[location + 2] === 0
+      )
         moves.push(
-          ((location + 2) << 8) & (moveTypes.CASTLE_KINGSIDE << 4) & piece
+          // ((location + 2) << 8) | (moveTypes.CASTLE_KINGSIDE << 4) | piece
+          (location << 14) | (moveTypes.CASTLE_KINGSIDE << 4) | piece
         );
 
       // black queen-side
-      if (this.bcqc === 0)
+      if (
+        this.bcc === 0 &&
+        this.board[location - 1] === 0 &&
+        this.board[location - 2] === 0 &&
+        this.board[location - 3] === 0
+      )
         moves.push(
-          ((location - 2) << 8) & (moveTypes.CASTLE_QUEENSIDE << 4) & piece
+          // ((location - 2) << 8) | (moveTypes.CASTLE_QUEENSIDE << 4) | piece
+          (location << 14) | (moveTypes.CASTLE_QUEENSIDE << 4) | piece
         );
     }
 
     return moves;
   }
 
-  // getKnightMoves(piece: ChessterPiece): ChessterMove[] {
-  //   const moves: ChessterMove[] = [];
+  getKnightMoves(piece: number, location: number): number[] {
+    const moves: number[] = [];
 
-  //   for (let i = -2; i < 3; i++) {
-  //     if (i === 0) continue;
-  //     for (let j = -2; j < 3; j++) {
-  //       if (
-  //         j === 0 ||
-  //         Math.abs(i) === Math.abs(j) ||
-  //         this.checkOutOfBounds(piece.location[0] + i, piece.location[1] + j)
-  //       )
-  //         continue;
-  //       const location =
-  //         this.board[piece.location[0] + i][piece.location[1] + j];
-  //       if (!location)
-  //         moves.push({
-  //           from: piece.location,
-  //           to: [piece.location[0] + i, piece.location[1] + j],
-  //           type: moveTypes.MOVE,
-  //         });
-  //       else if (location.team !== piece.team)
-  //         moves.push({
-  //           from: piece.location,
-  //           to: [piece.location[0] + i, piece.location[1] + j],
-  //           type: moveTypes.CAPTURE,
-  //           capture: [piece.location[0] + i, piece.location[1] + j],
-  //         });
-  //     }
-  //   }
+    if (location < 48) {
+      if ((location & 0b111) !== 0b111)
+        if (this.board[location + 17] === 0) {
+          // can do 2 down 1 right
+          moves.push(
+            (location << 14) |
+              ((location + 17) << 8) |
+              (moveTypes.MOVE << 4) |
+              piece
+          );
+        } else if ((this.board[location + 17] & 0b1) !== (piece & 0b1)) {
+          moves.push(
+            (location << 14) |
+              ((location + 17) << 8) |
+              (moveTypes.CAPTURE << 4) |
+              piece
+          );
+        }
 
-  //   return moves;
-  // }
+      if ((location & 0b111) !== 0)
+        if (this.board[location + 15] === 0) {
+          moves.push(
+            (location << 14) |
+              ((location + 15) << 8) |
+              (moveTypes.MOVE << 4) |
+              piece
+          );
+        } else if ((this.board[location + 15] & 0b1) !== (piece & 0b1)) {
+          moves.push(
+            (location << 14) |
+              ((location + 15) << 8) |
+              (moveTypes.CAPTURE << 4) |
+              piece
+          );
+        }
+    }
 
-  // getRookMoves(piece: ChessterPiece): ChessterMove[] {
-  //   const moves: ChessterMove[] = [];
+    if (location > 15) {
+      if ((location & 0b111) !== 0b111)
+        if (this.board[location - 15] === 0) {
+          moves.push(
+            (location << 14) |
+              ((location - 15) << 8) |
+              (moveTypes.MOVE << 4) |
+              piece
+          );
+        } else if ((this.board[location - 15] & 0b1) !== (piece & 0b1)) {
+          moves.push(
+            (location << 14) |
+              ((location - 15) << 8) |
+              (moveTypes.CAPTURE << 4) |
+              piece
+          );
+        }
 
-  //   for (let i = 1; i < 8; i++) {
-  //     if (this.checkOutOfBounds(piece.location[0] + i, piece.location[1]))
-  //       break;
-  //     let location = this.board[piece.location[0] + i][piece.location[1]];
-  //     if (!location)
-  //       moves.push({
-  //         from: piece.location,
-  //         to: [piece.location[0] + i, piece.location[1]],
-  //         type: moveTypes.MOVE,
-  //       });
-  //     else if (location.team !== piece.team) {
-  //       moves.push({
-  //         from: piece.location,
-  //         to: [piece.location[0] + i, piece.location[1]],
-  //         type: moveTypes.CAPTURE,
-  //         capture: [piece.location[0] + i, piece.location[1]],
-  //       });
-  //       break;
-  //     } else break;
-  //   }
+      if ((location & 0b111) !== 0)
+        if (this.board[location - 17] === 0) {
+          moves.push(
+            (location << 14) |
+              ((location - 17) << 8) |
+              (moveTypes.MOVE << 4) |
+              piece
+          );
+        } else if ((this.board[location - 17] & 0b1) !== (piece & 0b1)) {
+          moves.push(
+            (location << 14) |
+              ((location - 17) << 8) |
+              (moveTypes.CAPTURE << 4) |
+              piece
+          );
+        }
+    }
 
-  //   for (let i = 1; i < 8; i++) {
-  //     if (this.checkOutOfBounds(piece.location[0] - i, piece.location[1]))
-  //       break;
-  //     let location = this.board[piece.location[0] - i][piece.location[1]];
-  //     if (!location)
-  //       moves.push({
-  //         from: piece.location,
-  //         to: [piece.location[0] - i, piece.location[1]],
-  //         type: moveTypes.MOVE,
-  //       });
-  //     else if (location.team !== piece.team) {
-  //       moves.push({
-  //         from: piece.location,
-  //         to: [piece.location[0] - i, piece.location[1]],
-  //         type: moveTypes.CAPTURE,
-  //         capture: [piece.location[0] - i, piece.location[1]],
-  //       });
-  //       break;
-  //     } else break;
-  //   }
+    if ((location & 0b111) > 1) {
+      if (location < 56) {
+        if (this.board[location + 6] === 0) {
+          moves.push(
+            (location << 14) |
+              ((location + 6) << 8) |
+              (moveTypes.MOVE << 4) |
+              piece
+          );
+        } else if ((this.board[location + 6] & 0b1) !== (piece & 0b1)) {
+          moves.push(
+            (location << 14) |
+              ((location + 6) << 8) |
+              (moveTypes.CAPTURE << 4) |
+              piece
+          );
+        }
+      }
 
-  //   for (let i = 1; i < 8; i++) {
-  //     if (this.checkOutOfBounds(piece.location[0], piece.location[1] + i))
-  //       break;
-  //     let location = this.board[piece.location[0]][piece.location[1] + i];
-  //     if (!location)
-  //       moves.push({
-  //         from: piece.location,
-  //         to: [piece.location[0], piece.location[1] + i],
-  //         type: moveTypes.MOVE,
-  //       });
-  //     else if (location.team !== piece.team) {
-  //       moves.push({
-  //         from: piece.location,
-  //         to: [piece.location[0], piece.location[1] + i],
-  //         type: moveTypes.CAPTURE,
-  //         capture: [piece.location[0], piece.location[1] + i],
-  //       });
-  //       break;
-  //     } else break;
-  //   }
+      if (location > 7) {
+        if (this.board[location - 10] === 0) {
+          moves.push(
+            (location << 14) |
+              ((location - 10) << 8) |
+              (moveTypes.MOVE << 4) |
+              piece
+          );
+        } else if ((this.board[location - 10] & 0b1) !== (piece & 0b1)) {
+          moves.push(
+            (location << 14) |
+              ((location - 10) << 8) |
+              (moveTypes.CAPTURE << 4) |
+              piece
+          );
+        }
+      }
+    }
 
-  //   for (let i = 1; i < 8; i++) {
-  //     if (this.checkOutOfBounds(piece.location[0], piece.location[1] - i))
-  //       break;
-  //     let location = this.board[piece.location[0]][piece.location[1] - i];
-  //     if (!location)
-  //       moves.push({
-  //         from: piece.location,
-  //         to: [piece.location[0], piece.location[1] - i],
-  //         type: moveTypes.MOVE,
-  //       });
-  //     else if (location.team !== piece.team) {
-  //       moves.push({
-  //         from: piece.location,
-  //         to: [piece.location[0], piece.location[1] - i],
-  //         type: moveTypes.CAPTURE,
-  //         capture: [piece.location[0], piece.location[1] - i],
-  //       });
-  //       break;
-  //     } else break;
-  //   }
+    if ((location & 0b111) < 6) {
+      if (location < 56) {
+        if (this.board[location + 10] === 0) {
+          moves.push(
+            (location << 14) |
+              ((location + 10) << 8) |
+              (moveTypes.MOVE << 4) |
+              piece
+          );
+        } else if ((this.board[location + 10] & 0b1) !== (piece & 0b1)) {
+          moves.push(
+            (location << 14) |
+              ((location + 10) << 8) |
+              (moveTypes.CAPTURE << 4) |
+              piece
+          );
+        }
+      }
 
-  //   return moves;
-  // }
+      if (location > 7) {
+        if (this.board[location - 6] === 0) {
+          moves.push(
+            (location << 14) |
+              ((location - 6) << 8) |
+              (moveTypes.MOVE << 4) |
+              piece
+          );
+        } else if ((this.board[location - 6] & 0b1) !== (piece & 0b1)) {
+          moves.push(
+            (location << 14) |
+              ((location - 6) << 8) |
+              (moveTypes.CAPTURE << 4) |
+              piece
+          );
+        }
+      }
+    }
 
-  // getBishopMoves(piece: ChessterPiece): ChessterMove[] {
-  //   const moves: ChessterMove[] = [];
+    return moves;
+  }
 
-  //   for (let i = 1; i < 8; i++) {
-  //     if (this.checkOutOfBounds(piece.location[0] + i, piece.location[1] + i))
-  //       break;
-  //     let location = this.board[piece.location[0] + i][piece.location[1] + i];
-  //     if (!location)
-  //       moves.push({
-  //         from: piece.location,
-  //         to: [piece.location[0] + i, piece.location[1] + i],
-  //         type: moveTypes.MOVE,
-  //       });
-  //     else if (location.team !== piece.team) {
-  //       moves.push({
-  //         from: piece.location,
-  //         to: [piece.location[0] + i, piece.location[1] + i],
-  //         type: moveTypes.CAPTURE,
-  //         capture: [piece.location[0] + i, piece.location[1] + i],
-  //       });
-  //       break;
-  //     } else break;
-  //   }
+  getBishopMoves(piece: number, location: number): number[] {
+    const moves: number[] = [];
 
-  //   for (let i = 1; i < 8; i++) {
-  //     if (this.checkOutOfBounds(piece.location[0] + i, piece.location[1] - i))
-  //       break;
-  //     let location = this.board[piece.location[0] + i][piece.location[1] - i];
-  //     if (!location)
-  //       moves.push({
-  //         from: piece.location,
-  //         to: [piece.location[0] + i, piece.location[1] - i],
-  //         type: moveTypes.MOVE,
-  //       });
-  //     else if (location.team !== piece.team) {
-  //       moves.push({
-  //         from: piece.location,
-  //         to: [piece.location[0] + i, piece.location[1] - i],
-  //         type: moveTypes.CAPTURE,
-  //         capture: [piece.location[0] + i, piece.location[1] - i],
-  //       });
-  //       break;
-  //     } else break;
-  //   }
+    // down right
+    for (
+      let i = 1;
+      i <=
+      7 -
+        ((location & 0b111) > ((location >> 3) & 0b111)
+          ? location & 0b111
+          : (location >> 3) & 0b111);
+      i++
+    ) {
+      if (this.board[location + 9 * i] === 0) {
+        moves.push(
+          (location << 14) |
+            ((location + 9 * i) << 8) |
+            (moveTypes.MOVE << 4) |
+            piece
+        );
+      } else if ((this.board[location + 9 * i] & 0b1) !== (piece & 0b1)) {
+        moves.push(
+          (location << 14) |
+            ((location + 9 * i) << 8) |
+            (moveTypes.CAPTURE << 4) |
+            piece
+        );
+        break;
+      } else {
+        break;
+      }
+    }
 
-  //   for (let i = 1; i < 8; i++) {
-  //     if (this.checkOutOfBounds(piece.location[0] - i, piece.location[1] + i))
-  //       break;
-  //     let location = this.board[piece.location[0] - i][piece.location[1] + i];
+    // up right
+    for (
+      let i = 1;
+      i <=
+      7 -
+        ((location & 0b111) < ((location >> 3) & 0b111)
+          ? location & 0b111
+          : (location >> 3) & 0b111);
+      i++
+    ) {
+      if (this.board[location - 7 * i] === 0) {
+        moves.push(
+          (location << 14) |
+            ((location - 7 * i) << 8) |
+            (moveTypes.MOVE << 4) |
+            piece
+        );
+      } else if ((this.board[location - 7 * i] & 0b1) !== (piece & 0b1)) {
+        moves.push(
+          (location << 14) |
+            ((location - 7 * i) << 8) |
+            (moveTypes.CAPTURE << 4) |
+            piece
+        );
+        break;
+      } else {
+        break;
+      }
+    }
 
-  //     if (!location)
-  //       moves.push({
-  //         from: piece.location,
-  //         to: [piece.location[0] - i, piece.location[1] + i],
-  //         type: moveTypes.MOVE,
-  //       });
-  //     else if (location.team !== piece.team) {
-  //       moves.push({
-  //         from: piece.location,
-  //         to: [piece.location[0] - i, piece.location[1] + i],
-  //         type: moveTypes.CAPTURE,
-  //         capture: [piece.location[0] - i, piece.location[1] + i],
-  //       });
-  //       break;
-  //     } else break;
-  //   }
+    // down left
+    for (
+      let i = 1;
+      i <=
+      ((location & 0b111) < ((location >> 3) & 0b111)
+        ? location & 0b111
+        : (location >> 3) & 0b111);
+      i++
+    ) {
+      if (this.board[location + 7 * i] === 0) {
+        moves.push(
+          (location << 14) |
+            ((location + 7 * i) << 8) |
+            (moveTypes.MOVE << 4) |
+            piece
+        );
+      } else if ((this.board[location + 7 * i] & 0b1) !== (piece & 0b1)) {
+        moves.push(
+          (location << 14) |
+            ((location + 7 * i) << 8) |
+            (moveTypes.CAPTURE << 4) |
+            piece
+        );
+        break;
+      } else {
+        break;
+      }
+    }
 
-  //   for (let i = 1; i < 8; i++) {
-  //     if (this.checkOutOfBounds(piece.location[0] - i, piece.location[1] - i))
-  //       break;
-  //     let location = this.board[piece.location[0] - i][piece.location[1] - i];
-  //     if (!location)
-  //       moves.push({
-  //         from: piece.location,
-  //         to: [piece.location[0] - i, piece.location[1] - i],
-  //         type: moveTypes.MOVE,
-  //       });
-  //     else if (location.team !== piece.team) {
-  //       moves.push({
-  //         from: piece.location,
-  //         to: [piece.location[0] - i, piece.location[1] - i],
-  //         type: moveTypes.CAPTURE,
-  //         capture: [piece.location[0] - i, piece.location[1] - i],
-  //       });
-  //       break;
-  //     } else break;
-  //   }
+    // up left
+    for (
+      let i = 1;
+      i <=
+      ((location & 0b111) < ((location >> 3) & 0b111)
+        ? location & 0b111
+        : (location >> 3) & 0b111);
+      i++
+    ) {
+      if (this.board[location - 9 * i] === 0) {
+        moves.push(
+          (location << 14) |
+            ((location - 9 * i) << 8) |
+            (moveTypes.MOVE << 4) |
+            piece
+        );
+      } else if ((this.board[location - 9 * i] & 0b1) !== (piece & 0b1)) {
+        moves.push(
+          (location << 14) |
+            ((location - 9 * i) << 8) |
+            (moveTypes.CAPTURE << 4) |
+            piece
+        );
+        break;
+      } else {
+        break;
+      }
+    }
 
-  //   return moves;
-  // }
+    return moves;
+  }
 
-  // getQueenMoves(piece: ChessterPiece): ChessterMove[] {
-  //   const moves: ChessterMove[] = [];
+  getRookMoves(piece: number, location: number): number[] {
+    const moves: number[] = [];
 
-  //   for (let i = 1; i < 8; i++) {
-  //     if (this.checkOutOfBounds(piece.location[0] + i, piece.location[1]))
-  //       break;
-  //     let location = this.board[piece.location[0] + i][piece.location[1]];
-  //     if (!location)
-  //       moves.push({
-  //         from: piece.location,
-  //         to: [piece.location[0] + i, piece.location[1]],
-  //         type: moveTypes.MOVE,
-  //       });
-  //     else if (location.team !== piece.team) {
-  //       moves.push({
-  //         from: piece.location,
-  //         to: [piece.location[0] + i, piece.location[1]],
-  //         type: moveTypes.CAPTURE,
-  //         capture: [piece.location[0] + i, piece.location[1]],
-  //       });
-  //       break;
-  //     } else break;
-  //   }
+    for (let i = 1; i < 8 - (location & 0b111); i++) {
+      if (this.board[location + i] === 0) {
+        moves.push(
+          (location << 14) |
+            ((location + i) << 8) |
+            (moveTypes.MOVE << 4) |
+            piece
+        );
+      } else if ((this.board[location + i] & 0b1) !== (piece & 0b1)) {
+        moves.push(
+          (location << 14) |
+            ((location + i) << 8) |
+            (moveTypes.CAPTURE << 4) |
+            piece
+        );
+        break;
+      } else {
+        break;
+      }
+    }
 
-  //   for (let i = 1; i < 8; i++) {
-  //     if (this.checkOutOfBounds(piece.location[0] - i, piece.location[1]))
-  //       break;
-  //     let location = this.board[piece.location[0] - i][piece.location[1]];
-  //     if (!location)
-  //       moves.push({
-  //         from: piece.location,
-  //         to: [piece.location[0] - i, piece.location[1]],
-  //         type: moveTypes.MOVE,
-  //       });
-  //     else if (location.team !== piece.team) {
-  //       moves.push({
-  //         from: piece.location,
-  //         to: [piece.location[0] - i, piece.location[1]],
-  //         type: moveTypes.CAPTURE,
-  //         capture: [piece.location[0] - i, piece.location[1]],
-  //       });
-  //       break;
-  //     } else break;
-  //   }
+    for (let i = 1; i < (location & 0b111); i++) {
+      if (this.board[location - i] === 0) {
+        moves.push(
+          (location << 14) |
+            ((location - i) << 8) |
+            (moveTypes.MOVE << 4) |
+            piece
+        );
+      } else if ((this.board[location - i] & 0b1) !== (piece & 0b1)) {
+        moves.push(
+          (location << 14) |
+            ((location - i) << 8) |
+            (moveTypes.CAPTURE << 4) |
+            piece
+        );
+        break;
+      } else {
+        break;
+      }
+    }
 
-  //   for (let i = 1; i < 8; i++) {
-  //     if (this.checkOutOfBounds(piece.location[0], piece.location[1] + i))
-  //       break;
-  //     let location = this.board[piece.location[0]][piece.location[1] + i];
-  //     if (!location)
-  //       moves.push({
-  //         from: piece.location,
-  //         to: [piece.location[0], piece.location[1] + i],
-  //         type: moveTypes.MOVE,
-  //       });
-  //     else if (location.team !== piece.team) {
-  //       moves.push({
-  //         from: piece.location,
-  //         to: [piece.location[0], piece.location[1] + i],
-  //         type: moveTypes.CAPTURE,
-  //         capture: [piece.location[0], piece.location[1] + i],
-  //       });
-  //       break;
-  //     } else break;
-  //   }
+    for (let i = 1; i < 8 - (location >> 3); i++) {
+      if (this.board[location + 8 * i] === 0) {
+        moves.push(
+          (location << 14) |
+            ((location + 8 * i) << 8) |
+            (moveTypes.MOVE << 4) |
+            piece
+        );
+      } else if ((this.board[location + 8 * i] & 0b1) !== (piece & 0b1)) {
+        moves.push(
+          (location << 14) |
+            ((location + 8 * i) << 8) |
+            (moveTypes.CAPTURE << 4) |
+            piece
+        );
+        break;
+      } else {
+        break;
+      }
+    }
 
-  //   for (let i = 1; i < 8; i++) {
-  //     if (this.checkOutOfBounds(piece.location[0], piece.location[1] - i))
-  //       break;
-  //     let location = this.board[piece.location[0]][piece.location[1] - i];
-  //     if (!location)
-  //       moves.push({
-  //         from: piece.location,
-  //         to: [piece.location[0], piece.location[1] - i],
-  //         type: moveTypes.MOVE,
-  //       });
-  //     else if (location.team !== piece.team) {
-  //       moves.push({
-  //         from: piece.location,
-  //         to: [piece.location[0], piece.location[1] - i],
-  //         type: moveTypes.CAPTURE,
-  //         capture: [piece.location[0], piece.location[1] - i],
-  //       });
-  //       break;
-  //     } else break;
-  //   }
+    for (let i = 1; i < location >> 3; i++) {
+      if (this.board[location - 8 * i] === 0) {
+        moves.push(
+          (location << 14) |
+            ((location - 8 * i) << 8) |
+            (moveTypes.MOVE << 4) |
+            piece
+        );
+      } else if ((this.board[location - 8 * i] & 0b1) !== (piece & 0b1)) {
+        moves.push(
+          (location << 14) |
+            ((location - 8 * i) << 8) |
+            (moveTypes.CAPTURE << 4) |
+            piece
+        );
+        break;
+      } else {
+        break;
+      }
+    }
 
-  //   for (let i = 1; i < 8; i++) {
-  //     if (this.checkOutOfBounds(piece.location[0] + i, piece.location[1] + i))
-  //       break;
-  //     let location = this.board[piece.location[0] + i][piece.location[1] + i];
-  //     if (!location)
-  //       moves.push({
-  //         from: piece.location,
-  //         to: [piece.location[0] + i, piece.location[1] + i],
-  //         type: moveTypes.MOVE,
-  //       });
-  //     else if (location.team !== piece.team) {
-  //       moves.push({
-  //         from: piece.location,
-  //         to: [piece.location[0] + i, piece.location[1] + i],
-  //         type: moveTypes.CAPTURE,
-  //         capture: [piece.location[0] + i, piece.location[1] + i],
-  //       });
-  //       break;
-  //     } else break;
-  //   }
+    return moves;
+  }
 
-  //   for (let i = 1; i < 8; i++) {
-  //     if (this.checkOutOfBounds(piece.location[0] - i, piece.location[1] - i))
-  //       break;
-  //     let location = this.board[piece.location[0] - i][piece.location[1] - i];
-  //     if (!location)
-  //       moves.push({
-  //         from: piece.location,
-  //         to: [piece.location[0] - i, piece.location[1] - i],
-  //         type: moveTypes.MOVE,
-  //       });
-  //     else if (location.team !== piece.team) {
-  //       moves.push({
-  //         from: piece.location,
-  //         to: [piece.location[0] - i, piece.location[1] - i],
-  //         type: moveTypes.CAPTURE,
-  //         capture: [piece.location[0] - i, piece.location[1] - i],
-  //       });
-  //       break;
-  //     } else break;
-  //   }
+  getQueenMoves(piece: number, location: number): number[] {
+    const moves: number[] = [];
 
-  //   for (let i = 1; i < 8; i++) {
-  //     if (this.checkOutOfBounds(piece.location[0] - i, piece.location[1] + i))
-  //       break;
-  //     let location = this.board[piece.location[0] - i][piece.location[1] + i];
+    // down right
+    for (
+      let i = 1;
+      i <=
+      7 -
+        ((location & 0b111) > ((location >> 3) & 0b111)
+          ? location & 0b111
+          : (location >> 3) & 0b111);
+      i++
+    ) {
+      if (this.board[location + 9 * i] === 0) {
+        moves.push(
+          (location << 14) |
+            ((location + 9 * i) << 8) |
+            (moveTypes.MOVE << 4) |
+            piece
+        );
+      } else if ((this.board[location + 9 * i] & 0b1) !== (piece & 0b1)) {
+        moves.push(
+          (location << 14) |
+            ((location + 9 * i) << 8) |
+            (moveTypes.CAPTURE << 4) |
+            piece
+        );
+        break;
+      } else {
+        break;
+      }
+    }
 
-  //     if (!location)
-  //       moves.push({
-  //         from: piece.location,
-  //         to: [piece.location[0] - i, piece.location[1] + i],
-  //         type: moveTypes.MOVE,
-  //       });
-  //     else if (location.team !== piece.team) {
-  //       moves.push({
-  //         from: piece.location,
-  //         to: [piece.location[0] - i, piece.location[1] + i],
-  //         type: moveTypes.CAPTURE,
-  //         capture: [piece.location[0] - i, piece.location[1] + i],
-  //       });
-  //       break;
-  //     } else break;
-  //   }
+    // up right
+    for (
+      let i = 1;
+      i <=
+      7 -
+        ((location & 0b111) < ((location >> 3) & 0b111)
+          ? location & 0b111
+          : (location >> 3) & 0b111);
+      i++
+    ) {
+      if (this.board[location - 7 * i] === 0) {
+        moves.push(
+          (location << 14) |
+            ((location - 7 * i) << 8) |
+            (moveTypes.MOVE << 4) |
+            piece
+        );
+      } else if ((this.board[location - 7 * i] & 0b1) !== (piece & 0b1)) {
+        moves.push(
+          (location << 14) |
+            ((location - 7 * i) << 8) |
+            (moveTypes.CAPTURE << 4) |
+            piece
+        );
+        break;
+      } else {
+        break;
+      }
+    }
 
-  //   for (let i = 1; i < 8; i++) {
-  //     if (this.checkOutOfBounds(piece.location[0] + i, piece.location[1] - i))
-  //       break;
-  //     let location = this.board[piece.location[0] + i][piece.location[1] - i];
-  //     if (!location)
-  //       moves.push({
-  //         from: piece.location,
-  //         to: [piece.location[0] + i, piece.location[1] - i],
-  //         type: moveTypes.MOVE,
-  //       });
-  //     else if (location.team !== piece.team) {
-  //       moves.push({
-  //         from: piece.location,
-  //         to: [piece.location[0] + i, piece.location[1] - i],
-  //         type: moveTypes.CAPTURE,
-  //         capture: [piece.location[0] + i, piece.location[1] - i],
-  //       });
-  //       break;
-  //     } else break;
-  //   }
+    // down left
+    for (
+      let i = 1;
+      i <=
+      ((location & 0b111) < ((location >> 3) & 0b111)
+        ? location & 0b111
+        : (location >> 3) & 0b111);
+      i++
+    ) {
+      if (this.board[location + 7 * i] === 0) {
+        moves.push(
+          (location << 14) |
+            ((location + 7 * i) << 8) |
+            (moveTypes.MOVE << 4) |
+            piece
+        );
+      } else if ((this.board[location + 7 * i] & 0b1) !== (piece & 0b1)) {
+        moves.push(
+          (location << 14) |
+            ((location + 7 * i) << 8) |
+            (moveTypes.CAPTURE << 4) |
+            piece
+        );
+        break;
+      } else {
+        break;
+      }
+    }
 
-  //   return moves;
-  // }
+    // up left
+    for (
+      let i = 1;
+      i <=
+      ((location & 0b111) < ((location >> 3) & 0b111)
+        ? location & 0b111
+        : (location >> 3) & 0b111);
+      i++
+    ) {
+      if (this.board[location - 9 * i] === 0) {
+        moves.push(
+          (location << 14) |
+            ((location - 9 * i) << 8) |
+            (moveTypes.MOVE << 4) |
+            piece
+        );
+      } else if ((this.board[location - 9 * i] & 0b1) !== (piece & 0b1)) {
+        moves.push(
+          (location << 14) |
+            ((location - 9 * i) << 8) |
+            (moveTypes.CAPTURE << 4) |
+            piece
+        );
+        break;
+      } else {
+        break;
+      }
+    }
 
-  // getPawnMoves(piece: ChessterPiece): ChessterMove[] {
-  //   const moves: ChessterMove[] = [];
-  //   const direction = piece.team === WHITE ? 1 : -1;
+    return moves;
 
-  //   if (
-  //     !this.checkOutOfBounds(
-  //       piece.location[0],
-  //       piece.location[1] + direction
-  //     ) &&
-  //     !this.board[piece.location[0]][piece.location[1] + direction]
-  //   ) {
-  //     // check promotion here
-  //     if (
-  //       (piece.team === WHITE && piece.location[1] === 6) ||
-  //       (piece.team === BLACK && piece.location[1] === 1)
-  //     ) {
-  //       moves.push(
-  //         {
-  //           from: piece.location,
-  //           to: [piece.location[0], piece.location[1] + direction],
-  //           type: moveTypes.PROMOTION,
-  //           promotion: piece.team === WHITE ? "♕" : "♛",
-  //         },
-  //         {
-  //           from: piece.location,
-  //           to: [piece.location[0], piece.location[1] + direction],
-  //           type: moveTypes.PROMOTION,
-  //           promotion: piece.team === WHITE ? "♖" : "♜",
-  //         },
-  //         {
-  //           from: piece.location,
-  //           to: [piece.location[0], piece.location[1] + direction],
-  //           type: moveTypes.PROMOTION,
-  //           promotion: piece.team === WHITE ? "♗" : "♝",
-  //         },
-  //         {
-  //           from: piece.location,
-  //           to: [piece.location[0], piece.location[1] + direction],
-  //           type: moveTypes.PROMOTION,
-  //           promotion: piece.team === WHITE ? "♘" : "♞",
-  //         }
-  //       );
-  //     } else {
-  //       moves.push({
-  //         from: piece.location,
-  //         to: [piece.location[0], piece.location[1] + direction],
-  //         type: moveTypes.MOVE,
-  //       });
+    // how performant is this?
+    return [
+      ...this.getBishopMoves(piece, location),
+      ...this.getRookMoves(piece, location),
+    ];
+  }
 
-  //       // advancing two squares requires two vacant squares
-  //       if (
-  //         ((piece.team === WHITE && piece.location[1] === 1) ||
-  //           (piece.team === BLACK && piece.location[1] === 6)) &&
-  //         !this.board[piece.location[0]][piece.location[1] + direction * 2]
-  //       ) {
-  //         moves.push({
-  //           from: piece.location,
-  //           to: [piece.location[0], piece.location[1] + direction * 2],
-  //           type: moveTypes.MOVE,
-  //         });
-  //       }
-  //     }
-  //   }
+  getPawnMoves(piece: number, location: number): number[] {
+    const moves: number[] = [];
 
-  //   if (
-  //     !this.checkOutOfBounds(
-  //       piece.location[0] + 1,
-  //       piece.location[1] + direction
-  //     )
-  //   ) {
-  //     let location =
-  //       this.board[piece.location[0] + 1][piece.location[1] + direction];
-  //     if (location && location.team !== piece.team)
-  //       moves.push({
-  //         from: piece.location,
-  //         to: [piece.location[0] + 1, piece.location[1] + direction],
-  //         type: moveTypes.CAPTURE,
-  //         capture: [piece.location[0] + 1, piece.location[1] + direction],
-  //       });
-  //   }
+    console.log("[debug] getPawnMoves team: " + (piece & 0b1));
 
-  //   if (
-  //     !this.checkOutOfBounds(
-  //       piece.location[0] - 1,
-  //       piece.location[1] + direction
-  //     )
-  //   ) {
-  //     let location =
-  //       this.board[piece.location[0] - 1][piece.location[1] + direction];
-  //     if (location && location.team !== piece.team)
-  //       moves.push({
-  //         from: piece.location,
-  //         to: [piece.location[0] - 1, piece.location[1] + direction],
-  //         type: moveTypes.CAPTURE,
-  //         capture: [piece.location[0] - 1, piece.location[1] + direction],
-  //       });
-  //   }
+    // white piece
+    if ((piece & 0b1) === 0) {
+      if (this.board[location - 8] === 0) {
+        moves.push(
+          (location << 14) |
+            ((location - 8) << 8) |
+            (moveTypes.MOVE << 4) |
+            piece
+        );
 
-  //   // en passant
-  //   let lastMove = this.history.at(-1);
+        if (location >> 3 === 6 && this.board[location - 16] === 0) {
+          // double move
+          moves.push(
+            (location << 14) |
+              ((location - 16) << 8) |
+              (moveTypes.DOUBLE_PAWN_PUSH << 4) |
+              piece
+          );
+        }
+      }
 
-  //   if (
-  //     lastMove &&
-  //     piece.team == WHITE &&
-  //     piece.location[1] === 4 &&
-  //     this.board[lastMove.to[0]][lastMove.to[1]]!.string === "♟︎" &&
-  //     lastMove.from[1] === 6 &&
-  //     lastMove.to[1] === 4 &&
-  //     (lastMove.to[0] === piece.location[0] + 1 ||
-  //       lastMove.to[0] === piece.location[0] - 1)
-  //   ) {
-  //     moves.push({
-  //       from: piece.location,
-  //       to: [lastMove.to[0], lastMove.to[1] + 1],
-  //       type: moveTypes.EN_PASSANT,
-  //       capture: [lastMove.to[0], lastMove.to[1]],
-  //     });
-  //   }
+      // upper left capture
+      if ((location & 0b111) !== 0 && (this.board[location - 9] & 0b1) === 1)
+        moves.push(
+          (location << 14) |
+            ((location - 9) << 8) |
+            (moveTypes.CAPTURE << 4) |
+            piece
+        );
 
-  //   if (
-  //     lastMove &&
-  //     piece.team == BLACK &&
-  //     piece.location[1] === 3 &&
-  //     this.board[lastMove.to[0]][lastMove.to[1]]!.string === "♙" &&
-  //     lastMove.from[1] === 1 &&
-  //     lastMove.to[1] === 3 &&
-  //     (lastMove.to[0] === piece.location[0] + 1 ||
-  //       lastMove.to[0] === piece.location[0] - 1)
-  //   ) {
-  //     moves.push({
-  //       from: piece.location,
-  //       to: [lastMove.to[0], lastMove.to[1] - 1],
-  //       type: moveTypes.EN_PASSANT,
-  //       capture: [lastMove.to[0], lastMove.to[1]],
-  //     });
-  //   }
+      // upper right capture
+      if ((location & 0b111) !== 7 && (this.board[location - 7] & 0b1) === 1)
+        moves.push(
+          (location << 14) |
+            ((location - 7) << 8) |
+            (moveTypes.CAPTURE << 4) |
+            piece
+        );
 
-  //   return moves;
-  // }
+      // promotion
+      // if (location >> 3 === 1) {
+      //   moves.push(
+      //     ...[
+      //       (location << 14) |
+      //         ((location - 8) << 8) |
+      //         (moveTypes.PROMOTION_QUEEN << 4) |
+      //         piece,
+      //       (location << 14) |
+      //         ((location - 8) << 8) |
+      //         (moveTypes.PROMOTION_ROOK << 4) |
+      //         piece,
+      //       (location << 14) |
+      //         ((location - 8) << 8) |
+      //         (moveTypes.PROMOTION_BISHOP << 4) |
+      //         piece,
+      //       (location << 14) |
+      //         ((location - 8) << 8) |
+      //         (moveTypes.PROMOTION_KNIGHT << 4) |
+      //         piece,
+      //     ]
+      //   );
+      // }
+
+      // en passant
+      // if (this.history.at(-1) !== 0) {
+      //   if (
+      //     ((this.history[this.history.length - 1] >> 4) & 0b1111) ===
+      //       moveTypes.DOUBLE_PAWN_PUSH &&
+      //     this.history[this.history.length - 1] >> 12 === location >> 4 &&
+      //     Math.abs(
+      //       ((this.history[this.history.length - 1] >> 8) & 0b111111) - location
+      //     ) === 1 // performant?
+      //   ) {
+      //     moves.push(
+      //       (location << 14) |
+      //         ((((this.history[this.history.length - 1] >> 8) & 0b111111) -
+      //           8) <<
+      //           8) |
+      //         (moveTypes.EN_PASSANT_WHITE << 4) |
+      //         piece
+      //     );
+      //   }
+      // }
+    } else {
+      if (this.board[location + 8] === 0) {
+        moves.push(
+          (location << 14) |
+            ((location + 8) << 8) |
+            (moveTypes.MOVE << 4) |
+            piece
+        );
+
+        if (location >> 3 === 6 && this.board[location + 16] === 0) {
+          // double move
+          moves.push(
+            (location << 14) |
+              ((location + 16) << 8) |
+              (moveTypes.DOUBLE_PAWN_PUSH << 4) |
+              piece
+          );
+        }
+      }
+
+      // upper left capture
+      if ((location & 0b111) !== 7 && (this.board[location + 9] & 0b1) === 0)
+        moves.push(
+          (location << 14) |
+            ((location + 9) << 8) |
+            (moveTypes.CAPTURE << 4) |
+            piece
+        );
+
+      // upper right capture
+      if (location & 0b111 && (this.board[location + 7] & 0b1) === 0)
+        moves.push(
+          (location << 14) |
+            ((location + 7) << 8) |
+            (moveTypes.CAPTURE << 4) |
+            piece
+        );
+
+      // promotion
+      // if (location >> 3 === 6) {
+      //   moves.push(
+      //     ...[
+      //       (location << 14) |
+      //         ((location + 8) << 8) |
+      //         (moveTypes.PROMOTION_QUEEN << 4) |
+      //         piece,
+      //       (location << 14) |
+      //         ((location + 8) << 8) |
+      //         (moveTypes.PROMOTION_ROOK << 4) |
+      //         piece,
+      //       (location << 14) |
+      //         ((location + 8) << 8) |
+      //         (moveTypes.PROMOTION_BISHOP << 4) |
+      //         piece,
+      //       (location << 14) |
+      //         ((location + 8) << 8) |
+      //         (moveTypes.PROMOTION_KNIGHT << 4) |
+      //         piece,
+      //     ]
+      //   );
+      // }
+
+      // en passant
+      // if (this.history.at(-1) !== 0) {
+      //   if (
+      //     ((this.history[this.history.length - 1] >> 4) & 0b1111) ===
+      //       moveTypes.DOUBLE_PAWN_PUSH &&
+      //     this.history[this.history.length - 1] >> 12 === location >> 4 &&
+      //     Math.abs(
+      //       ((this.history[this.history.length - 1] >> 8) & 0b111111) - location
+      //     ) === 1 // performant?
+      //   ) {
+      //     moves.push(
+      //       (location << 14) |
+      //         ((((this.history[this.history.length - 1] >> 8) & 0b111111) +
+      //           8) <<
+      //           8) |
+      //         (moveTypes.EN_PASSANT_BLACK << 4) |
+      //         piece
+      //     );
+      //   }
+      // }
+    }
+
+    return moves;
+  }
 
   // countPiecesInBoundary(
   //   boundary1: ChessterLocation,

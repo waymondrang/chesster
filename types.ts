@@ -7,14 +7,16 @@ export const boardSize = 64,
   MIN_PLAYER = 1,
   moveTypes = {
     MOVE: 0b0000,
-    CAPTURE: 0b0001,
-    CASTLE_KINGSIDE: 0b0010,
-    CASTLE_QUEENSIDE: 0b0011,
-    EN_PASSANT: 0b0100,
-    PROMOTION_QUEEN: 0b0101,
-    PROMOTION_KNIGHT: 0b0110,
-    PROMOTION_BISHOP: 0b0111,
-    PROMOTION_ROOK: 0b1000,
+    DOUBLE_PAWN_PUSH: 0b0001,
+    CAPTURE: 0b0010,
+    CASTLE_KINGSIDE: 0b0011,
+    CASTLE_QUEENSIDE: 0b0100,
+    EN_PASSANT_WHITE: 0b0101,
+    EN_PASSANT_BLACK: 0b0110,
+    PROMOTION_QUEEN: 0b1000,
+    PROMOTION_KNIGHT: 0b1001,
+    PROMOTION_BISHOP: 0b1010,
+    PROMOTION_ROOK: 0b1011,
   },
   defaultBoardString: ChessterBoardString = [
     ["♜", "♞", "♝", "♛", "♚", "♝", "♞", "♜"],
@@ -49,7 +51,7 @@ export type ChessterPieceString =
 
 export type ChessterBoard = Array<number>;
 
-export type ChessterBoardString = (ChessterPieceString | undefined)[][];
+export type ChessterBoardString = (ChessterPieceString | "")[][];
 
 export type ChessterTeam = typeof WHITE | typeof BLACK;
 
@@ -66,10 +68,14 @@ export type ChessterMove = number;
 
 export type ChessterGameState = {
   board: Array<number>;
-  white: ChessterPlayer;
-  black: ChessterPlayer;
+  wc: boolean; // white check
+  bc: boolean; // black check
+  wcm: boolean; // white checkmate
+  bcm: boolean; // black checkmate
+  wcc: number; // white can castle
+  bcc: number; // black can castle
+  turn: number;
   history: ChessterHistory;
-  turn: ChessterTeam;
   simulation: boolean;
 };
 
