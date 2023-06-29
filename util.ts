@@ -13,6 +13,7 @@ import {
   RecursivePartial,
   WHITE,
   boardSize,
+  moveTypes,
 } from "./types";
 
 export function generateRandomInteger(min: number, max: number) {
@@ -124,6 +125,111 @@ export function pieceStringToNumber(
       break;
   }
   return number;
+}
+
+/**
+ * return a string representation of piece, where uppercase is white
+ * @param pieceNumber
+ * @returns
+ */
+export function pieceNumberToLetter(pieceNumber: number): string {
+  let letter = "";
+  switch (pieceNumber) {
+    case 0b0011:
+      letter = "p";
+      break;
+    case 0b0010:
+      letter = "P";
+      break;
+    case 0b0101:
+      letter = "n";
+      break;
+    case 0b0100:
+      letter = "N";
+      break;
+    case 0b1001:
+      letter = "r";
+      break;
+    case 0b1000:
+      letter = "R";
+      break;
+    case 0b0111:
+      letter = "b";
+      break;
+    case 0b0110:
+      letter = "B";
+      break;
+    case 0b1011:
+      letter = "q";
+      break;
+    case 0b1010:
+      letter = "Q";
+      break;
+    case 0b1101:
+      letter = "k";
+      break;
+    case 0b1100:
+      letter = "K";
+      break;
+  }
+  return letter;
+}
+
+export function moveToMoveObject(move: ChessterMove): {
+  from: string;
+  to: string;
+  promotion?: string;
+} {
+  console.log(getBinaryString(move));
+  return {
+    from:
+      String.fromCharCode(((move >>> 14) & 0b111) + 97) +
+      (8 - (((move >>> 14) >>> 3) & 0b111)),
+    to:
+      String.fromCharCode(((move >>> 8) & 0b111) + 97) +
+      (8 - (((move >>> 8) >>> 3) & 0b111)),
+    promotion: (() => {
+      switch ((move >>> 4) & 0b1111) {
+        case moveTypes.PROMOTION_BISHOP:
+          return "b";
+        case moveTypes.PROMOTION_KNIGHT:
+          return "n";
+        case moveTypes.PROMOTION_QUEEN:
+          return "q";
+        case moveTypes.PROMOTION_ROOK:
+          return "r";
+        default:
+          return undefined;
+      }
+    })(),
+  };
+}
+
+export function compareChessJSBoardWithChessterBoard(
+  chessJSBoard: { square: string; type: string; color: string }[][],
+  chessterBoard: ChessterBoard
+): boolean {
+  // flatten chessjs board
+  const flattenedChessJSBoard = chessJSBoard.flat();
+
+  for (let i = 0; i < boardSize; i++) {
+    if (flattenedChessJSBoard[i] === null && chessterBoard[i] === 0) continue;
+
+    let chessterPiece = pieceNumberToLetter(chessterBoard[i]);
+
+    if (
+      chessterPiece.toLowerCase() !== flattenedChessJSBoard[i].type ||
+      (chessterPiece === chessterPiece.toUpperCase() ? "w" : "b") !==
+        flattenedChessJSBoard[i].color
+    ) {
+      console.log(
+        `location: ${i}, chesster piece: ${chessterPiece}, chessjs piece: ${flattenedChessJSBoard[i].type}, color: ${flattenedChessJSBoard[i].color}`
+      );
+      return false;
+    }
+  }
+
+  return true;
 }
 
 export function numberToPieceString(pieceNumber: number): string {
@@ -244,7 +350,7 @@ export function boardStringToBuffer(boardString: ChessterBoardString): Buffer {
 }
 
 export function getBinaryString(dec: number) {
-  return (dec >>> 0).toString(2);
+  return (dec >> 0).toString(2);
 }
 
 export function createRandomArray<T>(
@@ -348,31 +454,31 @@ export function calculateTeam(piece: ChessterPieceString) {
 //   return board;
 // }
 
-// function typeOf(variable: any) {
-//   if (variable === void 0) return "undefined";
-//   if (variable === null) return "null";
+function typeOf(variable: any) {
+  if (variable === void 0) return "undefined";
+  if (variable === null) return "null";
 
-//   const type = typeof variable;
-//   const stype = Object.prototype.toString.call(variable);
+  const type = typeof variable;
+  const stype = Object.prototype.toString.call(variable);
 
-//   switch (type) {
-//     case "boolean":
-//     case "number":
-//     case "string":
-//     case "symbol":
-//     case "function":
-//       return type;
-//   }
+  switch (type) {
+    case "boolean":
+    case "number":
+    case "string":
+    case "symbol":
+    case "function":
+      return type;
+  }
 
-//   if (Array.isArray(variable)) return "array";
-//   if (variable instanceof Date) return "date";
-//   if (variable instanceof RegExp) return "regexp";
+  if (Array.isArray(variable)) return "array";
+  if (variable instanceof Date) return "date";
+  if (variable instanceof RegExp) return "regexp";
 
-//   switch (stype) {
-//     case "[object Object]":
-//       return "object";
-//   }
-// }
+  switch (stype) {
+    case "[object Object]":
+      return "object";
+  }
+}
 
 // function sCopy(input: any) {
 //   switch (typeOf(input)) {
@@ -426,65 +532,65 @@ export function calculateTeam(piece: ChessterPieceString) {
 //   return nInput;
 // }
 
-// /**
-//  * Recursively compare two values (more useful than bCompareState)
-//  * @param a
-//  * @param b
-//  * @returns
-//  */
-// export function rCompare(a: any, b: any) {
-//   if (a === undefined) return true;
+/**
+ * Recursively compare two values (more useful than bCompareState)
+ * @param a
+ * @param b
+ * @returns
+ */
+export function rCompare(a: any, b: any) {
+  if (a === undefined) return true;
 
-//   if (typeOf(a) !== typeOf(b)) {
-//     console.log("typeOf(a) !== typeOf(b)", typeOf(a), typeOf(b));
-//     return false;
-//   }
+  if (typeOf(a) !== typeOf(b)) {
+    console.log("typeOf(a) !== typeOf(b)", typeOf(a), typeOf(b));
+    return false;
+  }
 
-//   switch (typeOf(a)) {
-//     case "array":
-//       return rCompareArray(a, b);
-//     case "object":
-//       return rCompareObject(a, b);
-//     default:
-//       return a === b;
-//   }
-// }
+  switch (typeOf(a)) {
+    case "array":
+      return rCompareArray(a, b);
+    case "object":
+      return rCompareObject(a, b);
+    default:
+      return a === b;
+  }
+}
 
-// function rCompareObject(a: any, b: any) {
-//   if (a.constructor !== b.constructor) {
-//     console.log(
-//       "a.constructor !== b.constructor",
-//       a.constructor,
-//       b.constructor
-//     );
-//     return false;
-//   }
+function rCompareObject(a: any, b: any) {
+  if (a.constructor !== b.constructor) {
+    console.log(
+      "a.constructor !== b.constructor",
+      a.constructor,
+      b.constructor
+    );
+    return false;
+  }
 
-//   for (let key in a) {
-//     if (!rCompare(a[key], b[key])) {
-//       console.log("!rCompare(a[key], b[key])", a[key], b[key]);
-//       return false;
-//     }
-//   }
+  for (let key in a) {
+    if (!rCompare(a[key], b[key])) {
+      console.log(`!rCompare(a[${key}], b[${key}])`, a[key], b[key]);
+      return false;
+    }
+  }
 
-//   return true;
-// }
+  return true;
+}
 
-// function rCompareArray(a: any, b: any) {
-//   if (a.length !== b.length) {
-//     console.log("a.length !== b.length", a.length, b.length);
-//     return false;
-//   }
+function rCompareArray(a: any, b: any) {
+  if (a.length !== b.length) {
+    console.log("a.length !== b.length", a.length, b.length);
+    return false;
+  }
 
-//   for (let i = 0; i < a.length; i++) {
-//     if (!rCompare(a[i], b[i])) {
-//       console.log("!rCompare(a[i], b[i])", a[i], b[i]);
-//       return false;
-//     }
-//   }
+  for (let i = 0; i < a.length; i++) {
+    if (!rCompare(a[i], b[i])) {
+      console.log("!rCompare(a[i], b[i])", a[i], b[i]);
+      return false;
+    }
+  }
 
-//   return true;
-// }
+  return true;
+}
 
 // /**
 //  * Deep copy a ChessterGameState without recursion (best option for performance)

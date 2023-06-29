@@ -31,6 +31,17 @@
 | white | 0         |
 | black | 1         |
 
+| bcqc | wcqc | bckc | wckc | bit value |
+| ---- | ---- | ---- | ---- | --------- |
+| 1    | 1    | 1    | 1    | 000       |
+| 1    | 1    | 1    | 0    | 001       |
+| 1    | 1    | 0    | 1    | 010       |
+| 1    | 0    | 1    | 1    | 011       |
+| 0    | 1    | 1    | 1    | 100       |
+| 1    | 0    | 1    | 0    | 101       |
+| 0    | 1    | 0    | 1    | 110       |
+| 0    | 0    | 0    | 0    | 111       |
+
 \[piece (3 bits)\]\[team (1 bit)\]
 
 ### move bit representation
@@ -38,21 +49,22 @@
 location: 6 bits (0 to 63)
 
 total: (20 bits)
-\[move from (6 bits from 0 to 63)\]
-\[move to (6 bits from 0 to 63)\]
-\[move type (4 bits)\]
-\[original piece (4 bits)\]
+\[move from (6 bits from 0 to 63)\] (14)
+\[move to (6 bits from 0 to 63)\] (8)
+\[move type (4 bits)\] (4)
+\[original piece (4 bits)\] (0)
 
-1111001101000000
+100001 011010 0000 0110
 
 (in history)
-\[bcc (2 bits)\] (31)
-\[wcc (2 bits)\] (29)
-\[bcm\] (28)
-\[wcm\] (27)
-\[bc\] (26)
-\[wc\] (25)
-\[turn bit\] (24)
+\[bcqc bit\] (31)
+\[wcqc bit\] (30)
+\[bckc bit\] (29)
+\[wckc bit\] (28)
+\[bcm bit\] (27)
+\[wcm bit\] (26)
+\[bc bit\] (25)
+\[wc bit\] (24)
 \[captured piece, if any (4 bits)\] (20)
 \[move from (6 bits from 0 to 63)\] (14)
 \[move to (6 bits from 0 to 63)\] (8)

@@ -7,7 +7,7 @@ import { calculateTeam } from "../util";
 export {};
 
 function dec2bin(dec: number) {
-  return (dec >>> 0).toString(2);
+  return (dec >> 0).toString(2);
 }
 
 const pieces: ChessterPieceString[] = [

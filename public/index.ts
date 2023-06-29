@@ -33,6 +33,7 @@ const restart = document.querySelector("#restart")!;
 const promotion_close = document.querySelector("#promotion-close")!;
 const promotion = document.querySelector("#promotion")!;
 const promotion_options = document.querySelector("#promotion-options")!;
+const undo = document.querySelector("#undo")!;
 
 const socket = io();
 const game = new ChessterGame();
@@ -90,7 +91,7 @@ function clearMoveHighlights() {
 }
 
 function updateLastMove(gameHistory: ChessterHistory) {
-  for (let i = 0; i < 8; i++) {
+  for (let i = 0; i < boardSize; i++) {
     for (let modifier of ["moved_from", "moved_to"]) {
       elementBoard[i].classList.remove(modifier);
     }
@@ -98,8 +99,8 @@ function updateLastMove(gameHistory: ChessterHistory) {
 
   if (gameHistory.length > 0) {
     let lastMove = gameHistory[gameHistory.length - 1];
-    let from = (lastMove >> 14) & 0b111111;
-    let to = (lastMove >> 8) & 0b111111;
+    let from = (lastMove >>> 14) & 0b111111;
+    let to = (lastMove >>> 8) & 0b111111;
     elementBoard[from].classList.add("moved_from");
     elementBoard[to].classList.add("moved_to");
   }
@@ -128,8 +129,9 @@ promotion_close.addEventListener("click", () => {
 });
 
 function clientMove(move: ChessterMove) {
+  console.log("sending and making move", getBinaryString(move));
   aiMove(move);
-  socket.emit("move", getBinaryString(move));
+  socket.emit("move", move);
 }
 
 function aiMove(move: ChessterMove) {
@@ -143,6 +145,24 @@ function aiMove(move: ChessterMove) {
   selectedPieceElement = null;
   selectedPieceMoves = [];
 }
+
+function clientUndo() {
+  console.log("undoing");
+  game.undo();
+
+  updateBoard(game.board);
+  updateTurnIndicator(game.turn as ChessterTeam);
+  updateLastMove(game.history);
+  clearMoveHighlights();
+
+  selectedPieceElement = null;
+  selectedPieceMoves = [];
+  socket.emit("undo");
+}
+
+undo.addEventListener("click", () => {
+  clientUndo();
+});
 
 //////////////////////////////
 //     initialize board     //
@@ -178,14 +198,14 @@ for (let i = 0; i < boardSize; i++) {
       }
 
       let selectedMoves = selectedPieceMoves.filter(
-        (move) => ((move >> 1) & 0b111) === i
+        (move) => ((move >>> 8) & 0b111111) === i
       );
 
       if (selectedMoves.length > 0) {
         console.log("selectedMoves", selectedMoves);
 
         if (selectedMoves.length > 1) {
-          if (((selectedMoves[0] >> 8) & 0b1) !== 1)
+          if (((selectedMoves[0] >>> 7) & 0b1) !== 1)
             throw new Error(
               "invalid multi-move type: " + getBinaryString(selectedMoves[0])
             );
@@ -199,7 +219,7 @@ for (let i = 0; i < boardSize; i++) {
 
             // button.textContent = move.promotion || "";
 
-            switch ((move >> 4) & 0b1111) {
+            switch ((move >>> 4) & 0b1111) {
               case moveTypes.PROMOTION_QUEEN:
                 button.textContent = move & 0b1 ? "♛" : "♕";
                 break;
@@ -242,9 +262,11 @@ for (let i = 0; i < boardSize; i++) {
 
       const moves = game.getAvailableMoves(i);
 
+      console.log("calculatd moves: ", moves);
+
       for (let move of moves) {
-        elementBoard[(move >> 8) & 0b111111].classList.add(
-          getKeyByValue(moveTypes, (move >> 4) & 0b1111) as string
+        elementBoard[(move >>> 8) & 0b111111].classList.add(
+          getKeyByValue(moveTypes, (move >>> 4) & 0b1111) as string
         );
       }
 

@@ -72,9 +72,11 @@ export type ChessterGameState = {
   bc: boolean; // black check
   wcm: boolean; // white checkmate
   bcm: boolean; // black checkmate
-  wcc: number; // white can castle
-  bcc: number; // black can castle
-  turn: number;
+  wckc: boolean; // can white castle kingside
+  wcqc: boolean; // can white castle queenside
+  bckc: boolean; // can black castle kingside
+  bcqc: boolean; // can black castle queenside
+  turn: 0 | 1;
   history: ChessterHistory;
   simulation: boolean;
 };

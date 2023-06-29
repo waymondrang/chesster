@@ -2,6 +2,7 @@
  * this file can create a random board
  * and test the speed of a function
  */
+import { Chess } from "chess.js";
 import { ChessterGame } from "../game";
 import {
   ChessterBoard,
@@ -11,22 +12,67 @@ import {
   ChessterPieceString,
   WHITE,
   boardSize,
+  moveTypes,
 } from "../types";
+import {
+  compareChessJSBoardWithChessterBoard,
+  fenStringToBoard,
+  getBinaryString,
+  getKeyByValue,
+  moveToMoveObject,
+  numberToPieceString,
+} from "../util";
 
 const game = new ChessterGame();
+const chess = new Chess();
 
-function countBulkPositions(game: ChessterGame, depth: number): number {
+function countBulkPositions(depth: number): number {
   if (depth <= 0) return 1;
-
-  const moves: ChessterMove[] = [];
   let count = 0;
 
   for (let i = 0; i < boardSize; i++) {
     if (game.board[i] !== 0 && (game.board[i] & 0b1) === game.turn) {
       const moves = game.getAvailableMoves(i);
       for (let j = 0; j < moves.length; j++) {
-        game.move(moves[j], i);
-        count += countBulkPositions(game, depth - 1);
+        console.log("starting board:\n" + game.boardToString());
+        game.move(moves[j]);
+        try {
+          chess.move(moveToMoveObject(moves[j]));
+        } catch (e) {
+          console.log(getBinaryString(moves[j]));
+          console.log(chess.fen());
+          console.log(chess.ascii());
+          console.log(game.boardToString());
+          game.undo();
+          console.log(game.boardToString());
+          throw e;
+        }
+
+        if (!compareChessJSBoardWithChessterBoard(chess.board(), game.board)) {
+          console.log(
+            "last move: " +
+              getBinaryString(moves[j]) +
+              " from: " +
+              ((moves[j] >> 14) & 0b111111) +
+              " to: " +
+              ((moves[j] >> 8) & 0b111111) +
+              " move type: " +
+              getKeyByValue(moveTypes, (moves[j] >> 4) & 0b1111) +
+              " original piece: " +
+              numberToPieceString(moves[j] & 0b1111)
+          );
+          console.log(chess.ascii());
+          console.log(game.boardToString());
+          game.undo();
+          console.log(game.boardToString());
+          chess.undo();
+          console.log(chess.fen());
+          throw new Error("boards are not equal");
+        }
+
+        count += countBulkPositions(depth - 1);
+        game.undo();
+        chess.undo();
       }
     }
   }
@@ -37,9 +83,19 @@ function countBulkPositions(game: ChessterGame, depth: number): number {
 function measureCountBulkPositions(depth: number) {
   const startTime = performance.now();
 
-  game.init();
+  game.init({
+    board: fenStringToBoard(
+      "r3k2r/Pppp1ppp/1b3nbN/nP6/BBP1P3/q4N2/Pp1P2PP/R2Q1RK1"
+    ),
+  });
 
-  const count = countBulkPositions(game, depth);
+  chess.load(
+    "r3k2r/Pppp1ppp/1b3nbN/nP6/BBP1P3/q4N2/Pp1P2PP/R2Q1RK1 w kq - 0 1"
+  );
+
+  chess.move;
+
+  const count = countBulkPositions(depth);
   console.log(
     "Depth: " +
       depth +

@@ -9,7 +9,7 @@ import {
 } from "./types";
 import { Server, Socket } from "socket.io";
 import { createServer } from "http";
-import { boardStringToArray } from "./util";
+import { boardStringToArray, fenStringToBoard, getBinaryString } from "./util";
 
 const app = express();
 const server = createServer(app);
@@ -21,18 +21,9 @@ app.use(express.json());
 const testBoard: ChessterBoardString = [
   ["♜", "♞", "♝", "♛", "♚", "♝", "♞", "♜"],
   ["♟︎", "♟︎", "♟︎", "♟︎", "♟︎", "♟︎", "♟︎", "♟︎"],
-  new Array(8).fill(undefined),
-  new Array(8).fill(undefined),
-  [
-    undefined,
-    undefined,
-    undefined,
-    "♗",
-    undefined,
-    undefined,
-    undefined,
-    undefined,
-  ],
+  ["", "", "", "", "", "", "", ""],
+  ["", "", "", "", "", "", "", ""],
+  ["", "", "", "", "", "", "", ""],
   ["", "", "", "", "", "", "", ""],
   ["♙", "", "♙", "♙", "", "♙", "♙", "♙"],
   ["", "♘", "♗", "♕", "♔", "", "♘", "♖"],
@@ -41,14 +32,19 @@ const testBoard: ChessterBoardString = [
 io.on("connection", (socket: Socket) => {
   console.log("a user connected");
   const game = new ChessterGame({
-    board: boardStringToArray(testBoard),
+    board: fenStringToBoard(
+      "r3k2r/Pppp1ppp/1b3nbN/nP6/BBPPP3/q4N2/Pp4PP/R2Q1RK1"
+    ),
+    turn: BLACK,
   });
+
+  console.log(game.boardToString());
 
   socket.emit("initState", game.getState());
 
   socket.on("move", (data: ChessterMove) => {
-    console.log("move received");
-    game.validateAndMove(data);
+    console.log("move received: " + getBinaryString(data));
+    game.move(data);
 
     // if (
     //   (game.turn === WHITE && game.wcm) ||
@@ -88,7 +84,6 @@ io.on("connection", (socket: Socket) => {
   // });
 
   socket.on("disconnect", () => {
-    console.log("user disconnected");
     console.log("user disconnected");
   });
 });
