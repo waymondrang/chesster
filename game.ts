@@ -40,20 +40,20 @@ export class ChessterGame {
   }
 
   init(state?: RecursivePartial<ChessterGameState>) {
-    this.board = <ChessterBoard>state?.board || defaultBoard;
-    this.turn = <ChessterTeam>state?.turn || WHITE;
-    this.history = <ChessterHistory>state?.history || [];
-    this.simulation = <boolean>state?.simulation || false;
+    this.board = state?.board ?? defaultBoard;
+    this.turn = state?.turn ?? WHITE;
+    this.history = state?.history ?? [];
+    this.simulation = state?.simulation ?? false;
 
-    this.wc = false; // white check
-    this.bc = false; // black check
-    this.wcm = false; // white checkmate
-    this.bcm = false; // black checkmate
+    this.wc = state?.wc ?? false; // white check
+    this.bc = state?.bc ?? false; // black check
+    this.wcm = state?.wcm ?? false; // white checkmate
+    this.bcm = state?.bcm ?? false; // black checkmate
 
-    this.wckc = true; // white can castle kingside
-    this.wcqc = true; // white can castle queenside
-    this.bckc = true; // black can castle kingside
-    this.bcqc = true; // black can castle queenside
+    this.wckc = state?.wckc ?? true; // white can castle kingside
+    this.wcqc = state?.wcqc ?? true; // white can castle queenside
+    this.bckc = state?.bckc ?? true; // black can castle kingside
+    this.bcqc = state?.bcqc ?? true; // black can castle queenside
 
     this.updateChecked();
     this.updateCastle();
@@ -169,13 +169,13 @@ export class ChessterGame {
         this.board[((move >>> 14) & 0b111111) - 4] = 0;
         break;
       case moveTypes.EN_PASSANT_WHITE:
-        history |= this.board[((move >>> 8) & 0b111111) - 8] << 20;
+        history |= this.board[((move >>> 8) & 0b111111) + 8] << 20;
         this.board[(move >>> 14) & 0b111111] = 0;
         this.board[(move >>> 8) & 0b111111] = move & 0b1111;
         this.board[((move >>> 8) & 0b111111) + 8] = 0;
         break;
       case moveTypes.EN_PASSANT_BLACK:
-        history |= this.board[((move >>> 8) & 0b111111) + 8] << 20;
+        history |= this.board[((move >>> 8) & 0b111111) - 8] << 20;
         this.board[(move >>> 14) & 0b111111] = 0;
         this.board[(move >>> 8) & 0b111111] = move & 0b1111;
         this.board[((move >>> 8) & 0b111111) - 8] = 0;
@@ -404,10 +404,46 @@ export class ChessterGame {
       this.move(move);
 
       if ((team === WHITE && !this.wc) || (team === BLACK && !this.bc)) {
-        finalMoves.push(move);
+        this.undo();
+
+        if (((move >>> 4) & 0b1111) === moveTypes.CASTLE_KINGSIDE) {
+          // if move if castle kingside, check if currently team is in check. if not in check, continue checking position between king and rook
+          console.log(
+            "checking if can castle kingside: " +
+              getBinaryString(
+                (move & 0b11111100000000001111) |
+                  (((move >>> 14) + 1) << 8) |
+                  (moveTypes.MOVE << 4)
+              )
+          );
+          this.move(
+            (move & 0b11111100000000001111) |
+              (((move >>> 14) + 1) << 8) |
+              (moveTypes.MOVE << 4)
+          );
+
+          if ((team === WHITE && !this.wc) || (team === BLACK && !this.bc))
+            finalMoves.push(move);
+
+          this.undo();
+        } else if (((move >>> 4) & 0b1111) === moveTypes.CASTLE_QUEENSIDE) {
+          this.move(
+            (move & 0b11111100000000001111) |
+              (((move >>> 14) - 1) << 8) |
+              (moveTypes.MOVE << 4)
+          );
+
+          if ((team === WHITE && !this.wc) || (team === BLACK && !this.bc))
+            finalMoves.push(move);
+
+          this.undo();
+        } else {
+          finalMoves.push(move);
+        }
+      } else {
+        this.undo();
       }
 
-      this.undo();
       // console.log("after move:\n" + this.boardToString());
     }
 
@@ -1030,56 +1066,79 @@ export class ChessterGame {
     // white piece
     if ((piece & 0b1) === 0) {
       // promotion
-      if (location >>> 3 === 1 && this.board[location - 8] === 0) {
-        // this piece can only do promotion
-        return [
-          (location << 14) |
-            ((location - 8) << 8) |
-            (moveTypes.PROMOTION_QUEEN << 4) |
-            piece,
-          (location << 14) |
-            ((location - 8) << 8) |
-            (moveTypes.PROMOTION_ROOK << 4) |
-            piece,
-          (location << 14) |
-            ((location - 8) << 8) |
-            (moveTypes.PROMOTION_BISHOP << 4) |
-            piece,
-          (location << 14) |
-            ((location - 8) << 8) |
-            (moveTypes.PROMOTION_KNIGHT << 4) |
-            piece,
-        ];
-      }
 
       // up
       if (this.board[location - 8] === 0) {
-        moves.push(
-          (location << 14) |
-            ((location - 8) << 8) |
-            (moveTypes.MOVE << 4) |
-            piece
-        );
-
-        if (location >>> 3 === 6 && this.board[location - 16] === 0) {
-          // double move
+        if ((location - 8) >>> 3 === 0) {
+          // this piece can only do promotion
           moves.push(
             (location << 14) |
-              ((location - 16) << 8) |
-              (moveTypes.DOUBLE_PAWN_PUSH << 4) |
+              ((location - 8) << 8) |
+              (moveTypes.PROMOTION_QUEEN << 4) |
+              piece,
+            (location << 14) |
+              ((location - 8) << 8) |
+              (moveTypes.PROMOTION_ROOK << 4) |
+              piece,
+            (location << 14) |
+              ((location - 8) << 8) |
+              (moveTypes.PROMOTION_BISHOP << 4) |
+              piece,
+            (location << 14) |
+              ((location - 8) << 8) |
+              (moveTypes.PROMOTION_KNIGHT << 4) |
               piece
           );
+        } else {
+          moves.push(
+            (location << 14) |
+              ((location - 8) << 8) |
+              (moveTypes.MOVE << 4) |
+              piece
+          );
+
+          if (location >>> 3 === 6 && this.board[location - 16] === 0) {
+            // double move
+            moves.push(
+              (location << 14) |
+                ((location - 16) << 8) |
+                (moveTypes.DOUBLE_PAWN_PUSH << 4) |
+                piece
+            );
+          }
         }
       }
 
       // upper left capture
-      if ((location & 0b111) !== 0 && (this.board[location - 9] & 0b1) === 1)
-        moves.push(
-          (location << 14) |
-            ((location - 9) << 8) |
-            (moveTypes.CAPTURE << 4) |
-            piece
-        );
+      if ((location & 0b111) !== 0 && (this.board[location - 9] & 0b1) === 1) {
+        if ((location - 9) >>> 3 === 0) {
+          moves.push(
+            (location << 14) |
+              ((location - 8) << 8) |
+              (moveTypes.PROMOTION_QUEEN << 4) |
+              piece,
+            (location << 14) |
+              ((location - 8) << 8) |
+              (moveTypes.PROMOTION_ROOK << 4) |
+              piece,
+            (location << 14) |
+              ((location - 8) << 8) |
+              (moveTypes.PROMOTION_BISHOP << 4) |
+              piece,
+            (location << 14) |
+              ((location - 8) << 8) |
+              (moveTypes.PROMOTION_KNIGHT << 4) |
+              piece
+          );
+        } else {
+          moves.push(
+            (location << 14) |
+              ((location - 9) << 8) |
+              (moveTypes.CAPTURE << 4) |
+              piece
+          );
+        }
+      }
 
       // upper right capture
       if ((location & 0b111) !== 7 && (this.board[location - 7] & 0b1) === 1)

@@ -1,5 +1,23 @@
+import { ChessterGame } from "./game";
+import { WHITE } from "./types";
 import { fenStringToBoard } from "./util";
 
-console.log(
-  fenStringToBoard("r3k2r/Pppp1ppp/1b3nbN/nP6/BBP1P3/q4N2/Pp1P2PP/R2Q1RK1")
-);
+const game = new ChessterGame({
+  board: fenStringToBoard(
+    "r3k2r/Pp1p1ppp/1b3nbN/nPp5/BBPPP3/q4N2/Pp4PP/R2Q1RK1"
+  ),
+  turn: WHITE,
+});
+
+console.log(game.boardToString());
+console.log("- - - - - - - -");
+
+game.move(0b1100101001001010010);
+
+console.log(game.boardToString());
+console.log("- - - - - - - -");
+
+game.undo();
+
+console.log(game.boardToString());
+console.log("- - - - - - - -");

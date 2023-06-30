@@ -9,7 +9,12 @@ import {
 } from "./types";
 import { Server, Socket } from "socket.io";
 import { createServer } from "http";
-import { boardStringToArray, fenStringToBoard, getBinaryString } from "./util";
+import {
+  boardStringToArray,
+  fenStringToBoard,
+  fenStringToGameState,
+  getBinaryString,
+} from "./util";
 
 const app = express();
 const server = createServer(app);
@@ -31,12 +36,11 @@ const testBoard: ChessterBoardString = [
 
 io.on("connection", (socket: Socket) => {
   console.log("a user connected");
-  const game = new ChessterGame({
-    board: fenStringToBoard(
-      "r3k2r/Pppp1ppp/1b3nbN/nP6/BBPPP3/q4N2/Pp4PP/R2Q1RK1"
-    ),
-    turn: BLACK,
-  });
+  const game = new ChessterGame(
+    fenStringToGameState(
+      "1r2k2r/Pppp1ppp/1b3nb1/nP6/BBPPP1N1/q4N2/Pp4PP/R2Q1RK1 b k - 2 2"
+    )
+  );
 
   console.log(game.boardToString());
 

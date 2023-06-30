@@ -14,6 +14,7 @@ import {
   WHITE,
   boardSize,
   moveTypes,
+  ChessterTeam,
 } from "./types";
 
 export function generateRandomInteger(min: number, max: number) {
@@ -67,6 +68,32 @@ export function fenStringToBoard(fen: string): number[] {
   }
 
   return newBoard;
+}
+
+export function fenStringToGameState(
+  fen: string
+): RecursivePartial<ChessterGameState> {
+  let fenToPlayer = {
+    w: WHITE,
+    b: BLACK,
+  };
+
+  let fenToCastle = {
+    K: true,
+    Q: true,
+    k: true,
+    q: true,
+    "-": false,
+  };
+
+  return {
+    board: fenStringToBoard(fen.split(" ")[0]),
+    turn: fenToPlayer[fen.split(" ")[1]],
+    wckc: fen.split(" ")[2].includes("K"),
+    wcqc: fen.split(" ")[2].includes("Q"),
+    bckc: fen.split(" ")[2].includes("k"),
+    bcqc: fen.split(" ")[2].includes("q"),
+  };
 }
 
 export function generateRandomPieceString(): ChessterPieceString {
@@ -133,46 +160,33 @@ export function pieceStringToNumber(
  * @returns
  */
 export function pieceNumberToLetter(pieceNumber: number): string {
-  let letter = "";
   switch (pieceNumber) {
     case 0b0011:
-      letter = "p";
-      break;
+      return "p";
     case 0b0010:
-      letter = "P";
-      break;
+      return "P";
     case 0b0101:
-      letter = "n";
-      break;
+      return "n";
     case 0b0100:
-      letter = "N";
-      break;
+      return "N";
     case 0b1001:
-      letter = "r";
-      break;
+      return "r";
     case 0b1000:
-      letter = "R";
-      break;
+      return "R";
     case 0b0111:
-      letter = "b";
-      break;
+      return "b";
     case 0b0110:
-      letter = "B";
-      break;
+      return "B";
     case 0b1011:
-      letter = "q";
-      break;
+      return "q";
     case 0b1010:
-      letter = "Q";
-      break;
+      return "Q";
     case 0b1101:
-      letter = "k";
-      break;
+      return "k";
     case 0b1100:
-      letter = "K";
-      break;
+      return "K";
   }
-  return letter;
+  return "";
 }
 
 export function moveToMoveObject(move: ChessterMove): {
@@ -180,7 +194,6 @@ export function moveToMoveObject(move: ChessterMove): {
   to: string;
   promotion?: string;
 } {
-  console.log(getBinaryString(move));
   return {
     from:
       String.fromCharCode(((move >>> 14) & 0b111) + 97) +
@@ -214,6 +227,16 @@ export function compareChessJSBoardWithChessterBoard(
 
   for (let i = 0; i < boardSize; i++) {
     if (flattenedChessJSBoard[i] === null && chessterBoard[i] === 0) continue;
+
+    if (
+      (flattenedChessJSBoard[i] === null && chessterBoard[i] !== 0) ||
+      (flattenedChessJSBoard[i] !== null && chessterBoard[i] === 0)
+    ) {
+      console.log(
+        `location: ${i}, chesster board piece: ${chessterBoard[i]}, chessjs piece: ${flattenedChessJSBoard[i].type}, color: ${flattenedChessJSBoard[i].color}`
+      );
+      return false;
+    }
 
     let chessterPiece = pieceNumberToLetter(chessterBoard[i]);
 
