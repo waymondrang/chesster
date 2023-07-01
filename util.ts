@@ -204,12 +204,16 @@ export function moveToMoveObject(move: ChessterMove): {
     promotion: (() => {
       switch ((move >>> 4) & 0b1111) {
         case moveTypes.PROMOTION_BISHOP:
+        case moveTypes.PROMOTION_BISHOP_CAPTURE:
           return "b";
         case moveTypes.PROMOTION_KNIGHT:
+        case moveTypes.PROMOTION_KNIGHT_CAPTURE:
           return "n";
         case moveTypes.PROMOTION_QUEEN:
+        case moveTypes.PROMOTION_QUEEN_CAPTURE:
           return "q";
         case moveTypes.PROMOTION_ROOK:
+        case moveTypes.PROMOTION_ROOK_CAPTURE:
           return "r";
         default:
           return undefined;

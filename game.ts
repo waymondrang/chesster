@@ -16,7 +16,12 @@ import {
   defaultBoard,
   moveTypes,
 } from "./types";
-import { getBinaryString, numberToPieceString, rCompare } from "./util";
+import {
+  getBinaryString,
+  getKeyByValue,
+  numberToPieceString,
+  rCompare,
+} from "./util";
 
 export class ChessterGame {
   board: number[]; // board is 64 bytes
@@ -77,6 +82,10 @@ export class ChessterGame {
         this.turn ^= 1;
 
         switch ((move >>> 4) & 0b1111) {
+          case moveTypes.PROMOTION_BISHOP_CAPTURE:
+          case moveTypes.PROMOTION_ROOK_CAPTURE:
+          case moveTypes.PROMOTION_KNIGHT_CAPTURE:
+          case moveTypes.PROMOTION_QUEEN_CAPTURE:
           case moveTypes.CAPTURE:
             this.board[(move >>> 8) & 0b111111] = (move >>> 20) & 0b1111;
             this.board[(move >>> 14) & 0b111111] = move & 0b1111;
@@ -180,19 +189,27 @@ export class ChessterGame {
         this.board[(move >>> 8) & 0b111111] = move & 0b1111;
         this.board[((move >>> 8) & 0b111111) - 8] = 0;
         break;
+      case moveTypes.PROMOTION_QUEEN_CAPTURE:
       case moveTypes.PROMOTION_QUEEN:
+        history |= this.board[(move >>> 8) & 0b111111] << 20;
         this.board[(move >>> 14) & 0b111111] = 0;
         this.board[(move >>> 8) & 0b111111] = (move & 0b0001) | 0b1010;
         break;
+      case moveTypes.PROMOTION_ROOK_CAPTURE:
       case moveTypes.PROMOTION_ROOK:
+        history |= this.board[(move >>> 8) & 0b111111] << 20;
         this.board[(move >>> 14) & 0b111111] = 0;
         this.board[(move >>> 8) & 0b111111] = (move & 0b0001) | 0b1000;
         break;
+      case moveTypes.PROMOTION_BISHOP_CAPTURE:
       case moveTypes.PROMOTION_BISHOP:
+        history |= this.board[(move >>> 8) & 0b111111] << 20;
         this.board[(move >>> 14) & 0b111111] = 0;
         this.board[(move >>> 8) & 0b111111] = (move & 0b0001) | 0b0110;
         break;
+      case moveTypes.PROMOTION_KNIGHT_CAPTURE:
       case moveTypes.PROMOTION_KNIGHT:
+        history |= this.board[(move >>> 8) & 0b111111] << 20;
         this.board[(move >>> 14) & 0b111111] = 0;
         this.board[(move >>> 8) & 0b111111] = (move & 0b0001) | 0b0100;
         break;
@@ -298,7 +315,10 @@ export class ChessterGame {
       if (this.board[i] !== 0 && (this.board[i] & 0b1) !== team) {
         const moves = this.getAllMoves(i);
         for (let j = 0; j < moves.length; j++) {
-          if (((moves[j] >>> 4) & 0b1111) === moveTypes.CAPTURE) {
+          if (
+            ((moves[j] >>> 4) & 0b1111) === moveTypes.CAPTURE ||
+            ((moves[j] >>> 4) & 0b1111) > 11 // if any promotion capture moves
+          ) {
             if (this.board[(moves[j] >>> 8) & 0b111111] === (0b1100 | team)) {
               // 0b110 is king value
               // console.log(
@@ -401,6 +421,8 @@ export class ChessterGame {
       // console.log(
       //   "before move:\n" + this.boardToString() + "\n" + getBinaryString(move)
       // );
+      const beforeMoveBoardString = this.boardToString();
+
       this.move(move);
 
       if ((team === WHITE && !this.wc) || (team === BLACK && !this.bc)) {
@@ -408,14 +430,14 @@ export class ChessterGame {
 
         if (((move >>> 4) & 0b1111) === moveTypes.CASTLE_KINGSIDE) {
           // if move if castle kingside, check if currently team is in check. if not in check, continue checking position between king and rook
-          console.log(
-            "checking if can castle kingside: " +
-              getBinaryString(
-                (move & 0b11111100000000001111) |
-                  (((move >>> 14) + 1) << 8) |
-                  (moveTypes.MOVE << 4)
-              )
-          );
+          // console.log(
+          //   "checking if can castle kingside: " +
+          //     getBinaryString(
+          //       (move & 0b11111100000000001111) |
+          //         (((move >>> 14) + 1) << 8) |
+          //         (moveTypes.MOVE << 4)
+          //     )
+          // );
           this.move(
             (move & 0b11111100000000001111) |
               (((move >>> 14) + 1) << 8) |
@@ -442,6 +464,33 @@ export class ChessterGame {
         }
       } else {
         this.undo();
+      }
+
+      if (beforeMoveBoardString !== this.boardToString()) {
+        throw new Error(
+          "board changed during move: " +
+            getBinaryString(move) +
+            "\n" +
+            beforeMoveBoardString +
+            "\n" +
+            this.boardToString() +
+            "\n" +
+            this.history
+              .map(
+                (move) =>
+                  "piece: " +
+                  numberToPieceString(move & 0b1111) +
+                  " move type: " +
+                  getKeyByValue(moveTypes, (move >>> 4) & 0b1111) +
+                  " to: " +
+                  ((move >>> 8) & 0b111111) +
+                  " from: " +
+                  ((move >>> 14) & 0b111111) +
+                  " captured: " +
+                  numberToPieceString((move >>> 20) & 0b1111)
+              )
+              .join("\n")
+        );
       }
 
       // console.log("after move:\n" + this.boardToString());
@@ -1114,20 +1163,20 @@ export class ChessterGame {
         if ((location - 9) >>> 3 === 0) {
           moves.push(
             (location << 14) |
-              ((location - 8) << 8) |
-              (moveTypes.PROMOTION_QUEEN << 4) |
+              ((location - 9) << 8) |
+              (moveTypes.PROMOTION_QUEEN_CAPTURE << 4) |
               piece,
             (location << 14) |
-              ((location - 8) << 8) |
-              (moveTypes.PROMOTION_ROOK << 4) |
+              ((location - 9) << 8) |
+              (moveTypes.PROMOTION_ROOK_CAPTURE << 4) |
               piece,
             (location << 14) |
-              ((location - 8) << 8) |
-              (moveTypes.PROMOTION_BISHOP << 4) |
+              ((location - 9) << 8) |
+              (moveTypes.PROMOTION_BISHOP_CAPTURE << 4) |
               piece,
             (location << 14) |
-              ((location - 8) << 8) |
-              (moveTypes.PROMOTION_KNIGHT << 4) |
+              ((location - 9) << 8) |
+              (moveTypes.PROMOTION_KNIGHT_CAPTURE << 4) |
               piece
           );
         } else {
@@ -1142,12 +1191,33 @@ export class ChessterGame {
 
       // upper right capture
       if ((location & 0b111) !== 7 && (this.board[location - 7] & 0b1) === 1)
-        moves.push(
-          (location << 14) |
-            ((location - 7) << 8) |
-            (moveTypes.CAPTURE << 4) |
-            piece
-        );
+        if ((location - 7) >>> 3 === 0) {
+          moves.push(
+            (location << 14) |
+              ((location - 7) << 8) |
+              (moveTypes.PROMOTION_QUEEN_CAPTURE << 4) |
+              piece,
+            (location << 14) |
+              ((location - 7) << 8) |
+              (moveTypes.PROMOTION_ROOK_CAPTURE << 4) |
+              piece,
+            (location << 14) |
+              ((location - 7) << 8) |
+              (moveTypes.PROMOTION_BISHOP_CAPTURE << 4) |
+              piece,
+            (location << 14) |
+              ((location - 7) << 8) |
+              (moveTypes.PROMOTION_KNIGHT_CAPTURE << 4) |
+              piece
+          );
+        } else {
+          moves.push(
+            (location << 14) |
+              ((location - 7) << 8) |
+              (moveTypes.CAPTURE << 4) |
+              piece
+          );
+        }
 
       // en passant
       if (this.history[this.history.length - 1] !== 0) {
@@ -1172,60 +1242,82 @@ export class ChessterGame {
         }
       }
     } else {
-      // promotion
-      if (location >>> 3 === 6 && this.board[location + 8] === 0) {
-        return [
-          (location << 14) |
-            ((location + 8) << 8) |
-            (moveTypes.PROMOTION_QUEEN << 4) |
-            piece,
-          (location << 14) |
-            ((location + 8) << 8) |
-            (moveTypes.PROMOTION_ROOK << 4) |
-            piece,
-          (location << 14) |
-            ((location + 8) << 8) |
-            (moveTypes.PROMOTION_BISHOP << 4) |
-            piece,
-          (location << 14) |
-            ((location + 8) << 8) |
-            (moveTypes.PROMOTION_KNIGHT << 4) |
-            piece,
-        ];
-      }
-
       // black piece
       if (this.board[location + 8] === 0) {
-        moves.push(
-          (location << 14) |
-            ((location + 8) << 8) |
-            (moveTypes.MOVE << 4) |
-            piece
-        );
-
-        if (location >>> 3 === 1 && this.board[location + 16] === 0) {
-          // double move
+        // promotion
+        if (location >>> 3 === 6) {
           moves.push(
             (location << 14) |
-              ((location + 16) << 8) |
-              (moveTypes.DOUBLE_PAWN_PUSH << 4) |
+              ((location + 8) << 8) |
+              (moveTypes.PROMOTION_QUEEN << 4) |
+              piece,
+            (location << 14) |
+              ((location + 8) << 8) |
+              (moveTypes.PROMOTION_ROOK << 4) |
+              piece,
+            (location << 14) |
+              ((location + 8) << 8) |
+              (moveTypes.PROMOTION_BISHOP << 4) |
+              piece,
+            (location << 14) |
+              ((location + 8) << 8) |
+              (moveTypes.PROMOTION_KNIGHT << 4) |
               piece
           );
+        } else {
+          moves.push(
+            (location << 14) |
+              ((location + 8) << 8) |
+              (moveTypes.MOVE << 4) |
+              piece
+          );
+
+          if (location >>> 3 === 1 && this.board[location + 16] === 0) {
+            // double move
+            moves.push(
+              (location << 14) |
+                ((location + 16) << 8) |
+                (moveTypes.DOUBLE_PAWN_PUSH << 4) |
+                piece
+            );
+          }
         }
       }
 
       // upper left capture
       if (
-        (location & 0b111) !== 7 &&
+        (location & 0b111) !== 7 && // or < 7
         this.board[location + 9] !== 0 &&
         (this.board[location + 9] & 0b1) === 0
-      )
-        moves.push(
-          (location << 14) |
-            ((location + 9) << 8) |
-            (moveTypes.CAPTURE << 4) |
-            piece
-        );
+      ) {
+        if ((location + 9) >>> 3 === 7) {
+          moves.push(
+            (location << 14) |
+              ((location + 9) << 8) |
+              (moveTypes.PROMOTION_QUEEN_CAPTURE << 4) |
+              piece,
+            (location << 14) |
+              ((location + 9) << 8) |
+              (moveTypes.PROMOTION_ROOK_CAPTURE << 4) |
+              piece,
+            (location << 14) |
+              ((location + 9) << 8) |
+              (moveTypes.PROMOTION_BISHOP_CAPTURE << 4) |
+              piece,
+            (location << 14) |
+              ((location + 9) << 8) |
+              (moveTypes.PROMOTION_KNIGHT_CAPTURE << 4) |
+              piece
+          );
+        } else {
+          moves.push(
+            (location << 14) |
+              ((location + 9) << 8) |
+              (moveTypes.CAPTURE << 4) |
+              piece
+          );
+        }
+      }
 
       // upper right capture
       if (
@@ -1233,12 +1325,33 @@ export class ChessterGame {
         this.board[location + 7] !== 0 &&
         (this.board[location + 7] & 0b1) === 0
       )
-        moves.push(
-          (location << 14) |
-            ((location + 7) << 8) |
-            (moveTypes.CAPTURE << 4) |
-            piece
-        );
+        if ((location + 7) >>> 3 === 7) {
+          moves.push(
+            (location << 14) |
+              ((location + 7) << 8) |
+              (moveTypes.PROMOTION_QUEEN_CAPTURE << 4) |
+              piece,
+            (location << 14) |
+              ((location + 7) << 8) |
+              (moveTypes.PROMOTION_ROOK_CAPTURE << 4) |
+              piece,
+            (location << 14) |
+              ((location + 7) << 8) |
+              (moveTypes.PROMOTION_BISHOP_CAPTURE << 4) |
+              piece,
+            (location << 14) |
+              ((location + 7) << 8) |
+              (moveTypes.PROMOTION_KNIGHT_CAPTURE << 4) |
+              piece
+          );
+        } else {
+          moves.push(
+            (location << 14) |
+              ((location + 7) << 8) |
+              (moveTypes.CAPTURE << 4) |
+              piece
+          );
+        }
 
       // en passant
       if (this.history[this.history.length - 1] !== 0) {

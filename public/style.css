@@ -280,7 +280,14 @@ nav {
 .cell.PROMOTION_KNIGHT,
 .cell.PROMOTION_ROOK,
 .cell.PROMOTION_BISHOP {
-    background-color: #6e791b;
+    background-color: #F2E205;
+}
+
+.cell.PROMOTION_QUEEN_CAPTURE,
+.cell.PROMOTION_KNIGHT_CAPTURE,
+.cell.PROMOTION_ROOK_CAPTURE,
+.cell.PROMOTION_BISHOP_CAPTURE {
+    background-color: #d8c77f;
 }
 
 .cell:hover {
