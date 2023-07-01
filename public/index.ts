@@ -21,7 +21,7 @@ import {
   moveTypes,
 } from "../types";
 import { io } from "socket.io-client";
-import { getBinaryString, getKeyByValue, numberToPieceString } from "../util";
+import { binaryToString, getKeyByValue, numberToPieceString } from "../util";
 
 ////////////////////////////////
 //     constant variables     //
@@ -129,7 +129,7 @@ promotion_close.addEventListener("click", () => {
 });
 
 function clientMove(move: ChessterMove) {
-  console.log("sending and making move", getBinaryString(move));
+  console.log("sending and making move", binaryToString(move));
   aiMove(move);
   socket.emit("move", move);
 }
@@ -187,7 +187,7 @@ for (let i = 0; i < boardSize; i++) {
       // toggle selected cell
       event.preventDefault();
 
-      console.log("selected piece: " + getBinaryString(game.board[i]));
+      console.log("selected piece: " + binaryToString(game.board[i]));
 
       if (selectedPieceElement === cell) {
         console.log("deselecting piece");
@@ -207,7 +207,7 @@ for (let i = 0; i < boardSize; i++) {
         if (selectedMoves.length > 1) {
           if (((selectedMoves[0] >>> 7) & 0b1) !== 1)
             throw new Error(
-              "invalid multi-move type: " + getBinaryString(selectedMoves[0])
+              "invalid multi-move type: " + binaryToString(selectedMoves[0])
             );
 
           // make promotion modal visible

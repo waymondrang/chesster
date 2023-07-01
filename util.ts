@@ -372,7 +372,28 @@ export function boardStringToBuffer(boardString: ChessterBoardString): Buffer {
   return buffer;
 }
 
-export function getBinaryString(dec: number) {
+export function historyToString(history: number) {
+  return (
+    moveToString(history) +
+    ` captured piece: ${(history >>> 20) & 0b1111} (${numberToPieceString(
+      (history >>> 20) & 0b1111
+    )}), wc: ${(history >>> 24) & 0b1}, bc: ${(history >>> 25) & 0b1}, wcm: ${
+      (history >>> 26) & 0b1
+    }, bcm: ${(history >>> 27) & 0b1}, wckc: ${(history >>> 28) & 0b1}, bckc: ${
+      (history >>> 29) & 0b1
+    }, wcqc: ${(history >>> 30) & 0b1}, bcqc: ${(history >>> 31) & 0b1}`
+  );
+}
+
+export function moveToString(move: number) {
+  return `move type: "${getKeyByValue(
+    moveTypes,
+    (move >>> 4) & 0b1111
+  )}", piece: ${move & 0b1111} (${numberToPieceString(move & 0b1111)})
+  move to: ${(move >>> 8) & 0b111111}, move from: ${(move >>> 14) & 0b111111}`;
+}
+
+export function binaryToString(dec: number) {
   return (dec >> 0).toString(2);
 }
 

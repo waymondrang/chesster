@@ -1,14 +1,8 @@
 import {
   BLACK,
-  ChessterBoard,
-  ChessterBoardString,
   ChessterGameState,
   ChessterHistory,
-  ChessterLocation,
   ChessterMove,
-  ChessterPiece,
-  ChessterPieceString,
-  ChessterPlayer,
   ChessterTeam,
   RecursivePartial,
   WHITE,
@@ -16,7 +10,7 @@ import {
   defaultBoard,
   moveTypes,
 } from "./types";
-import { getBinaryString, numberToPieceString, rCompare } from "./util";
+import { binaryToString, numberToPieceString, rCompare } from "./util";
 
 export class ChessterGame {
   board: number[]; // board is 64 bytes
@@ -33,7 +27,7 @@ export class ChessterGame {
   simulation: boolean;
 
   /**
-   * Creates a new ChessterGame instance. (including init())
+   * creates a new chesster game instance and initializes it
    */
   constructor(state?: RecursivePartial<ChessterGameState>) {
     this.init(state);
@@ -59,12 +53,13 @@ export class ChessterGame {
     this.updateCastle();
   }
 
+  /**
+   * undo the last move
+   */
   undo() {
     if (this.history.length > 0) {
       const move = this.history.pop();
       if (move) {
-        // console.log("retrieved history: " + getBinaryString(move));
-
         this.bcqc = ((move >>> 31) & 0b1) === 1;
         this.wcqc = ((move >>> 30) & 0b1) === 1;
         this.bckc = ((move >>> 29) & 0b1) === 1;
@@ -138,7 +133,7 @@ export class ChessterGame {
       (this.bc ? 0b1 << 25 : 0) |
       (this.wc ? 0b1 << 24 : 0);
 
-    // console.log("initial history: " + getBinaryString(history));
+    // console.log("initial history: " + binaryToString(history));
 
     switch ((move >>> 4) & 0b1111) {
       case moveTypes.CAPTURE:
@@ -202,12 +197,12 @@ export class ChessterGame {
         this.board[(move >>> 8) & 0b111111] = move & 0b1111;
         break;
       default:
-        throw new Error("invalid move type: " + getBinaryString(move));
+        throw new Error("invalid move type: " + binaryToString(move));
     }
 
     history |= move & 0b11111111111111111111;
 
-    // console.log("final history: " + getBinaryString(history));
+    // console.log("final history: " + binaryToString(history));
 
     this.updateCastle();
     this.updateChecked();
@@ -229,14 +224,14 @@ export class ChessterGame {
 
     if (!vp)
       throw new Error(
-        "no piece at from location:" + getBinaryString((vm >>> 14) & 0b111111)
+        "no piece at from location:" + binaryToString((vm >>> 14) & 0b111111)
       );
 
     const move = this.getAvailableMoves((vm >>> 14) & 0b111111).find(
       (m) => m === vm
     );
 
-    if (!move) throw new Error("invalid move: " + getBinaryString(vm));
+    if (!move) throw new Error("invalid move: " + binaryToString(vm));
 
     this.move(vm);
   }
@@ -302,7 +297,7 @@ export class ChessterGame {
             if (this.board[(moves[j] >>> 8) & 0b111111] === (0b1100 | team)) {
               // 0b110 is king value
               // console.log(
-              //   "move: " + getBinaryString(moves[j]) + " checks team " + team
+              //   "move: " + binaryToString(moves[j]) + " checks team " + team
               // );
               return true;
             }
@@ -399,7 +394,7 @@ export class ChessterGame {
 
     for (let move of moves) {
       // console.log(
-      //   "before move:\n" + this.boardToString() + "\n" + getBinaryString(move)
+      //   "before move:\n" + this.boardToString() + "\n" + binaryToString(move)
       // );
       this.move(move);
 
@@ -410,7 +405,7 @@ export class ChessterGame {
           // if move if castle kingside, check if currently team is in check. if not in check, continue checking position between king and rook
           console.log(
             "checking if can castle kingside: " +
-              getBinaryString(
+              binaryToString(
                 (move & 0b11111100000000001111) |
                   (((move >>> 14) + 1) << 8) |
                   (moveTypes.MOVE << 4)

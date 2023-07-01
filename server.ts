@@ -13,7 +13,7 @@ import {
   boardStringToArray,
   fenStringToBoard,
   fenStringToGameState,
-  getBinaryString,
+  binaryToString,
 } from "./util";
 
 const app = express();
@@ -47,7 +47,7 @@ io.on("connection", (socket: Socket) => {
   socket.emit("initState", game.getState());
 
   socket.on("move", (data: ChessterMove) => {
-    console.log("move received: " + getBinaryString(data));
+    console.log("move received: " + binaryToString(data));
     game.move(data);
 
     // if (

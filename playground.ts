@@ -16,7 +16,7 @@ import {
   createRandomArray,
   generateRandomInteger,
   generateRandomPieceString,
-  getBinaryString,
+  binaryToString,
 } from "./util";
 
 const n = 1000000;

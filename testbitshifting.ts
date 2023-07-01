@@ -1,4 +1,4 @@
-import { getBinaryString } from "./util";
+import { binaryToString } from "./util";
 
 export {};
 
@@ -37,39 +37,39 @@ console.log(
 );
 
 let history = 0;
-console.log(getBinaryString(history));
+console.log(binaryToString(history));
 
 history |= bcqc ? 0b1 << 31 : 0;
-console.log(getBinaryString(history));
+console.log(binaryToString(history));
 
 history |= wcqc ? 0b1 << 30 : 0;
-console.log(getBinaryString(history));
+console.log(binaryToString(history));
 
 history |= bckc ? 0b1 << 29 : 0;
-console.log(getBinaryString(history));
+console.log(binaryToString(history));
 
 history |= wckc ? 0b1 << 28 : 0;
-console.log(getBinaryString(history));
+console.log(binaryToString(history));
 
 history |= bcm ? 0b1 << 27 : 0;
-console.log(getBinaryString(history));
+console.log(binaryToString(history));
 
 history |= wcm ? 0b1 << 26 : 0;
-console.log(getBinaryString(history));
+console.log(binaryToString(history));
 
 history |= bc ? 0b1 << 25 : 0;
-console.log(getBinaryString(history));
+console.log(binaryToString(history));
 
 history |= wc ? 0b1 << 24 : 0;
-console.log(getBinaryString(history));
+console.log(binaryToString(history));
 
 console.log("history initial assignment over");
 
-console.log(getBinaryString(move & 0b11111111111111111111));
+console.log(binaryToString(move & 0b11111111111111111111));
 
 history |= move & 0b11111111111111111111;
 
-console.log(getBinaryString(history));
+console.log(binaryToString(history));
 
 newbcqc = ((history >>> 31) & 0b1) === 1;
 newwcqc = ((history >>> 30) & 0b1) === 1;
