@@ -220,15 +220,19 @@ for (let i = 0; i < boardSize; i++) {
             // button.textContent = move.promotion || "";
 
             switch ((move >>> 4) & 0b1111) {
+              case moveTypes.PROMOTION_QUEEN_CAPTURE:
               case moveTypes.PROMOTION_QUEEN:
                 button.textContent = move & 0b1 ? "♛" : "♕";
                 break;
+              case moveTypes.PROMOTION_ROOK_CAPTURE:
               case moveTypes.PROMOTION_ROOK:
                 button.textContent = move & 0b1 ? "♜" : "♖";
                 break;
+              case moveTypes.PROMOTION_BISHOP_CAPTURE:
               case moveTypes.PROMOTION_BISHOP:
                 button.textContent = move & 0b1 ? "♝" : "♗";
                 break;
+              case moveTypes.PROMOTION_KNIGHT_CAPTURE:
               case moveTypes.PROMOTION_KNIGHT:
                 button.textContent = move & 0b1 ? "♞" : "♘";
                 break;

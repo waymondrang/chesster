@@ -95,11 +95,11 @@ function measureCountBulkPositions(depth: number) {
 
   game.init(
     fenStringToGameState(
-      "r3k2r/Pppp1ppp/1b3nbN/nP6/BBPPP3/q4N2/Pp4PP/R2Q1RK1 b kq - 0 1"
+      "rnbqkbnr/pp1ppppp/8/2p5/2PP4/8/PP2PPPP/RNBQKBNR b KQkq - 0 2"
     )
   );
 
-  chess.load("r3k2r/Pppp1ppp/1b3nbN/nP6/BBPPP3/q4N2/Pp4PP/R2Q1RK1 b kq - 0 1");
+  chess.load("rnbqkbnr/pp1ppppp/8/2p5/2PP4/8/PP2PPPP/RNBQKBNR b KQkq - 0 2");
 
   const count = countBulkPositions(depth);
 

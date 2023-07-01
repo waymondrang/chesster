@@ -54,8 +54,6 @@ total: (20 bits)
 \[move type (4 bits)\] (4)
 \[original piece (4 bits)\] (0)
 
-100001 011010 0000 0110
-
 (in history)
 \[bcqc bit\] (31)
 \[wcqc bit\] (30)
@@ -70,6 +68,9 @@ total: (20 bits)
 \[move to (6 bits from 0 to 63)\] (8)
 \[move type (4 bits)\] (4)
 \[original piece (4 bits)\] (0)
+
+1 0 0 0 0 0 0000 110001 111000 1010 0011
+56 bishop capture bp
 
 (not used)
 \[will check (1 bit)\]\[move location (6 bits from 0 to 63)\]\[move type (4 bits)\]\[original piece (4 bits)\]
