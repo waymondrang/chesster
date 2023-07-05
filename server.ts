@@ -21,6 +21,11 @@ app.use(express.json());
 
 io.on("connection", (socket: Socket) => {
   const game = new ChessterGame();
+  const ai = new ChessterAI(game); // maybe move this to the top?
+  // const aiMove = ai.getNextMove();
+
+  // game.move(aiMove);
+
   socket.emit("initState", game.getState());
 
   socket.on("move", (data: ChessterMove) => {

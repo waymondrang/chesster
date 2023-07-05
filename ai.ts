@@ -1,3 +1,4 @@
+import { stat } from "fs";
 import { ChessterGame } from "./game";
 import {
   BLACK,
@@ -135,7 +136,7 @@ export class ChessterAI {
     node: ChessterAINode = this.root
   ): [ChessterMove | undefined, number] {
     if (node.isTerminal()) {
-      return [undefined, node.score];
+      return [undefined, (node.state.turn === BLACK ? 1 : -1) * node.score];
     }
     if (node.playerType === MAX_PLAYER) {
       // maximizer
@@ -243,7 +244,7 @@ export class ChessterAI {
       for (const piece of row) {
         if (piece) {
           score +=
-            (calculateTeam(piece.string) === BLACK ? 1 : -1) * // assuming white is maximizer
+            (calculateTeam(piece.string) === state.turn ? 1 : -1) * // assuming white is maximizer
             this.getPieceValue(piece);
         }
       }
