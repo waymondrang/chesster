@@ -1,13 +1,66 @@
 import { ChessterGame } from "../game";
+import { Chess } from "chess.js";
 import { boardSize } from "../types";
-import { fenStringToGameState } from "../util";
+import {
+  compareChessJSBoardWithChessterBoard,
+  fenStringToGameState,
+  moveToMoveObject,
+  moveToString,
+} from "../util";
 
 const game = new ChessterGame();
+const chess = new Chess();
 
 const n = 2;
 const depth = 5;
 const fen = "";
-const counter: number = 1;
+const counter: number = 2;
+
+// counter 2
+function countBulkPositionsCompare(depth: number): number {
+  if (depth <= 0) return 1;
+
+  let count = 0;
+
+  for (let i = 0; i < boardSize; i++) {
+    if (game.board[i] !== 0 && (game.board[i] & 0b1) === game.turn) {
+      const moves = game.getAvailableMoves(i);
+      for (let j = 0; j < moves.length; j++) {
+        game.move(moves[j]);
+
+        try {
+          chess.move(moveToMoveObject(moves[j]));
+        } catch (e) {
+          console.log(moveToString(moves[j]));
+          console.log(chess.fen());
+          console.log(chess.ascii());
+          console.log(game.boardToString());
+          game.undo();
+          console.log(game.boardToString());
+          throw e;
+        }
+
+        if (!compareChessJSBoardWithChessterBoard(chess.board(), game.board)) {
+          console.log(chess.ascii());
+          console.log(game.boardToString());
+          game.undo();
+          console.log(game.boardToString());
+          chess.undo();
+          console.log(chess.ascii());
+          console.log(chess.fen());
+          throw new Error("boards are not equal");
+        }
+
+        count += countBulkPositionsCompare(depth - 1);
+
+        game.undo();
+        chess.undo();
+      }
+    }
+  }
+
+  return count;
+}
 
 // counter 1
 function countBulkPositions(depth: number): [number, number, number, number] {
@@ -68,9 +121,25 @@ function countBulkPositionsSimple(depth: number): number {
 function measureCountBulkPositions(depth: number) {
   const startTime = performance.now();
 
-  if (fen !== "") game.init(fenStringToGameState(fen));
+  if (fen !== "") {
+    game.init(fenStringToGameState(fen));
+    chess.load(fen);
+  }
 
   switch (counter) {
+    case 2: {
+      const count = countBulkPositionsCompare(depth);
+      console.log(
+        "Depth: " +
+          depth +
+          "\tNumber of positions: " +
+          count +
+          "\tTime: " +
+          (performance.now() - startTime) +
+          "ms"
+      );
+      break;
+    }
     case 1: {
       const count = countBulkPositions(depth);
       console.log(
