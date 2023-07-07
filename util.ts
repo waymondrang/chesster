@@ -393,8 +393,11 @@ export function moveToString(move: number) {
   return `move type: "${getKeyByValue(
     moveTypes,
     (move >>> 4) & 0b1111
-  )}", piece: ${move & 0b1111} (${numberToPieceString(move & 0b1111)})
-  move to: ${(move >>> 8) & 0b111111}, move from: ${(move >>> 14) & 0b111111}`;
+  )}", piece: ${move & 0b1111} (${numberToPieceString(
+    move & 0b1111
+  )}) move to: ${(move >>> 8) & 0b111111}, move from: ${
+    (move >>> 14) & 0b111111
+  }`;
 }
 
 export function binaryToString(dec: number) {

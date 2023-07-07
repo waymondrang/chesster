@@ -10,7 +10,13 @@ import {
   defaultBoard,
   moveTypes,
 } from "./types";
-import { binaryToString, numberToPieceString, rCompare } from "./util";
+import {
+  binaryToString,
+  getKeyByValue,
+  moveToString,
+  numberToPieceString,
+  rCompare,
+} from "./util";
 
 export class ChessterGame {
   board: number[]; // board is 64 bytes
@@ -25,6 +31,7 @@ export class ChessterGame {
   turn: 0 | 1;
   history: ChessterHistory;
   simulation: boolean;
+  last5moves: number[];
 
   /**
    * creates a new chesster game instance and initializes it
@@ -38,6 +45,8 @@ export class ChessterGame {
     this.turn = state?.turn ?? WHITE;
     this.history = state?.history ?? [];
     this.simulation = state?.simulation ?? false;
+
+    this.last5moves = new Array(5).fill(0);
 
     this.wc = state?.wc ?? false; // white check
     this.bc = state?.bc ?? false; // black check
@@ -220,6 +229,8 @@ export class ChessterGame {
     this.updateChecked();
     this.turn ^= 1;
     this.history.push(history);
+    this.last5moves.push(history);
+    this.last5moves.shift();
   }
 
   /**
@@ -407,6 +418,8 @@ export class ChessterGame {
 
     this.simulation = true;
 
+    let lastSimulatedMoves: number[] = [];
+
     for (let move of moves) {
       // console.log(
       //   "before move:\n" + this.boardToString() + "\n" + binaryToString(move)
@@ -414,6 +427,7 @@ export class ChessterGame {
       const beforeMoveBoardString = this.boardToString();
 
       this.move(move);
+      lastSimulatedMoves.push(move);
 
       if ((team === WHITE && !this.wc) || (team === BLACK && !this.bc)) {
         this.undo();
@@ -434,12 +448,24 @@ export class ChessterGame {
               (moveTypes.MOVE << 4)
           );
 
+          lastSimulatedMoves.push(
+            (move & 0b11111100000000001111) |
+              (((move >>> 14) + 1) << 8) |
+              (moveTypes.MOVE << 4)
+          );
+
           if ((team === WHITE && !this.wc) || (team === BLACK && !this.bc))
             finalMoves.push(move);
 
           this.undo();
         } else if (((move >>> 4) & 0b1111) === moveTypes.CASTLE_QUEENSIDE) {
           this.move(
+            (move & 0b11111100000000001111) |
+              (((move >>> 14) - 1) << 8) |
+              (moveTypes.MOVE << 4)
+          );
+
+          lastSimulatedMoves.push(
             (move & 0b11111100000000001111) |
               (((move >>> 14) - 1) << 8) |
               (moveTypes.MOVE << 4)
@@ -458,28 +484,18 @@ export class ChessterGame {
 
       if (beforeMoveBoardString !== this.boardToString()) {
         throw new Error(
-          "board changed during move: " +
-            getBinaryString(move) +
+          "board changed during simulated move: " +
+            moveToString(move) +
+            " for location " +
+            location +
             "\n" +
             beforeMoveBoardString +
             "\n" +
             this.boardToString() +
-            "\n" +
-            this.history
-              .map(
-                (move) =>
-                  "piece: " +
-                  numberToPieceString(move & 0b1111) +
-                  " move type: " +
-                  getKeyByValue(moveTypes, (move >>> 4) & 0b1111) +
-                  " to: " +
-                  ((move >>> 8) & 0b111111) +
-                  " from: " +
-                  ((move >>> 14) & 0b111111) +
-                  " captured: " +
-                  numberToPieceString((move >>> 20) & 0b1111)
-              )
-              .join("\n")
+            "\nhistory:\n" +
+            this.history.map((move) => moveToString(move)).join("\n") +
+            "\nlast 5 moves (top to bottom):\n" +
+            lastSimulatedMoves.map((move) => moveToString(move)).join("\n")
         );
       }
 
@@ -1180,7 +1196,7 @@ export class ChessterGame {
       }
 
       // upper right capture
-      if ((location & 0b111) !== 7 && (this.board[location - 7] & 0b1) === 1)
+      if ((location & 0b111) !== 7 && (this.board[location - 7] & 0b1) === 1) {
         if ((location - 7) >>> 3 === 0) {
           moves.push(
             (location << 14) |
@@ -1208,14 +1224,15 @@ export class ChessterGame {
               piece
           );
         }
+      }
 
       // en passant
       if (this.history[this.history.length - 1] !== 0) {
         if (
           ((this.history[this.history.length - 1] >>> 4) & 0b1111) ===
             moveTypes.DOUBLE_PAWN_PUSH &&
-          ((this.history[this.history.length - 1] >>> 12) & 0b11) ===
-            ((location >>> 4) & 0b11) &&
+          ((this.history[this.history.length - 1] >>> 11) & 0b111) === 0b011 &&
+          ((location >>> 3) & 0b111) === 0b011 &&
           Math.abs(
             ((this.history[this.history.length - 1] >>> 8) & 0b111111) -
               location
@@ -1348,8 +1365,8 @@ export class ChessterGame {
         if (
           ((this.history[this.history.length - 1] >>> 4) & 0b1111) ===
             moveTypes.DOUBLE_PAWN_PUSH &&
-          ((this.history[this.history.length - 1] >>> 12) & 0b11) ===
-            ((location >>> 4) & 0b11) &&
+          ((this.history[this.history.length - 1] >>> 11) & 0b111) === 0b100 &&
+          ((location >>> 3) & 0b111) === 0b100 &&
           Math.abs(
             ((this.history[this.history.length - 1] >>> 8) & 0b111111) -
               location
