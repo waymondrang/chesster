@@ -24,21 +24,21 @@ app.use(express.static("public"));
 app.use(express.json());
 
 const testBoard: ChessterBoardString = [
-  ["♜", "♞", "♝", "♛", "♚", "♝", "♞", "♜"],
-  ["♟︎", "♟︎", "♟︎", "♟︎", "♟︎", "♟︎", "♟︎", "♟︎"],
+  ["", "", "", "", "", "", "♗", "♖"],
   ["", "", "", "", "", "", "", ""],
   ["", "", "", "", "", "", "", ""],
   ["", "", "", "", "", "", "", ""],
   ["", "", "", "", "", "", "", ""],
-  ["♙", "", "♙", "♙", "", "♙", "♙", "♙"],
-  ["", "♘", "♗", "♕", "♔", "", "♘", "♖"],
+  ["", "", "", "", "", "", "", ""],
+  ["", "", "", "", "", "", "", ""],
+  ["", "♝", "", "", "♜", "", "", ""],
 ];
 
 io.on("connection", (socket: Socket) => {
   console.log("a user connected");
-  const game = new ChessterGame(
-    fenStringToGameState("8/K1p5/3p4/r7/1R3p1k/8/4P1P1/8 w - - 2 3")
-  );
+  const game = new ChessterGame({
+    board: boardStringToArray(testBoard),
+  });
 
   console.log(game.boardToString());
 
