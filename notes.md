@@ -11,20 +11,24 @@
 | king       | 110         |
 | (unused)   | 111         |
 
-| move                | bit pattern |
-| ------------------- | ----------- |
-| move                | 0000        |
-| double pawn push    | 0001        |
-| capture             | 0010        |
-| castle (king side)  | 0011        |
-| castle (queen side) | 0100        |
-| en passant (white)  | 0101        |
-| en passant (black)  | 0110        |
-| (unused)            | 0111        |
-| promotion (queen)   | 1000        |
-| promotion (knight)  | 1001        |
-| promotion (bishop)  | 1010        |
-| promotion (rook)    | 1011        |
+| move                       | bit pattern |
+| -------------------------- | ----------- |
+| move                       | 0000        |
+| double pawn push           | 0001        |
+| capture                    | 0010        |
+| castle (king side)         | 0011        |
+| castle (queen side)        | 0100        |
+| en passant (white)         | 0101        |
+| en passant (black)         | 0110        |
+| (unused)                   | 0111        |
+| promotion (queen)          | 1000        |
+| promotion (knight)         | 1001        |
+| promotion (bishop)         | 1010        |
+| promotion (rook)           | 1011        |
+| promotion capture (queen)  | 1100        |
+| promotion capture (knight) | 1101        |
+| promotion capture (bishop) | 1110        |
+| promotion capture (rook)   | 1111        |
 
 | team  | bit value |
 | ----- | --------- |

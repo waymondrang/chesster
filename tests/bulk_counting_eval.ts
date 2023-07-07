@@ -63,8 +63,7 @@ function countBulkPositions(depth: number): [number, number, number, number] {
 function measureCountBulkPositions(depth: number) {
   const startTime = performance.now();
 
-  // const fen =
-  //   "r3k2r/p1ppqpb1/bn2pnp1/3PN3/1p2P3/2N2Q1p/PPPBBPPP/R3K2R w KQkq -";
+  const fen = "bqnb1rkr/pp3ppp/3ppn2/2p5/5P2/P2P4/NPP1P1PP/BQ1BNRKR w - - 2 9";
 
   // game.init(fenStringToGameState(fen));
 
