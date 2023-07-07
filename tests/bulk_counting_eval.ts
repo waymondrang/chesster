@@ -113,7 +113,7 @@ function measureCountBulkPositions(depth: number) {
 }
 
 const n = 2;
-const depth = 4;
+const depth = 5;
 
 console.log("CHESSTER BULK COUNTING EVALUATION");
 console.log();

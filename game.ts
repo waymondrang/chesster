@@ -1029,7 +1029,7 @@ export class ChessterGame {
     // up left
     for (
       let i = 1;
-      ((location - 9 * i) & 0b111) < 7 && location - 9 * i > 0;
+      ((location - 9 * i) & 0b111) < 7 && location - 9 * i >= 0;
       i++
     ) {
       if (this.board[location - 9 * i] === 0) {
