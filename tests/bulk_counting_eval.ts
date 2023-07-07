@@ -48,13 +48,13 @@ function countBulkPositions(
 function measureCountBulkPositions(depth: number) {
   const startTime = performance.now();
 
-  game.init({
-    board: boardStringToBoard(
-      ChessterGame.readFenString(
-        "r3k2r/p1ppqpb1/bn2pnp1/3PN3/1p2P3/2N2Q1p/PPPBBPPP/R3K2R w KQkq -"
-      )
-    ),
-  });
+  // game.init({
+  //   board: boardStringToBoard(
+  //     ChessterGame.readFenString(
+  //       "r3k2r/p1ppqpb1/bn2pnp1/3PN3/1p2P3/2N2Q1p/PPPBBPPP/R3K2R w KQkq -"
+  //     )
+  //   ),
+  // });
 
   const count = countBulkPositions(game.getState(), depth);
   console.log(
