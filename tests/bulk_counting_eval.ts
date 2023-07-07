@@ -93,7 +93,7 @@ function countBulkPositions(depth: number): number {
 function measureCountBulkPositions(depth: number) {
   const startTime = performance.now();
 
-  const fen = "8/2p5/3p4/KP5r/1R3p1k/8/4P1P1/8 w - -";
+  const fen = "bqnb1rkr/pp3ppp/3ppn2/2p5/5P2/P2P4/NPP1P1PP/BQ1BNRKR w - - 2 9";
 
   game.init(fenStringToGameState(fen));
 
@@ -113,7 +113,7 @@ function measureCountBulkPositions(depth: number) {
 }
 
 const n = 2;
-const depth = 5;
+const depth = 4;
 
 console.log("CHESSTER BULK COUNTING EVALUATION");
 console.log();
