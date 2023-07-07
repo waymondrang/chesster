@@ -259,6 +259,50 @@ export class ChessterGame {
     this.move(vm);
   }
 
+  validateAndMoveObject(vm: {
+    from: string;
+    to: string;
+    promotion?: string;
+  }): number {
+    const moves = this.getAvailableMoves(
+      (8 - Number.parseInt(vm.from[1])) * 8 + (vm.from.charCodeAt(0) - 97)
+    );
+
+    let pd: number;
+
+    switch (vm.promotion) {
+      case "q":
+        pd = 0b00;
+        break;
+      case "r":
+        pd = 0b11;
+        break;
+      case "b":
+        pd = 0b10;
+        break;
+      case "n":
+        pd = 0b01;
+        break;
+    }
+
+    const move = moves.find(
+      (m) =>
+        ((m >>> 8) & 0b111111) ===
+          (8 - Number.parseInt(vm.to[1])) * 8 + (vm.to.charCodeAt(0) - 97) &&
+        (vm.promotion
+          ? ((m >>> 6) & 0b11) === 0b10 || ((m >>> 6) & 0b11) === 0b11
+            ? ((m >>> 4) & 0b11) === pd
+            : false
+          : true)
+    );
+
+    if (!move) throw new Error("invalid move: " + JSON.stringify(vm));
+
+    this.move(move);
+
+    return move;
+  }
+
   /**
    * Creates a printable string of the board
    * @returns The board as a string
