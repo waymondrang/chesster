@@ -1081,7 +1081,7 @@ export class ChessterGame {
     }
 
     // up
-    for (let i = 1; location - 8 * i > 0; i++) {
+    for (let i = 1; location - 8 * i >= 0; i++) {
       if (this.board[location - 8 * i] === 0) {
         moves.push(
           (location << 14) |

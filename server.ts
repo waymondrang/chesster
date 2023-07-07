@@ -37,9 +37,7 @@ const testBoard: ChessterBoardString = [
 io.on("connection", (socket: Socket) => {
   console.log("a user connected");
   const game = new ChessterGame(
-    fenStringToGameState(
-      "rnb1kbnr/pp1p1ppp/8/q1p1p3/2PPP3/8/PP3PPP/RNBQKBNR w KQkq - 0 1"
-    )
+    fenStringToGameState("8/K1p5/3p4/r7/1R3p1k/8/4P1P1/8 w - - 2 3")
   );
 
   console.log(game.boardToString());
