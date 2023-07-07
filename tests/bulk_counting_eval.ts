@@ -1,32 +1,15 @@
-/**
- * this file can create a random board
- * and test the speed of a function
- */
-import { Chess } from "chess.js";
 import { ChessterGame } from "../game";
-import {
-  ChessterBoard,
-  ChessterBoardString,
-  ChessterGameState,
-  ChessterMove,
-  ChessterPieceString,
-  WHITE,
-  boardSize,
-  moveTypes,
-  BLACK,
-} from "../types";
-import {
-  compareChessJSBoardWithChessterBoard,
-  fenStringToBoard,
-  fenStringToGameState,
-  binaryToString,
-  getKeyByValue,
-  moveToMoveObject,
-  numberToPieceString,
-} from "../util";
+import { boardSize } from "../types";
+import { fenStringToGameState } from "../util";
 
 const game = new ChessterGame();
 
+const n = 2;
+const depth = 5;
+const fen = "";
+const counter: number = 1;
+
+// counter 1
 function countBulkPositions(depth: number): [number, number, number, number] {
   if (depth <= 0)
     return [
@@ -62,6 +45,7 @@ function countBulkPositions(depth: number): [number, number, number, number] {
   return [count, captures, checks, checkmates];
 }
 
+// counter 0
 function countBulkPositionsSimple(depth: number): number {
   if (depth <= 0) return 1;
 
@@ -84,41 +68,43 @@ function countBulkPositionsSimple(depth: number): number {
 function measureCountBulkPositions(depth: number) {
   const startTime = performance.now();
 
-  // const fen = "bqnb1rkr/pp3ppp/3ppn2/2p5/5P2/P2P4/NPP1P1PP/BQ1BNRKR w - - 2 9";
+  if (fen !== "") game.init(fenStringToGameState(fen));
 
-  // game.init(fenStringToGameState(fen));
-
-  // const count = countBulkPositions(depth);
-  const count = countBulkPositionsSimple(depth);
-
-  // console.log(
-  //   "Depth: " +
-  //     depth +
-  //     "\tNumber of positions: " +
-  //     count[0] +
-  //     "\tNumber of captures: " +
-  //     count[1] +
-  //     "\tNumber of checks: " +
-  //     count[2] +
-  //     "\tNumber of checkmates: " +
-  //     count[3] +
-  //     "\tTime: " +
-  //     (performance.now() - startTime) +
-  //     "ms"
-  // );
-  console.log(
-    "Depth: " +
-      depth +
-      "\tNumber of positions: " +
-      count +
-      "\tTime: " +
-      (performance.now() - startTime) +
-      "ms"
-  );
+  switch (counter) {
+    case 1: {
+      const count = countBulkPositions(depth);
+      console.log(
+        "Depth: " +
+          depth +
+          "\tNumber of positions: " +
+          count[0] +
+          "\tNumber of captures: " +
+          count[1] +
+          "\tNumber of checks: " +
+          count[2] +
+          "\tNumber of checkmates: " +
+          count[3] +
+          "\tTime: " +
+          (performance.now() - startTime) +
+          "ms"
+      );
+      break;
+    }
+    case 0: {
+      const count = countBulkPositionsSimple(depth);
+      console.log(
+        "Depth: " +
+          depth +
+          "\tNumber of positions: " +
+          count +
+          "\tTime: " +
+          (performance.now() - startTime) +
+          "ms"
+      );
+      break;
+    }
+  }
 }
-
-const n = 2;
-const depth = 5;
 
 console.log("CHESSTER BULK COUNTING EVALUATION");
 console.log();

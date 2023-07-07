@@ -1,14 +1,13 @@
-/**
- * this file can create a random board
- * and test the speed of a function
- */
 import { Chess } from "chess.js";
 
 const chess = new Chess();
 
+const n = 2;
+const depth = 5;
+const fen = "";
+
 function countBulkPositions(depth: number): number {
   if (depth <= 0) return 1;
-
   let count = 0;
 
   const moves = chess.moves();
@@ -25,9 +24,7 @@ function countBulkPositions(depth: number): number {
 function measureCountBulkPositions(depth: number) {
   const startTime = performance.now();
 
-  //   const fen = "bqnb1rkr/pp3ppp/3ppn2/2p5/5P2/P2P4/NPP1P1PP/BQ1BNRKR w - - 2 9";
-
-  //   chess.load(fen);
+  if (fen !== "") chess.load(fen);
 
   const count = countBulkPositions(depth);
 
@@ -41,9 +38,6 @@ function measureCountBulkPositions(depth: number) {
       "ms"
   );
 }
-
-const n = 2;
-const depth = 5;
 
 console.log("CHESSTER BULK COUNTING EVALUATION");
 console.log();
