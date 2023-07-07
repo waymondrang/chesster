@@ -69,9 +69,6 @@ total: (20 bits)
 \[move type (4 bits)\] (4)
 \[original piece (4 bits)\] (0)
 
-1 0 0 0 0 0 0000 110001 111000 1010 0011
-56 bishop capture bp
-
 (not used)
 \[will check (1 bit)\]\[move location (6 bits from 0 to 63)\]\[move type (4 bits)\]\[original piece (4 bits)\]
 
@@ -168,3 +165,12 @@ liveGenerate: 6583.046700012684ms
 ### todo tests
 
 - compare (location & 0b111000) !== 0b111000 vs (location >> 3) !== 7
+
+## bulk counting evalulation
+
+CHESSTER BULK COUNTING EVALUATION
+
+Depth: 1 Number of positions: 20 Time: 3.173799991607666ms
+Depth: 2 Number of positions: 400 Time: 18.184300005435944ms
+Depth: 3 Number of positions: 8902 Time: 90.87610000371933ms
+Depth: 4 Number of positions: 197281 Time: 755.8995000123978ms

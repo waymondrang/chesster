@@ -31,7 +31,6 @@ export class ChessterGame {
   turn: 0 | 1;
   history: ChessterHistory;
   simulation: boolean;
-  last5moves: number[];
 
   /**
    * creates a new chesster game instance and initializes it
@@ -45,8 +44,6 @@ export class ChessterGame {
     this.turn = state?.turn ?? WHITE;
     this.history = state?.history ?? [];
     this.simulation = state?.simulation ?? false;
-
-    this.last5moves = new Array(5).fill(0);
 
     this.wc = state?.wc ?? false; // white check
     this.bc = state?.bc ?? false; // black check
@@ -123,18 +120,6 @@ export class ChessterGame {
   }
 
   move(move: ChessterMove) {
-    // console.log(
-    //   "bcqc: " + this.bcqc,
-    //   "wcqc: " + this.wcqc,
-    //   "bckc: " + this.bckc,
-    //   "wckc: " + this.wckc,
-    //   "bcm: " + this.bcm,
-    //   "wcm: " + this.wcm,
-    //   "bc: " + this.bc,
-    //   "wc: " + this.wc,
-    //   "turn: " + this.turn
-    // );
-
     // 32 bit number
     let history =
       (this.bcqc ? 0b1 << 31 : 0) |
@@ -146,18 +131,8 @@ export class ChessterGame {
       (this.bc ? 0b1 << 25 : 0) |
       (this.wc ? 0b1 << 24 : 0);
 
-    // console.log("initial history: " + binaryToString(history));
-
     switch ((move >>> 4) & 0b1111) {
       case moveTypes.CAPTURE:
-        // console.log(
-        //   "captuing piece at",
-        //   (move >>> 8) & 0b111111,
-        //   "with",
-        //   move & 0b1111,
-        //   "and moving to",
-        //   (move >>> 14) & 0b111111
-        // );
         history |= this.board[(move >>> 8) & 0b111111] << 20;
         this.board[(move >>> 14) & 0b111111] = 0;
         this.board[(move >>> 8) & 0b111111] = move & 0b1111;
@@ -221,16 +196,10 @@ export class ChessterGame {
         throw new Error("invalid move type: " + binaryToString(move));
     }
 
-    history |= move & 0b11111111111111111111;
-
-    // console.log("final history: " + binaryToString(history));
-
     this.updateCastle();
     this.updateChecked();
     this.turn ^= 1;
-    this.history.push(history);
-    this.last5moves.push(history);
-    this.last5moves.shift();
+    this.history.push(history | (move & 0b11111111111111111111));
   }
 
   /**
@@ -322,9 +291,6 @@ export class ChessterGame {
           ) {
             if (this.board[(moves[j] >>> 8) & 0b111111] === (0b1100 | team)) {
               // 0b110 is king value
-              // console.log(
-              //   "move: " + binaryToString(moves[j]) + " checks team " + team
-              // );
               return true;
             }
           }
@@ -409,46 +375,22 @@ export class ChessterGame {
    */
   getAvailableMoves(location: number): number[] {
     const moves = this.getAllMoves(location);
-    const finalMoves = [];
-    const team = this.board[location] & 0b1;
 
     if (this.simulation) return moves;
 
-    // const originalState = this.getState();
+    const finalMoves = [];
+    const team = this.board[location] & 0b1;
 
     this.simulation = true;
 
-    let lastSimulatedMoves: number[] = [];
-
     for (let move of moves) {
-      // console.log(
-      //   "before move:\n" + this.boardToString() + "\n" + binaryToString(move)
-      // );
-      const beforeMoveBoardString = this.boardToString();
-
       this.move(move);
-      lastSimulatedMoves.push(move);
 
       if ((team === WHITE && !this.wc) || (team === BLACK && !this.bc)) {
         this.undo();
 
         if (((move >>> 4) & 0b1111) === moveTypes.CASTLE_KINGSIDE) {
-          // if move if castle kingside, check if currently team is in check. if not in check, continue checking position between king and rook
-          // console.log(
-          //   "checking if can castle kingside: " +
-          //     getBinaryString(
-          //       (move & 0b11111100000000001111) |
-          //         (((move >>> 14) + 1) << 8) |
-          //         (moveTypes.MOVE << 4)
-          //     )
-          // );
           this.move(
-            (move & 0b11111100000000001111) |
-              (((move >>> 14) + 1) << 8) |
-              (moveTypes.MOVE << 4)
-          );
-
-          lastSimulatedMoves.push(
             (move & 0b11111100000000001111) |
               (((move >>> 14) + 1) << 8) |
               (moveTypes.MOVE << 4)
@@ -465,12 +407,6 @@ export class ChessterGame {
               (moveTypes.MOVE << 4)
           );
 
-          lastSimulatedMoves.push(
-            (move & 0b11111100000000001111) |
-              (((move >>> 14) - 1) << 8) |
-              (moveTypes.MOVE << 4)
-          );
-
           if ((team === WHITE && !this.wc) || (team === BLACK && !this.bc))
             finalMoves.push(move);
 
@@ -481,30 +417,9 @@ export class ChessterGame {
       } else {
         this.undo();
       }
-
-      if (beforeMoveBoardString !== this.boardToString()) {
-        throw new Error(
-          "board changed during simulated move: " +
-            moveToString(move) +
-            " for location " +
-            location +
-            "\n" +
-            beforeMoveBoardString +
-            "\n" +
-            this.boardToString() +
-            "\nhistory:\n" +
-            this.history.map((move) => moveToString(move)).join("\n") +
-            "\nlast 5 moves (top to bottom):\n" +
-            lastSimulatedMoves.map((move) => moveToString(move)).join("\n")
-        );
-      }
-
-      // console.log("after move:\n" + this.boardToString());
     }
 
     this.simulation = false;
-
-    // console.log(rCompare(originalState, this.getState()));
 
     return finalMoves;
   }
