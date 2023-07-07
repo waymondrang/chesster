@@ -20,17 +20,17 @@ import {
 
 export class ChessterGame {
   board: number[]; // board is 64 bytes
-  wc: boolean; // white check
-  bc: boolean; // black check
-  wcm: boolean; // white checkmate
-  bcm: boolean; // black checkmate
-  wckc: boolean; // white can castle kingside
-  bckc: boolean; // black can castle kingside
-  wcqc: boolean; // white can castle queenside
-  bcqc: boolean; // black can castle queenside
+  wc: number; // white check
+  bc: number; // black check
+  wcm: number; // white checkmate
+  bcm: number; // black checkmate
+  wckc: number; // white can castle kingside
+  bckc: number; // black can castle kingside
+  wcqc: number; // white can castle queenside
+  bcqc: number; // black can castle queenside
   turn: 0 | 1;
+  simulation: 0 | 1;
   history: ChessterHistory;
-  simulation: boolean;
 
   /**
    * creates a new chesster game instance and initializes it
@@ -43,17 +43,17 @@ export class ChessterGame {
     this.board = state?.board ?? defaultBoard;
     this.turn = state?.turn ?? WHITE;
     this.history = state?.history ?? [];
-    this.simulation = state?.simulation ?? false;
+    this.simulation = state?.simulation ?? 0;
 
-    this.wc = state?.wc ?? false; // white check
-    this.bc = state?.bc ?? false; // black check
-    this.wcm = state?.wcm ?? false; // white checkmate
-    this.bcm = state?.bcm ?? false; // black checkmate
+    this.wc = state?.wc ?? 0; // white check
+    this.bc = state?.bc ?? 0; // black check
+    this.wcm = state?.wcm ?? 0; // white checkmate
+    this.bcm = state?.bcm ?? 0; // black checkmate
 
-    this.wckc = state?.wckc ?? true; // white can castle kingside
-    this.wcqc = state?.wcqc ?? true; // white can castle queenside
-    this.bckc = state?.bckc ?? true; // black can castle kingside
-    this.bcqc = state?.bcqc ?? true; // black can castle queenside
+    this.wckc = state?.wckc ?? 1; // white can castle kingside
+    this.wcqc = state?.wcqc ?? 1; // white can castle queenside
+    this.bckc = state?.bckc ?? 1; // black can castle kingside
+    this.bcqc = state?.bcqc ?? 1; // black can castle queenside
 
     this.updateChecked();
     this.updateCastle();
@@ -66,14 +66,14 @@ export class ChessterGame {
     if (this.history.length > 0) {
       const move = this.history.pop();
       if (move) {
-        this.bcqc = ((move >>> 31) & 0b1) === 1;
-        this.wcqc = ((move >>> 30) & 0b1) === 1;
-        this.bckc = ((move >>> 29) & 0b1) === 1;
-        this.wckc = ((move >>> 28) & 0b1) === 1;
-        this.bcm = ((move >>> 27) & 0b1) === 1;
-        this.wcm = ((move >>> 26) & 0b1) === 1;
-        this.bc = ((move >>> 25) & 0b1) === 1;
-        this.wc = ((move >>> 24) & 0b1) === 1;
+        this.bcqc = (move >>> 31) & 0b1;
+        this.wcqc = (move >>> 30) & 0b1;
+        this.bckc = (move >>> 29) & 0b1;
+        this.wckc = (move >>> 28) & 0b1;
+        this.bcm = (move >>> 27) & 0b1;
+        this.wcm = (move >>> 26) & 0b1;
+        this.bc = (move >>> 25) & 0b1;
+        this.wc = (move >>> 24) & 0b1;
 
         this.turn ^= 1;
 
@@ -122,14 +122,14 @@ export class ChessterGame {
   move(move: ChessterMove) {
     // 32 bit number
     let history =
-      (this.bcqc ? 0b1 << 31 : 0) |
-      (this.wcqc ? 0b1 << 30 : 0) |
-      (this.bckc ? 0b1 << 29 : 0) |
-      (this.wckc ? 0b1 << 28 : 0) |
-      (this.bcm ? 0b1 << 27 : 0) |
-      (this.wcm ? 0b1 << 26 : 0) |
-      (this.bc ? 0b1 << 25 : 0) |
-      (this.wc ? 0b1 << 24 : 0);
+      (this.bcqc << 31) |
+      (this.wcqc << 30) |
+      (this.bckc << 29) |
+      (this.wckc << 28) |
+      (this.bcm << 27) |
+      (this.wcm << 26) |
+      (this.bc << 25) |
+      (this.wc << 24);
 
     switch ((move >>> 4) & 0b1111) {
       case moveTypes.CAPTURE:
@@ -295,28 +295,28 @@ export class ChessterGame {
 
   updateCastle() {
     if (
-      this.wckc === true &&
+      this.wckc === 1 &&
       (this.board[60] !== 0b1100 || this.board[63] !== 0b1000)
     )
-      this.wckc = false;
+      this.wckc = 0;
 
     if (
-      this.wcqc === true &&
+      this.wcqc === 1 &&
       (this.board[60] !== 0b1100 || this.board[56] !== 0b1000)
     )
-      this.wcqc = false;
+      this.wcqc = 0;
 
     if (
-      this.bckc === true &&
+      this.bckc === 1 &&
       (this.board[4] !== 0b1101 || this.board[7] !== 0b1001)
     )
-      this.bckc = false;
+      this.bckc = 0;
 
     if (
-      this.bcqc === true &&
+      this.bcqc === 1 &&
       (this.board[4] !== 0b1101 || this.board[0] !== 0b1001)
     )
-      this.bcqc = false;
+      this.bcqc = 0;
   }
 
   /**
@@ -324,24 +324,24 @@ export class ChessterGame {
    * @param team The team to check
    * @returns Whether the given team is checked
    */
-  isChecked(team: ChessterTeam): boolean {
+  isChecked(team: ChessterTeam): number {
     for (let i = 0; i < boardSize; i++) {
       if (this.board[i] !== 0 && (this.board[i] & 0b1) !== team) {
         const moves = this.getAllMoves(i);
         for (let j = 0; j < moves.length; j++) {
           if (
             ((moves[j] >>> 4) & 0b1111) === moveTypes.CAPTURE ||
-            ((moves[j] >>> 4) & 0b1111) > 11 // if any promotion capture moves
+            ((moves[j] >>> 6) & 0b11) === 0b11 // if any promotion capture moves
           ) {
             if (this.board[(moves[j] >>> 8) & 0b111111] === (0b1100 | team)) {
               // 0b110 is king value
-              return true;
+              return 1;
             }
           }
         }
       }
     }
-    return false;
+    return 0;
   }
 
   /**
@@ -350,11 +350,11 @@ export class ChessterGame {
    * @returns Whether the enemy team is checkmated
    * @todo Implement this
    */
-  isCheckmated(team: ChessterTeam): boolean {
+  isCheckmated(team: ChessterTeam): number {
     for (let i = 0; i < boardSize; i++)
       if (this.board[i] !== 0 && (this.board[i] & 0b1) === team)
-        if (this.getAvailableMoves(i).length > 0) return false;
-    return true;
+        if (this.getAvailableMoves(i).length > 0) return 0;
+    return 1;
   }
 
   getState(): ChessterGameState {
@@ -381,26 +381,19 @@ export class ChessterGame {
    * @returns
    */
   getAllMoves(location: number): number[] {
-    let moves: number[] = [];
     switch ((this.board[location] >>> 1) & 0b111) {
       case 0b001:
-        moves = this.getPawnMoves(this.board[location], location);
-        break;
+        return this.getPawnMoves(this.board[location], location);
       case 0b010:
-        moves = this.getKnightMoves(this.board[location], location);
-        break;
+        return this.getKnightMoves(this.board[location], location);
       case 0b011:
-        moves = this.getBishopMoves(this.board[location], location);
-        break;
+        return this.getBishopMoves(this.board[location], location);
       case 0b100:
-        moves = this.getRookMoves(this.board[location], location);
-        break;
+        return this.getRookMoves(this.board[location], location);
       case 0b101:
-        moves = this.getQueenMoves(this.board[location], location);
-        break;
+        return this.getQueenMoves(this.board[location], location);
       case 0b110:
-        moves = this.getKingMoves(this.board[location], location);
-        break;
+        return this.getKingMoves(this.board[location], location);
       default:
         throw new Error(
           "invalid piece while getting available moves: " +
@@ -409,8 +402,6 @@ export class ChessterGame {
             this.boardToString()
         );
     }
-
-    return moves;
   }
 
   /**
@@ -425,7 +416,7 @@ export class ChessterGame {
     const finalMoves = [];
     const team = this.board[location] & 0b1;
 
-    this.simulation = true;
+    this.simulation = 1;
 
     for (let move of moves) {
       this.move(move);
@@ -463,7 +454,7 @@ export class ChessterGame {
       }
     }
 
-    this.simulation = false;
+    this.simulation = 0;
 
     return finalMoves;
   }
@@ -639,7 +630,7 @@ export class ChessterGame {
     }
 
     // castling
-    if ((piece & 0b1) === 0 && this.wc === false) {
+    if ((piece & 0b1) === 0 && this.wc === 0) {
       // white king-side
       if (
         this.wckc &&
@@ -670,7 +661,7 @@ export class ChessterGame {
         );
     }
 
-    if ((piece & 0b1) === 1 && this.bc === false) {
+    if ((piece & 0b1) === 1 && this.bc === 0) {
       // black king-side
       if (
         this.bckc &&
