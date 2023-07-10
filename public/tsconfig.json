@@ -2,7 +2,7 @@
   "compilerOptions": {
     "sourceMap": true,
     "esModuleInterop": true,
-    "target": "ESNext",
-    "moduleResolution": "Node"
-  }
+    "skipLibCheck": true
+  },
+  "files": ["./index.ts", "./worker.ts"]
 }

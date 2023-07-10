@@ -167,11 +167,10 @@ nav {
     border-bottom-right-radius: calc(var(--border-size, 0.25rem) * 2);
 }
 
-#chessboard.disabled {
+/* #chessboard.disabled {
     pointer-events: none;
     cursor: not-allowed;
-    opacity: 0.5;
-}
+} */
 
 #promotion {
     height: calc(var(--chessboard-size, 400px) / 8);
@@ -254,7 +253,8 @@ nav {
     background-color: #F25116;
 }
 
-.cell.MOVE {
+.cell.MOVE,
+.cell.DOUBLE_PAWN_PUSH {
     background-color: #536473;
 }
 
@@ -262,16 +262,31 @@ nav {
     background-color: #B2E7B3;
 }
 
-.cell.CASTLE {
+.cell.CASTLE,
+.cell.CASTLE_KINGSIDE,
+.cell.CASTLE_QUEENSIDE {
     background-color: #F2E205;
 }
 
-.cell.EN_PASSANT {
+.cell.EN_PASSANT,
+.cell.EN_PASSANT_WHITE,
+.cell.EN_PASSANT_BLACK {
     background-color: #CDA3A7;
 }
 
-.cell.PROMOTION {
-    background-color: #6e791b;
+.cell.PROMOTION,
+.cell.PROMOTION_QUEEN,
+.cell.PROMOTION_KNIGHT,
+.cell.PROMOTION_ROOK,
+.cell.PROMOTION_BISHOP {
+    background-color: #F2E205;
+}
+
+.cell.PROMOTION_QUEEN_CAPTURE,
+.cell.PROMOTION_KNIGHT_CAPTURE,
+.cell.PROMOTION_ROOK_CAPTURE,
+.cell.PROMOTION_BISHOP_CAPTURE {
+    background-color: #d8c77f;
 }
 
 .cell:hover {

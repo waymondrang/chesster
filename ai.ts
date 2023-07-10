@@ -1,255 +1,184 @@
-import { stat } from "fs";
 import { ChessterGame } from "./game";
 import {
   BLACK,
-  ChessterGameState,
-  ChessterLocation,
   ChessterMove,
-  ChessterPiece,
-  ChessterPlayer,
-  ChessterTeam,
   MAX_PLAYER,
   MIN_PLAYER,
-  WHITE,
+  boardSize,
 } from "./types";
-import { calculateTeam, dCopyState } from "./util";
 
-class ChessterAINode {
-  state: ChessterGameState;
-  playerType: typeof MAX_PLAYER | typeof MIN_PLAYER;
-  children: ChessterAINode[];
-  score: number;
+const depth = 3;
+const mobilityWeight = 3;
+const pieceValueWeight = 20;
 
-  constructor(
-    state: ChessterGameState,
-    playerType: typeof MAX_PLAYER | typeof MIN_PLAYER
-  ) {
-    this.state = state;
-    this.score = this.calculateStateScore(state);
-    this.playerType = playerType;
-    this.children = [];
+const MVV_LVA: number[][] = [
+  [0, 0, 0, 0, 0, 0, 0], // victim K, attacker K, Q, R, B, N, P, None
+  [10, 11, 12, 13, 14, 15, 0], // victim P, attacker K, Q, R, B, N, P, None
+  [20, 21, 22, 23, 24, 25, 0], // victim N, attacker K, Q, R, B, N, P, None
+  [30, 31, 32, 33, 34, 35, 0], // victim B, attacker K, Q, R, B, N, P, None
+  [40, 41, 42, 43, 44, 45, 0], // victim R, attacker K, Q, R, B, N, P, None
+  [50, 51, 52, 53, 54, 55, 0], // victim Q, attacker K, Q, R, B, N, P, None
+  [0, 0, 0, 0, 0, 0, 0], // victim None, attacker K, Q, R, B, N, P, None
+];
+
+const pieceValues: number[] = [0, 100, 310, 320, 500, 900, 2000, 0];
+
+function sortMoves(moves: number[]): number[] {
+  const sortedMoves: number[] = [];
+
+  for (let i = 0; i < moves.length; i++) {
+    const move = moves[i];
+
+    let score = MVV_LVA[(moves[i] >>> 21) & 0b111][(moves[i] >>> 1) & 0b111];
+
+    let j = 0;
+    while (j < sortedMoves.length && score < sortedMoves[j]) j++;
+
+    sortedMoves.splice(j, 0, move);
   }
 
-  calculateStateScore(state: ChessterGameState): number {
-    let score = 0;
-    for (const row of state.board) {
-      for (const piece of row) {
-        if (piece) {
-          score +=
-            (calculateTeam(piece.string) === BLACK ? 1 : -1) *
-            this.getPieceValue(piece);
-        }
-      }
-    }
-    let blackMobility = 0;
-    let whiteMobility = 0;
-    const simulation = new ChessterGame(dCopyState(state));
-    for (const piece of state.black.pieces)
-      blackMobility += simulation.getAvailableMoves(piece).length;
-
-    for (const piece of state.white.pieces)
-      whiteMobility += simulation.getAvailableMoves(piece).length;
-
-    score += 0.1 * (blackMobility - whiteMobility);
-    return score;
-  }
-
-  getPieceValue(piece: ChessterPiece): number {
-    switch (piece.string) {
-      case "♔":
-      case "♚":
-        return 200;
-      case "♕":
-      case "♛":
-        return 9;
-      case "♗":
-      case "♝":
-        return 3;
-      case "♘":
-      case "♞":
-        return 3;
-      case "♖":
-      case "♜":
-        return 5;
-      case "♙":
-      case "♟︎":
-        return 1;
-      default:
-        throw new Error("getting value of invalid piece");
-    }
-  }
-
-  isTerminal(): boolean {
-    return this.children.length === 0;
-  }
+  return sortedMoves;
 }
 
 export class ChessterAI {
   game: ChessterGame;
-  self: ChessterPlayer;
-  root: ChessterAINode;
-  simulator: ChessterGame;
+  team: number;
 
-  constructor(game: ChessterGame) {
-    // game.turn will indicate the AI's team
+  constructor(game: ChessterGame, team: number = BLACK) {
+    // game.turn will indicate the ai's team
     this.game = game;
-    this.self = this.game.turn === WHITE ? this.game.white : this.game.black;
-    this.root = new ChessterAINode(
-      dCopyState(this.game.getState()),
-      MAX_PLAYER
-    );
-    this.simulator = new ChessterGame();
+    this.team = team;
   }
 
-  buildMoveTree(node: ChessterAINode = this.root, depth: number = 0) {
-    if (depth === 0) return;
-    // console.log(
-    //   "playing as " +
-    //     (node.playerType === MAX_PLAYER ? "MAX_PLAYER" : "MIN_PLAYER") +
-    //     " at depth " +
-    //     depth +
-    //     " on turn " +
-    //     node.state.turn
-    // );
-    for (const piece of node.state.turn === WHITE
-      ? node.state.white.pieces
-      : node.state.black.pieces) {
-      this.simulator.init(dCopyState(node.state)); // initialize game with current state
-      const moves = this.simulator.getAvailableMoves(piece);
-      for (const move of moves) {
-        // console.log("simulating move: " + JSON.stringify(move));
-        this.simulator.init(dCopyState(node.state)); // initialize game with current state
-        // console.log(this.simulator.boardToString());
-        this.simulator.move(move);
-        // console.log(this.simulator.boardToString());
-        const child = new ChessterAINode(
-          dCopyState(this.simulator.getState()),
-          node.playerType === MAX_PLAYER ? MIN_PLAYER : MAX_PLAYER
-        );
-        node.children.push(child);
-        this.buildMoveTree(child, depth - 1);
+  /**
+   * calculates the black player's score
+   * @returns
+   */
+  calculateStateScore(): number {
+    let score = 0;
+
+    for (let i = 0; i < boardSize; i++) {
+      if (this.game.board[i] !== 0) {
+        score +=
+          pieceValueWeight *
+            ((this.game.board[i] & 0b1) === this.team ? 1 : -1) *
+            pieceValues[(this.game.board[i] >>> 1) & 0b111] +
+          mobilityWeight *
+            ((this.game.board[i] & 0b1) === this.team ? 1 : -1) *
+            this.game.getAvailableMoves(i).length; // if white multiply by -1
       }
     }
+
+    return score;
   }
 
   miniMax(
-    node: ChessterAINode = this.root
-  ): [ChessterMove | undefined, number] {
-    if (node.isTerminal()) {
-      return [undefined, (node.state.turn === BLACK ? 1 : -1) * node.score];
-    }
-    if (node.playerType === MAX_PLAYER) {
+    depth: number,
+    alpha: number = -Infinity,
+    beta: number = Infinity,
+    playerType: number = MAX_PLAYER,
+    count: number = 0
+  ): [ChessterMove | undefined, number, number] {
+    if (depth === 0) return [undefined, this.calculateStateScore(), count];
+
+    if (playerType === MAX_PLAYER) {
       // maximizer
       let bestValue = -Infinity;
       let bestMove: ChessterMove | undefined;
-      for (const child of node.children) {
-        const [_, value] = this.miniMax(child);
-        if (value > bestValue) {
-          // can add randomness to make AI "easier"
-          bestValue = value;
-          bestMove = child.state.history[child.state.history.length - 1];
+
+      for (let i = 0; i < boardSize; i++) {
+        if (
+          this.game.board[i] !== 0 &&
+          (this.game.board[i] & 0b1) === this.game.turn
+        ) {
+          const moves = sortMoves(this.game.getAvailableMoves(i));
+
+          for (let j = moves.length - 1; j >= 0; j--) {
+            count++;
+
+            this.game.move(moves[j]);
+
+            const [_, value] = this.miniMax(
+              depth - 1,
+              alpha,
+              beta,
+              1 ^ playerType
+            );
+
+            this.game.undo();
+
+            if (value > bestValue) {
+              // can add randomness to make AI "easier"
+              bestValue = value;
+              bestMove = moves[j];
+            }
+
+            if (bestValue > alpha) alpha = bestValue;
+            if (alpha >= beta) break;
+          }
         }
       }
-      return [bestMove, bestValue];
-    } else if (node.playerType === MIN_PLAYER) {
+
+      return [bestMove, bestValue, count];
+    } else if (playerType === MIN_PLAYER) {
       // minimizer
       let bestValue = Infinity;
       let bestMove: ChessterMove | undefined;
-      for (const child of node.children) {
-        const [_, value] = this.miniMax(child);
-        if (value < bestValue) {
-          // assume minimizer (opponent) plays optimally
-          bestValue = value;
-          bestMove = child.state.history[child.state.history.length - 1];
+
+      for (let i = 0; i < boardSize; i++) {
+        if (
+          this.game.board[i] !== 0 &&
+          (this.game.board[i] & 0b1) === this.game.turn
+        ) {
+          const moves = sortMoves(this.game.getAvailableMoves(i));
+
+          for (let j = moves.length - 1; j >= 0; j--) {
+            count++;
+
+            this.game.move(moves[j]);
+
+            const [_, value] = this.miniMax(
+              depth - 1,
+              alpha,
+              beta,
+              1 ^ playerType,
+              count
+            );
+
+            this.game.undo();
+
+            if (value < bestValue) {
+              // assume minimizer (opponent) plays optimally
+              bestValue = value;
+              bestMove = moves[j];
+            }
+
+            if (bestValue < beta) beta = bestValue;
+            if (alpha >= beta) break;
+          }
         }
       }
-      return [bestMove, bestValue];
+
+      return [bestMove, bestValue, count];
     } else {
       throw new Error("invalid player type");
     }
   }
 
-  getNextMove(): ChessterMove | undefined {
+  getMove(): ChessterMove | undefined {
     const startTime = performance.now();
-    this.buildMoveTree(this.root, 2);
-    const [bestMove, _] = this.miniMax();
-    console.log("time taken: " + (performance.now() - startTime));
-    // console.log(
-    //   "best move: " + JSON.stringify(bestMove) + " with score: " + score
-    // );
+    // this.root = new ChessterAINode(this.game.getState(), MAX_PLAYER, 0);
+    // this.buildMoveTree(this.root, depth);
+    const [bestMove, _, count] = this.miniMax(depth);
+    console.log(
+      "count: " + count + " time taken: " + (performance.now() - startTime)
+    );
     return bestMove;
-    // const startTime = performance.now();
-    // const pieces = this.self.pieces;
-    // let bestValue: number = -Infinity;
-    // let bestMove: ChessterMove | undefined;
-
-    // for (const piece of pieces) {
-    //   const moves = this.game.getAvailableMoves(piece);
-    //   for (const move of moves) {
-    //     const simulator = new ChessterGame(dCopyState(this.game.getState()));
-    //     simulator.move(move);
-    //     let moveValue =
-    //       this.getMoveValue(move) +
-    //       simulator.countPiecesInBoundary([2, 2], [5, 5]) * 0.5;
-    //     if (moveValue > bestValue) {
-    //       bestValue = moveValue;
-    //       bestMove = move;
-    //     }
-    //   }
-    // }
-
-    // const endTime = performance.now();
-    // console.log(`AI took ${endTime - startTime}ms to make a move`);
-    // return bestMove;
   }
 
-  getMoveValue(move: ChessterMove): number {
-    if (move.capture) {
-      return this.getPieceValue(
-        this.game.board[move.capture[0]][move.capture[1]]! // assert existence
-      );
-    } else {
-      return 0;
-    }
-  }
-
-  getPieceValue(piece: ChessterPiece): number {
-    switch (piece.string) {
-      case "♔":
-      case "♚":
-        return 1000;
-      case "♕":
-      case "♛":
-        return 9;
-      case "♗":
-      case "♝":
-        return 3;
-      case "♘":
-      case "♞":
-        return 3;
-      case "♖":
-      case "♜":
-        return 5;
-      case "♙":
-      case "♟︎":
-        return 1;
-      default:
-        throw new Error("getting value of invalid piece");
-    }
-  }
-
-  calculateStateScore(state: ChessterGameState): number {
-    let score = 0;
-    for (const row of state.board) {
-      for (const piece of row) {
-        if (piece) {
-          score +=
-            (calculateTeam(piece.string) === state.turn ? 1 : -1) * // assuming white is maximizer
-            this.getPieceValue(piece);
-        }
-      }
-    }
-    console.log("score: " + score);
-    return score;
+  makeMove(): ChessterMove | undefined {
+    const move = this.getMove();
+    if (move !== undefined) this.game.move(move);
+    return move;
   }
 }
