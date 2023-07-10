@@ -12,13 +12,10 @@ import {
   ChessterBoard,
   ChessterHistory,
   ChessterMove,
-  ChessterPieceString,
   ChessterTeam,
-  WHITE,
   boardSize,
   moveTypes,
 } from "../types";
-import { io } from "socket.io-client";
 import { binaryToString, getKeyByValue, numberToPieceString } from "../util";
 import { messageTypes } from "./types";
 
@@ -34,7 +31,6 @@ const promotion = document.querySelector("#promotion")!;
 const promotion_options = document.querySelector("#promotion-options")!;
 const undo = document.querySelector("#undo")!;
 
-const socket = io();
 const game = new ChessterGame();
 const aiWorker = new Worker("worker.js");
 
@@ -139,7 +135,6 @@ function clientUndo() {
 
   selectedPieceElement = null;
   selectedPieceMoves = [];
-  socket.emit("undo");
 }
 
 undo.addEventListener("click", () => {
