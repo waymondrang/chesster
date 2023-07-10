@@ -14,10 +14,10 @@
 | move                       | bit pattern |
 | -------------------------- | ----------- |
 | move                       | 0000        |
-| double pawn push           | 0001        |
-| capture                    | 0010        |
-| castle (king side)         | 0011        |
-| castle (queen side)        | 0100        |
+| castle (king side)         | 0001        |
+| castle (queen side)        | 0010        |
+| double pawn push           | 0011        |
+| capture                    | 0100        |
 | en passant (white)         | 0101        |
 | en passant (black)         | 0110        |
 | (unused)                   | 0111        |
@@ -105,76 +105,3 @@ total: (20 bits)
 | 40  | 101000 | 101001 | 101010 | 101011 | 101100 | 101101 | 101110 | 101111 |
 | 48  | 110000 | 110001 | 110010 | 110011 | 110100 | 110101 | 110110 | 110111 |
 | 56  | 111000 | 111001 | 111010 | 111011 | 111100 | 111101 | 111110 | 111111 |
-
-### iteration/data type results
-
-```
-uint8: 658.7679600119591ms
-uint32: 661.0946100115776ms
-buffer: 652.7213200330734ms
-arrayFor: 622.7894200086594ms
-arrayWhile: 607.817779994011ms
-nestedArrayTestWhile: 723.1028299808502ms
-chessterBoard: 0ms
-```
-
-```
-uint8: 683.5581399798393ms
-uint32: 672.319019985199ms
-buffer: 677.8230999946594ms
-arrayFor: 648.0823300004006ms
-arrayWhile: 619.2686400175095ms
-arrayPushWhile: 643.2715700149536ms
-nestedArrayTestWhile: 716.3691900014877ms
-```
-
-arrayWhile is clearly the winner!
-
-### getWhihteKingMoves
-
-using only if statements
-
-```
-liveGenerateMoveTest: 1000000 iterations took 6626.551499962807ms
-liveGenerateMoveTest: 1000000 iterations took 6988.545799970627ms
-liveGenerateMoveTest: 1000000 iterations took 6437.332000017166ms
-liveGenerateMoveTest: 1000000 iterations took 6421.122200012207ms
-liveGenerateMoveTest: 1000000 iterations took 6447.907799959183ms
-liveGenerateMoveTest: 1000000 iterations took 6424.315500020981ms
-liveGenerateMoveTest: 1000000 iterations took 6474.685600042343ms
-liveGenerateMoveTest: 1000000 iterations took 6424.331400036812ms
-liveGenerateMoveTest: 1000000 iterations took 6411.646800041199ms
-liveGenerateMoveTest: 1000000 iterations took 6536.028600096703ms
-preGenerate: 0ms
-liveGenerate: 6519.246720016003ms
-```
-
-using bitwise and loop
-
-```
-liveGenerateMoveTest: 1000000 iterations took 6689.716600060463ms
-liveGenerateMoveTest: 1000000 iterations took 6601.729099988937ms
-liveGenerateMoveTest: 1000000 iterations took 6713.074100017548ms
-liveGenerateMoveTest: 1000000 iterations took 6500.011300086975ms
-liveGenerateMoveTest: 1000000 iterations took 6548.257400035858ms
-liveGenerateMoveTest: 1000000 iterations took 6611.903599977493ms
-liveGenerateMoveTest: 1000000 iterations took 6514.960600018501ms
-liveGenerateMoveTest: 1000000 iterations took 6569.82539999485ms
-liveGenerateMoveTest: 1000000 iterations took 6515.367999911308ms
-liveGenerateMoveTest: 1000000 iterations took 6565.6209000349045ms
-preGenerate: 0ms
-liveGenerate: 6583.046700012684ms
-```
-
-### todo tests
-
-- compare (location & 0b111000) !== 0b111000 vs (location >> 3) !== 7
-
-## bulk counting evalulation
-
-CHESSTER BULK COUNTING EVALUATION
-
-Depth: 1 Number of positions: 20 Time: 3.173799991607666ms
-Depth: 2 Number of positions: 400 Time: 18.184300005435944ms
-Depth: 3 Number of positions: 8902 Time: 90.87610000371933ms
-Depth: 4 Number of positions: 197281 Time: 755.8995000123978ms

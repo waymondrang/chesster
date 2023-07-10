@@ -1,6 +1,8 @@
 {
   "compilerOptions": {
     "sourceMap": true,
-    "esModuleInterop": true
-  }
+    "esModuleInterop": true,
+    "skipLibCheck": true
+  },
+  "files": ["./index.ts", "./worker.ts"]
 }

@@ -14,7 +14,7 @@ const chess = new Chess();
 const n = 2;
 const depth = 5;
 const fen = "";
-const counter: number = 2;
+const counter: number = 0; // default is 0
 
 // counter 2
 function countBulkPositionsCompare(depth: number): number {

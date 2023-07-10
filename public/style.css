@@ -167,11 +167,10 @@ nav {
     border-bottom-right-radius: calc(var(--border-size, 0.25rem) * 2);
 }
 
-#chessboard.disabled {
+/* #chessboard.disabled {
     pointer-events: none;
     cursor: not-allowed;
-    opacity: 0.5;
-}
+} */
 
 #promotion {
     height: calc(var(--chessboard-size, 400px) / 8);

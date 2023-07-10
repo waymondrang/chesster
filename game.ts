@@ -10,13 +10,7 @@ import {
   defaultBoard,
   moveTypes,
 } from "./types";
-import {
-  binaryToString,
-  getKeyByValue,
-  moveToString,
-  numberToPieceString,
-  rCompare,
-} from "./util";
+import { binaryToString, numberToPieceString } from "./util";
 
 export class ChessterGame {
   board: number[]; // board is 64 bytes
@@ -40,7 +34,7 @@ export class ChessterGame {
   }
 
   init(state?: RecursivePartial<ChessterGameState>) {
-    this.board = state?.board ?? defaultBoard;
+    this.board = state?.board ?? [...defaultBoard];
     this.turn = state?.turn ?? WHITE;
     this.history = state?.history ?? [];
     this.simulation = state?.simulation ?? 0;
