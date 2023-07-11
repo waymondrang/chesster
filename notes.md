@@ -21,14 +21,14 @@
 | en passant (white)         | 0101        |
 | en passant (black)         | 0110        |
 | (unused)                   | 0111        |
-| promotion (queen)          | 1000        |
-| promotion (knight)         | 1001        |
-| promotion (bishop)         | 1010        |
-| promotion (rook)           | 1011        |
-| promotion capture (queen)  | 1100        |
-| promotion capture (knight) | 1101        |
-| promotion capture (bishop) | 1110        |
-| promotion capture (rook)   | 1111        |
+| promotion (knight)         | 1000        |
+| promotion (bishop)         | 1001        |
+| promotion (rook)           | 1010        |
+| promotion (queen)          | 1011        |
+| promotion capture (knight) | 1100        |
+| promotion capture (bishop) | 1101        |
+| promotion capture (rook)   | 1110        |
+| promotion capture (queen)  | 1111        |
 
 | team  | bit value |
 | ----- | --------- |

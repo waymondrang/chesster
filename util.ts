@@ -303,6 +303,37 @@ export function numberToPieceString(pieceNumber: number): string {
   return pieceString;
 }
 
+export function numberToFileName(pieceNumber: number): string {
+  switch (pieceNumber) {
+    case 0b0011:
+      return "pawn_black";
+    case 0b0010:
+      return "pawn_white";
+    case 0b0101:
+      return "knight_black";
+    case 0b0100:
+      return "knight_white";
+    case 0b1001:
+      return "rook_black";
+    case 0b1000:
+      return "rook_white";
+    case 0b0111:
+      return "bishop_black";
+    case 0b0110:
+      return "bishop_white";
+    case 0b1011:
+      return "queen_black";
+    case 0b1010:
+      return "queen_white";
+    case 0b1101:
+      return "king_black";
+    case 0b1100:
+      return "king_white";
+    default:
+      return "";
+  }
+}
+
 export function boardStringToUint8Array(
   boardString: ChessterBoardString
 ): Uint8Array {

@@ -16,20 +16,29 @@ import {
   boardSize,
   moveTypes,
 } from "../types";
-import { binaryToString, getKeyByValue, numberToPieceString } from "../util";
+import {
+  binaryToString,
+  getKeyByValue,
+  numberToFileName,
+  numberToPieceString,
+} from "../util";
 import { messageTypes } from "./types";
 
 ////////////////////////////////
 //     constant variables     //
 ////////////////////////////////
 
-const chessboard = document.querySelector("#chessboard")!;
-const turn_span = document.querySelector("#turn")!;
-const restart = document.querySelector("#restart")!;
-const promotion_close = document.querySelector("#promotion-close")!;
-const promotion = document.querySelector("#promotion")!;
-const promotion_options = document.querySelector("#promotion-options")!;
-const undo = document.querySelector("#undo")!;
+const chessboard = document.querySelector("#chessboard") as HTMLDivElement;
+const turn_span = document.querySelector("#turn") as HTMLSpanElement;
+const restart = document.querySelector("#restart") as HTMLButtonElement;
+const promotion_close = document.querySelector(
+  "#promotion-close"
+) as HTMLButtonElement;
+const promotion = document.querySelector("#promotion") as HTMLDivElement;
+const promotion_options = document.querySelector(
+  "#promotion-options"
+) as HTMLDivElement;
+const undo = document.querySelector("#undo") as HTMLButtonElement;
 
 const game = new ChessterGame();
 const aiWorker = new Worker("worker.js");
@@ -65,6 +74,21 @@ function clearMoveHighlights() {
   }
 }
 
+function clearMove() {
+  for (let i = 0; i < boardSize; i++) {
+    for (let modifier of [...Object.keys(moveTypes), "selected"]) {
+      elementBoard[i].classList.remove(modifier);
+    }
+
+    for (let j = 0; j < elementBoard[i].children.length; j++) {
+      if (elementBoard[i].children[j].id === "xo") {
+        elementBoard[i].children[j].remove();
+        j--;
+      }
+    }
+  }
+}
+
 function updateLastMove(gameHistory: ChessterHistory) {
   for (let i = 0; i < boardSize; i++) {
     for (let modifier of ["moved_from", "moved_to"]) {
@@ -81,17 +105,49 @@ function updateLastMove(gameHistory: ChessterHistory) {
   }
 }
 
-function updateBoard(gameBoard: ChessterBoard) {
-  clearMoveHighlights();
+function updateMove(move: ChessterMove) {
+  // todo: only update spaces that have changed
+}
 
-  for (let i = 0; i < boardSize; i++) {
-    elementBoard[i].innerHTML = "";
-    if (gameBoard[i] !== 0)
-      elementBoard[i].textContent = numberToPieceString(gameBoard[i]);
+function updateBoard(gameBoard: ChessterBoard, previousBoard?: ChessterBoard) {
+  if (previousBoard === undefined) {
+    for (let i = 0; i < boardSize; i++) {
+      elementBoard[i].innerHTML = "";
+      if (gameBoard[i] !== 0) {
+        // elementBoard[i].textContent = numberToPieceString(gameBoard[i]);
+        let img = document.createElement("img");
+        img.setAttribute(
+          "src",
+          "pieces/" + numberToFileName(gameBoard[i]) + ".svg"
+        );
+        img.setAttribute("draggable", "false");
+
+        elementBoard[i].appendChild(img);
+      }
+    }
+  } else {
+    for (let i = 0; i < boardSize; i++) {
+      if (gameBoard[i] !== previousBoard[i]) {
+        elementBoard[i].innerHTML = "";
+        if (gameBoard[i] !== 0) {
+          // elementBoard[i].textContent = numberToPieceString(gameBoard[i]);
+          let img = document.createElement("img");
+          img.setAttribute(
+            "src",
+            "pieces/" + numberToFileName(gameBoard[i]) + ".svg"
+          );
+          img.setAttribute("draggable", "false");
+
+          elementBoard[i].appendChild(img);
+        }
+      }
+    }
   }
 
   if (game.turn === BLACK) chessboard.classList.add("disabled");
   else chessboard.classList.remove("disabled");
+
+  undo.disabled = game.history.length === 0;
 }
 
 function updateTurnIndicator(gameTurn: ChessterTeam) {
@@ -109,29 +165,33 @@ promotion_close.addEventListener("click", () => {
 function clientMove(move: ChessterMove) {
   console.log("sending and making move", binaryToString(move));
   makeMove(move);
-  aiWorker.postMessage({ type: messageTypes.MOVE, state: game.getState() });
+  // aiWorker.postMessage({ type: messageTypes.MOVE, state: game.getState() }); // disable to enable two player
 }
 
 function makeMove(move: ChessterMove) {
+  let previousBoard = [...game.board];
+
   game.move(move);
 
-  updateBoard(game.board);
+  updateBoard(game.board, previousBoard);
   updateTurnIndicator(game.turn);
   updateLastMove(game.history);
-  clearMoveHighlights();
+  clearMove();
 
   selectedPieceElement = null;
   selectedPieceMoves = [];
 }
 
 function clientUndo() {
+  let previousBoard = [...game.board];
+
   console.log("undoing");
   game.undo();
 
-  updateBoard(game.board);
+  updateBoard(game.board, previousBoard);
   updateTurnIndicator(game.turn);
   updateLastMove(game.history);
-  clearMoveHighlights();
+  clearMove();
 
   selectedPieceElement = null;
   selectedPieceMoves = [];
@@ -177,7 +237,7 @@ for (let i = 0; i < boardSize; i++) {
 
       if (selectedPieceElement === cell) {
         console.log("deselecting piece");
-        clearMoveHighlights();
+        clearMove();
         selectedPieceElement = null;
         selectedPieceMoves = [];
         return;
@@ -205,24 +265,37 @@ for (let i = 0; i < boardSize; i++) {
 
             // button.textContent = move.promotion || "";
 
-            switch ((move >>> 4) & 0b1111) {
-              case moveTypes.PROMOTION_QUEEN_CAPTURE:
-              case moveTypes.PROMOTION_QUEEN:
-                button.textContent = move & 0b1 ? "♛" : "♕";
-                break;
-              case moveTypes.PROMOTION_ROOK_CAPTURE:
-              case moveTypes.PROMOTION_ROOK:
-                button.textContent = move & 0b1 ? "♜" : "♖";
-                break;
-              case moveTypes.PROMOTION_BISHOP_CAPTURE:
-              case moveTypes.PROMOTION_BISHOP:
-                button.textContent = move & 0b1 ? "♝" : "♗";
-                break;
-              case moveTypes.PROMOTION_KNIGHT_CAPTURE:
-              case moveTypes.PROMOTION_KNIGHT:
-                button.textContent = move & 0b1 ? "♞" : "♘";
-                break;
-            }
+            let img = document.createElement("img");
+            img.setAttribute(
+              "src",
+              "pieces/" +
+                numberToFileName(
+                  ((((move >> 4) & 0b11) + 2) << 1) | (move & 0b1)
+                ) +
+                ".svg"
+            );
+            img.setAttribute("draggable", "false");
+
+            button.appendChild(img);
+
+            // switch ((move >>> 4) & 0b1111) {
+            //   case moveTypes.PROMOTION_QUEEN_CAPTURE:
+            //   case moveTypes.PROMOTION_QUEEN:
+            //     button.textContent = move & 0b1 ? "♛" : "♕";
+            //     break;
+            //   case moveTypes.PROMOTION_ROOK_CAPTURE:
+            //   case moveTypes.PROMOTION_ROOK:
+            //     button.textContent = move & 0b1 ? "♜" : "♖";
+            //     break;
+            //   case moveTypes.PROMOTION_BISHOP_CAPTURE:
+            //   case moveTypes.PROMOTION_BISHOP:
+            //     button.textContent = move & 0b1 ? "♝" : "♗";
+            //     break;
+            //   case moveTypes.PROMOTION_KNIGHT_CAPTURE:
+            //   case moveTypes.PROMOTION_KNIGHT:
+            //     button.textContent = move & 0b1 ? "♞" : "♘";
+            //     break;
+            // }
 
             button.addEventListener("click", async () => {
               promotion.classList.add("hidden");
@@ -241,7 +314,7 @@ for (let i = 0; i < boardSize; i++) {
         return;
       }
 
-      clearMoveHighlights();
+      clearMove();
       selectedPieceElement = null;
       selectedPieceMoves = [];
 
@@ -251,13 +324,16 @@ for (let i = 0; i < boardSize; i++) {
       cell.classList.toggle("selected");
 
       const moves = game.getAvailableMoves(i);
-
-      console.log("calculatd moves: ", moves);
-
       for (let move of moves) {
+        let img = document.createElement("img");
+        img.src = "pieces/xo.svg";
+        img.id = "xo";
+        img.setAttribute("draggable", "false");
+
         elementBoard[(move >>> 8) & 0b111111].classList.add(
           getKeyByValue(moveTypes, (move >>> 4) & 0b1111) as string
         );
+        elementBoard[(move >>> 8) & 0b111111].appendChild(img);
       }
 
       selectedPieceElement = cell;
@@ -266,6 +342,7 @@ for (let i = 0; i < boardSize; i++) {
   })();
 }
 
+// initialize board
 updateBoard(game.board);
 updateTurnIndicator(game.turn);
 updateLastMove(game.history);
@@ -277,7 +354,7 @@ restart.addEventListener("click", async () => {
   updateBoard(game.board);
   updateTurnIndicator(game.turn);
   updateLastMove(game.history);
-  clearMoveHighlights();
+  clearMove();
 
   selectedPieceElement = null;
   selectedPieceMoves = [];
