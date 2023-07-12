@@ -16,9 +16,11 @@ import {
   boardSize,
   moveTypes,
   messageTypes,
+  ChessterBoardString,
 } from "../types";
 import {
   binaryToString,
+  boardStringToArray,
   getKeyByValue,
   numberToFileName,
   numberToPieceString,
@@ -42,6 +44,21 @@ const undo = document.querySelector("#undo") as HTMLButtonElement;
 
 const game = new ChessterGame();
 const aiWorker = new Worker("worker.js");
+
+// const defaultBoardString: ChessterBoardString = [
+//   ["♜", "♞", "♝", "♛", "♚", "", "", ""],
+//   ["♟︎", "♟︎", "♟︎", "♟︎", "♟︎", "", "♙", ""],
+//   new Array(8).fill(undefined),
+//   new Array(8).fill(undefined),
+//   new Array(8).fill(undefined),
+//   new Array(8).fill(undefined),
+//   ["♙", "♙", "♙", "♙", "♙", "♙", "♙", "♙"],
+//   ["♖", "♘", "♗", "♕", "♔", "♗", "♘", "♖"],
+// ];
+
+// game.init({
+//   board: boardStringToArray(defaultBoardString),
+// });
 
 ///////////////////
 //     types     //
@@ -123,6 +140,17 @@ function updateBoard(gameBoard: ChessterBoard, previousBoard?: ChessterBoard) {
         img.setAttribute("draggable", "false");
 
         elementBoard[i].appendChild(img);
+
+        if (
+          (game.wc && gameBoard[i] === 0b1100) ||
+          (game.bc && gameBoard[i] === 0b1101)
+        ) {
+          let img = document.createElement("img");
+          img.setAttribute("src", "pieces/circle.svg");
+          img.setAttribute("draggable", "false");
+          img.setAttribute("id", "checked");
+          elementBoard[i].appendChild(img);
+        }
       }
     }
   } else {
@@ -141,11 +169,30 @@ function updateBoard(gameBoard: ChessterBoard, previousBoard?: ChessterBoard) {
           elementBoard[i].appendChild(img);
         }
       }
+
+      if (elementBoard[i].children.length > 1)
+        for (let j = 0; j < elementBoard[i].children.length; j++) {
+          if (elementBoard[i].children[j].id === "checked") {
+            elementBoard[i].children[j].remove();
+            j--;
+          }
+        }
+
+      if (
+        (game.wc === 1 && gameBoard[i] === 0b1100) ||
+        (game.bc === 1 && gameBoard[i] === 0b1101)
+      ) {
+        let img = document.createElement("img");
+        img.setAttribute("src", "pieces/circle.svg");
+        img.setAttribute("draggable", "false");
+        img.setAttribute("id", "checked");
+        elementBoard[i].appendChild(img);
+      }
     }
   }
 
-  if (game.turn === BLACK) chessboard.classList.add("disabled");
-  else chessboard.classList.remove("disabled");
+  // if (game.turn === BLACK) chessboard.classList.add("disabled");
+  // else chessboard.classList.remove("disabled");
 
   undo.disabled = game.history.length === 0;
 }
@@ -165,7 +212,7 @@ promotion_close.addEventListener("click", () => {
 function clientMove(move: ChessterMove) {
   console.log("sending and making move", binaryToString(move));
   makeMove(move);
-  // aiWorker.postMessage({ type: messageTypes.MOVE, state: game.getState() }); // disable to enable two player
+  aiWorker.postMessage({ type: messageTypes.MOVE, state: game.getState() }); // disable to enable two player
 }
 
 function makeMove(move: ChessterMove) {
@@ -250,6 +297,7 @@ for (let i = 0; i < boardSize; i++) {
       if (selectedMoves.length > 0) {
         console.log("selectedMoves", selectedMoves);
 
+        // if selected move is promotion
         if (selectedMoves.length > 1) {
           if (((selectedMoves[0] >>> 7) & 0b1) !== 1)
             throw new Error(
@@ -259,6 +307,7 @@ for (let i = 0; i < boardSize; i++) {
           // make promotion modal visible
           promotion.classList.remove("hidden");
           chessboard.classList.add("disabled");
+          promotion_options.replaceChildren(); // clear buttons
 
           for (let move of selectedMoves) {
             let button = document.createElement("button");
@@ -277,25 +326,6 @@ for (let i = 0; i < boardSize; i++) {
             img.setAttribute("draggable", "false");
 
             button.appendChild(img);
-
-            // switch ((move >>> 4) & 0b1111) {
-            //   case moveTypes.PROMOTION_QUEEN_CAPTURE:
-            //   case moveTypes.PROMOTION_QUEEN:
-            //     button.textContent = move & 0b1 ? "♛" : "♕";
-            //     break;
-            //   case moveTypes.PROMOTION_ROOK_CAPTURE:
-            //   case moveTypes.PROMOTION_ROOK:
-            //     button.textContent = move & 0b1 ? "♜" : "♖";
-            //     break;
-            //   case moveTypes.PROMOTION_BISHOP_CAPTURE:
-            //   case moveTypes.PROMOTION_BISHOP:
-            //     button.textContent = move & 0b1 ? "♝" : "♗";
-            //     break;
-            //   case moveTypes.PROMOTION_KNIGHT_CAPTURE:
-            //   case moveTypes.PROMOTION_KNIGHT:
-            //     button.textContent = move & 0b1 ? "♞" : "♘";
-            //     break;
-            // }
 
             button.addEventListener("click", async () => {
               promotion.classList.add("hidden");

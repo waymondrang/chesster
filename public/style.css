@@ -194,10 +194,10 @@ nav {
     border-bottom-right-radius: calc(var(--border-size, 0.25rem) * 2);
 }
 
-/* #chessboard.disabled {
+#chessboard.disabled {
     pointer-events: none;
     cursor: not-allowed;
-} */
+}
 
 #promotion {
     height: calc(var(--chessboard-size, 400px) / 8);
@@ -261,9 +261,10 @@ nav {
     -webkit-user-select: none;
     -ms-user-select: none;
     user-select: none;
-    border: var(--border-size, 0.25rem) transparent;
+    border: transparent;
     border-style: inset;
     position: relative;
+    padding: calc(var(--border-size, 0.25rem) / 2);
 }
 
 .cell img {
@@ -273,13 +274,31 @@ nav {
 }
 
 .cell img#xo {
-    opacity: 0.25;
+    opacity: 0.5;
     width: 80%;
     height: 80%;
     position: absolute;
     top: 50%;
     left: 50%;
     transform: translate(-50%, -50%);
+}
+
+.cell img#checked {
+    opacity: 1;
+    width: calc(var(--border-size, 0.25rem) * 2);
+    height: calc(var(--border-size, 0.25rem) * 2);
+    position: absolute;
+    top: calc(var(--border-size, 0.25rem) / 2);
+    right: calc(var(--border-size, 0.25rem) / 2);
+    border-radius: 50%;
+}
+
+.cell.variant1 img#checked {
+    border: calc(var(--border-size, 0.25rem) / 2) solid #e9e9e9;
+}
+
+.cell.variant2 img#checked {
+    border: calc(var(--border-size, 0.25rem) / 2) solid #d9d9d9;
 }
 
 .cell.variant1 {
@@ -290,16 +309,40 @@ nav {
     background-color: #d9d9d9;
 }
 
-.cell.moved_from {
-    background-color: #BBA2DE;
+/* .cell.variant1.checked {
+    animation-duration: 1.4s;
+    animation-fill-mode: forwards;
+    animation-iteration-count: infinite;
+    animation-timing-function: linear;
+    animation-name: thinking;
+    background: #e9e9e9;
+    background: linear-gradient(to right, #e9e9e9 4%, #EDBABA 27%, #e9e9e9 50%);
+    background-size: calc(var(--chessboard-size, 400px) * 2) calc(var(--chessboard-size, 400px));
+    position: relative;
 }
 
-.cell.moved_to {
-    background-color: #BBA2DE;
-}
+.cell.variant2.checked {
+    animation-duration: 4s;
+    animation-fill-mode: forwards;
+    animation-iteration-count: 1;
+    animation-timing-function: cubic-bezier(0, 1, 0, 1);
+    animation-delay: 0.5s;
+    animation-name: slide;
+    background: #d9d9d9;
+    background: linear-gradient(to bottom, #ff0000 50%, #d9d9d9 50%);
+    background-size: calc(var(--chessboard-size, 400px) / 8) calc(var(--chessboard-size, 400px) / 4);
+    background-position: 0 calc(-1 * var(--chessboard-size, 400px) / 16);
+    position: relative;
+} */
 
-.cell.selected {
-    background-color: #F25116;
+@keyframes slide {
+    0% {
+        background-position: 0 calc(-1 * var(--chessboard-size, 400px) / 4);
+    }
+
+    100% {
+        background-position: 0 calc(-1 * var(--border-size, 0.25rem));
+    }
 }
 
 /* .cell.MOVE,
@@ -347,8 +390,25 @@ nav {
 }
 
 .cell:hover {
-    border: var(--border-size, 0.25rem) solid #F25116;
+    background-color: #E5BDAE;
 }
+
+.cell.moved_from {
+    background-color: #BBA2DE;
+}
+
+.cell.moved_to {
+    background-color: #BBA2DE;
+}
+
+.cell.selected {
+    background-color: #F25116;
+}
+
+/* .cell.selected:hover {
+    background-color: #EE7549;
+} */
+
 
 .material-symbols-outlined {
     font-size: calc(var(--primary-font-size) / 2);
@@ -370,5 +430,27 @@ nav {
 @media (min-width: 900px) and (min-height: 900px) {
     :root {
         --primary-font-size: 2.5rem;
+    }
+}
+
+#turn.BLACK {
+    animation-duration: 1.2s;
+    animation-fill-mode: forwards;
+    animation-iteration-count: infinite;
+    animation-timing-function: linear;
+    animation-name: thinking;
+    background: #1b1b1b;
+    background: linear-gradient(to right, #1b1b1b 4%, #3b3b3b 27%, #1b1b1b 50%);
+    background-size: calc(var(--chessboard-size, 400px) /2) calc(var(--chessboard-size, 400px)/8);
+    position: relative;
+}
+
+@keyframes thinking {
+    0% {
+        background-position: calc(-1 * var(--chessboard-size, 400px) / 4) 0;
+    }
+
+    100% {
+        background-position: calc(var(--chessboard-size, 400px) / 4) 0;
     }
 }
