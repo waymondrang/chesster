@@ -15,6 +15,7 @@ import {
   ChessterTeam,
   boardSize,
   moveTypes,
+  messageTypes,
 } from "../types";
 import {
   binaryToString,
@@ -22,7 +23,6 @@ import {
   numberToFileName,
   numberToPieceString,
 } from "../util";
-import { messageTypes } from "./types";
 
 ////////////////////////////////
 //     constant variables     //

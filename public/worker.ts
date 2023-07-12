@@ -1,7 +1,6 @@
 import { ChessterAI } from "../ai";
 import { ChessterGame } from "../game";
-import { BLACK, WHITE } from "../types";
-import { messageTypes } from "./types";
+import { BLACK, WHITE, messageTypes } from "../types";
 
 const game = new ChessterGame();
 const ai = new ChessterAI(game, BLACK);

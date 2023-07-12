@@ -1,4 +1,4 @@
-### bit representation
+### piece representation
 
 | piece      | bit pattern |
 | ---------- | ----------- |
@@ -11,7 +11,27 @@
 | king       | 110         |
 | (unused)   | 111         |
 
-| move                       | bit pattern |
+| team  | bit value |
+| ----- | --------- |
+| white | 0         |
+| black | 1         |
+
+\*_4 bits total, team being least significant bit_
+
+### move representation
+
+| data      | # of bits | start |
+| --------- | --------- | ----- |
+| move from | 6         | 14    |
+| move to   | 6         | 8     |
+| move type | 4         | 4     |
+| piece     | 4         | 0     |
+
+\*_20 bits total_
+
+### move type representation
+
+| move type                  | bit pattern |
 | -------------------------- | ----------- |
 | move                       | 0000        |
 | castle (king side)         | 0001        |
@@ -30,51 +50,27 @@
 | promotion capture (rook)   | 1110        |
 | promotion capture (queen)  | 1111        |
 
-| team  | bit value |
-| ----- | --------- |
-| white | 0         |
-| black | 1         |
+\*_the last two bits in the promotion can be used to determine the promotion piece by adding 2_
 
-| bcqc | wcqc | bckc | wckc | bit value |
-| ---- | ---- | ---- | ---- | --------- |
-| 1    | 1    | 1    | 1    | 000       |
-| 1    | 1    | 1    | 0    | 001       |
-| 1    | 1    | 0    | 1    | 010       |
-| 1    | 0    | 1    | 1    | 011       |
-| 0    | 1    | 1    | 1    | 100       |
-| 1    | 0    | 1    | 0    | 101       |
-| 0    | 1    | 0    | 1    | 110       |
-| 0    | 0    | 0    | 0    | 111       |
+### history representation
 
-\[piece (3 bits)\]\[team (1 bit)\]
+| data           | # of bits | start |
+| -------------- | --------- | ----- |
+| bcqc           | 1         | 31    |
+| wcqc           | 1         | 30    |
+| bckc           | 1         | 29    |
+| wckc           | 1         | 28    |
+| bcm            | 1         | 27    |
+| wcm            | 1         | 26    |
+| bc             | 1         | 25    |
+| wc             | 1         | 24    |
+| captured piece | 4         | 20    |
+| move from      | 6         | 14    |
+| move to        | 6         | 8     |
+| move type      | 4         | 4     |
+| original piece | 4         | 0     |
 
-### move bit representation
-
-location: 6 bits (0 to 63)
-
-total: (20 bits)
-\[move from (6 bits from 0 to 63)\] (14)
-\[move to (6 bits from 0 to 63)\] (8)
-\[move type (4 bits)\] (4)
-\[original piece (4 bits)\] (0)
-
-(in history)
-\[bcqc bit\] (31)
-\[wcqc bit\] (30)
-\[bckc bit\] (29)
-\[wckc bit\] (28)
-\[bcm bit\] (27)
-\[wcm bit\] (26)
-\[bc bit\] (25)
-\[wc bit\] (24)
-\[captured piece, if any (4 bits)\] (20)
-\[move from (6 bits from 0 to 63)\] (14)
-\[move to (6 bits from 0 to 63)\] (8)
-\[move type (4 bits)\] (4)
-\[original piece (4 bits)\] (0)
-
-(not used)
-\[will check (1 bit)\]\[move location (6 bits from 0 to 63)\]\[move type (4 bits)\]\[original piece (4 bits)\]
+\*_32 bits total_
 
 ### default starting position representation
 
@@ -93,7 +89,9 @@ total: (20 bits)
 | 1000 | 1000 | 1000 | 1000 | 1000 | 1000 | 1000 | 1000  |
 | 1000 | 0100 | 0110 | 1010 | 1100 | 0110 | 0100 | 1000  |
 
-### board bit representation
+### board reference
+
+60 x 4 bit pieces
 
 |     | 0      | 1      | 2      | 3      | 4      | 5      | 6      | 7 ...  |
 | --- | ------ | ------ | ------ | ------ | ------ | ------ | ------ | ------ |

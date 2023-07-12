@@ -2,8 +2,8 @@ const path = require("path");
 
 module.exports = {
   entry: {
-    bundle: "./index.ts",
-    worker: "./worker.ts",
+    bundle: "./public/index.ts",
+    worker: "./public/worker.ts",
   },
   module: {
     rules: [
@@ -19,7 +19,7 @@ module.exports = {
   },
   output: {
     filename: "[name].js",
-    path: path.resolve(__dirname, "."),
+    path: path.resolve(__dirname, "./public/"),
   },
   watch: true,
   mode: "development",
