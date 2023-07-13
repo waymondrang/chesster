@@ -34,6 +34,7 @@ function sortMoves(moves: number[]): number[] {
 
     let j = 0;
     while (j < sortedMoves.length && score < sortedMoves[j]) j++;
+
     sortedMoves.splice(j, 0, move);
   }
 
@@ -78,7 +79,7 @@ export class ChessterAI {
     beta: number = Infinity,
     playerType: number = MAX_PLAYER
   ): [ChessterMove | undefined, number] {
-    if (depth === 0) return [0, this.calculateStateScore()];
+    if (depth === 0) return [undefined, this.calculateStateScore()];
 
     if (playerType === MAX_PLAYER) {
       // maximizer
@@ -95,7 +96,7 @@ export class ChessterAI {
           for (let j = moves.length - 1; j >= 0; j--) {
             this.game.move(moves[j]);
 
-            const [move, value] = this.miniMax(
+            const [_, value] = this.miniMax(
               depth - 1,
               alpha,
               beta,
@@ -104,7 +105,7 @@ export class ChessterAI {
 
             this.game.undo();
 
-            if (move === undefined) continue;
+            // if (move === undefined) continue;
 
             if (value > bestValue) {
               // can add randomness to make AI "easier"
@@ -134,7 +135,7 @@ export class ChessterAI {
           for (let j = moves.length - 1; j >= 0; j--) {
             this.game.move(moves[j]);
 
-            const [move, value] = this.miniMax(
+            const [_, value] = this.miniMax(
               depth - 1,
               alpha,
               beta,
@@ -143,7 +144,7 @@ export class ChessterAI {
 
             this.game.undo();
 
-            if (move === undefined) continue;
+            // if (move === undefined) continue;
 
             if (value < bestValue) {
               // assume minimizer (opponent) plays optimally
