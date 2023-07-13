@@ -6,6 +6,7 @@ import {
   MIN_PLAYER,
   boardSize,
 } from "./types";
+import { moveToString, numberToPieceString } from "./util";
 
 const depth = 3;
 const mobilityWeight = 3;
@@ -33,7 +34,6 @@ function sortMoves(moves: number[]): number[] {
 
     let j = 0;
     while (j < sortedMoves.length && score < sortedMoves[j]) j++;
-
     sortedMoves.splice(j, 0, move);
   }
 
@@ -76,10 +76,9 @@ export class ChessterAI {
     depth: number,
     alpha: number = -Infinity,
     beta: number = Infinity,
-    playerType: number = MAX_PLAYER,
-    count: number = 0
-  ): [ChessterMove | undefined, number, number] {
-    if (depth === 0) return [undefined, this.calculateStateScore(), count];
+    playerType: number = MAX_PLAYER
+  ): [ChessterMove | undefined, number] {
+    if (depth === 0) return [0, this.calculateStateScore()];
 
     if (playerType === MAX_PLAYER) {
       // maximizer
@@ -94,11 +93,9 @@ export class ChessterAI {
           const moves = sortMoves(this.game.getAvailableMoves(i));
 
           for (let j = moves.length - 1; j >= 0; j--) {
-            count++;
-
             this.game.move(moves[j]);
 
-            const [_, value] = this.miniMax(
+            const [move, value] = this.miniMax(
               depth - 1,
               alpha,
               beta,
@@ -106,6 +103,8 @@ export class ChessterAI {
             );
 
             this.game.undo();
+
+            if (move === undefined) continue;
 
             if (value > bestValue) {
               // can add randomness to make AI "easier"
@@ -119,7 +118,7 @@ export class ChessterAI {
         }
       }
 
-      return [bestMove, bestValue, count];
+      return [bestMove, bestValue];
     } else if (playerType === MIN_PLAYER) {
       // minimizer
       let bestValue = Infinity;
@@ -133,19 +132,18 @@ export class ChessterAI {
           const moves = sortMoves(this.game.getAvailableMoves(i));
 
           for (let j = moves.length - 1; j >= 0; j--) {
-            count++;
-
             this.game.move(moves[j]);
 
-            const [_, value] = this.miniMax(
+            const [move, value] = this.miniMax(
               depth - 1,
               alpha,
               beta,
-              1 ^ playerType,
-              count
+              1 ^ playerType
             );
 
             this.game.undo();
+
+            if (move === undefined) continue;
 
             if (value < bestValue) {
               // assume minimizer (opponent) plays optimally
@@ -159,7 +157,7 @@ export class ChessterAI {
         }
       }
 
-      return [bestMove, bestValue, count];
+      return [bestMove, bestValue];
     } else {
       throw new Error("invalid player type");
     }
@@ -169,10 +167,8 @@ export class ChessterAI {
     const startTime = performance.now();
     // this.root = new ChessterAINode(this.game.getState(), MAX_PLAYER, 0);
     // this.buildMoveTree(this.root, depth);
-    const [bestMove, _, count] = this.miniMax(depth);
-    console.log(
-      "count: " + count + " time taken: " + (performance.now() - startTime)
-    );
+    const [bestMove, _] = this.miniMax(depth);
+    console.log("time taken: " + (performance.now() - startTime));
     return bestMove;
   }
 

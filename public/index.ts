@@ -17,10 +17,12 @@ import {
   moveTypes,
   messageTypes,
   ChessterBoardString,
+  WHITE,
 } from "../types";
 import {
   binaryToString,
   boardStringToArray,
+  fenStringToGameState,
   getKeyByValue,
   numberToFileName,
   numberToPieceString,
@@ -60,6 +62,12 @@ const aiWorker = new Worker("worker.js");
 // game.init({
 //   board: boardStringToArray(defaultBoardString),
 // });
+
+// game.init(
+//   fenStringToGameState(
+//     "rn3k1r/p1Bp2p1/5ppn/6N1/3pQ3/8/PP2PPPP/4KB1R w K - 4 21"
+//   )
+// );
 
 ///////////////////
 //     types     //
@@ -214,7 +222,9 @@ function updateBoard(gameBoard: ChessterBoard, previousBoard?: ChessterBoard) {
   // if (game.turn === BLACK) chessboard.classList.add("disabled");
   // else chessboard.classList.remove("disabled");
 
-  undo.disabled = game.history.length === 0 || game.history.length % 2 !== 0;
+  undo.disabled =
+    game.history.length === 0 ||
+    (game.wcm !== 0 || game.bcm !== 0 ? false : game.turn === BLACK);
 }
 
 function updateStatus(gameTurn: ChessterTeam) {
@@ -224,8 +234,10 @@ function updateStatus(gameTurn: ChessterTeam) {
 
   if (game.wcm || game.bcm) {
     end_span.classList.remove("hidden");
+    turn_span.classList.add("game-over");
   } else {
     end_span.classList.add("hidden");
+    turn_span.classList.remove("game-over");
   }
 }
 
@@ -238,7 +250,8 @@ promotion_close.addEventListener("click", () => {
 function clientMove(move: ChessterMove) {
   console.log("sending and making move", binaryToString(move));
   makeMove(move);
-  aiWorker.postMessage({ type: messageTypes.MOVE, state: game.getState() }); // disable to enable two player
+  if (game.wcm === 0 && game.bcm === 0)
+    aiWorker.postMessage({ type: messageTypes.MOVE, state: game.getState() }); // disable to enable two player
 }
 
 function makeMove(move: ChessterMove) {
@@ -258,9 +271,8 @@ function makeMove(move: ChessterMove) {
 function clientUndo() {
   let previousBoard = [...game.board];
 
-  console.log("undoing 2x");
   game.undo();
-  game.undo();
+  if (game.turn === BLACK) game.undo();
 
   updateBoard(game.board, previousBoard);
   updateStatus(game.turn);
@@ -279,6 +291,10 @@ aiWorker.onmessage = function (event) {
   console.log("aiWorker.onmessage", event.data);
   switch (event.data.type) {
     case messageTypes.MOVE:
+      if (event.data.move === undefined) {
+        console.error("ai returned undefined move, likely game is over");
+        return;
+      }
       makeMove(event.data.move);
       break;
   }

@@ -490,11 +490,14 @@ nav {
     animation-fill-mode: forwards;
     animation-iteration-count: infinite;
     animation-timing-function: linear;
-    animation-name: thinking;
     background: #1b1b1b;
+    position: relative;
+}
+
+#turn.BLACK:not(.game-over) {
+    animation-name: thinking;
     background: linear-gradient(to right, #1b1b1b 4%, #3b3b3b 27%, #1b1b1b 50%);
     background-size: calc(var(--chessboard-size, 400px) /2) calc(var(--chessboard-size, 400px)/8);
-    position: relative;
 }
 
 @keyframes thinking {

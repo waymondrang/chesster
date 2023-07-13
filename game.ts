@@ -60,6 +60,8 @@ export class ChessterGame {
     if (this.history.length > 0) {
       const move = this.history.pop();
       if (move) {
+        if (this.wcm === 0 && this.bcm === 0) this.turn ^= 1;
+
         this.bcqc = (move >>> 31) & 0b1;
         this.wcqc = (move >>> 30) & 0b1;
         this.bckc = (move >>> 29) & 0b1;
@@ -68,8 +70,6 @@ export class ChessterGame {
         this.wcm = (move >>> 26) & 0b1;
         this.bc = (move >>> 25) & 0b1;
         this.wc = (move >>> 24) & 0b1;
-
-        this.turn ^= 1;
 
         switch ((move >>> 4) & 0b1111) {
           case moveTypes.PROMOTION_BISHOP_CAPTURE:
@@ -192,7 +192,7 @@ export class ChessterGame {
 
     this.updateCastle();
     this.updateChecked();
-    this.turn ^= 1;
+    if (this.wcm === 0 && this.bcm === 0) this.turn ^= 1;
     this.history.push(history | (move & 0b11111111111111111111));
   }
 
