@@ -32,6 +32,7 @@ import {
 
 const chessboard = document.querySelector("#chessboard") as HTMLDivElement;
 const turn_span = document.querySelector("#turn") as HTMLSpanElement;
+const end_span = document.querySelector("#end") as HTMLSpanElement;
 const restart = document.querySelector("#restart") as HTMLButtonElement;
 const promotion_close = document.querySelector(
   "#promotion-close"
@@ -141,14 +142,24 @@ function updateBoard(gameBoard: ChessterBoard, previousBoard?: ChessterBoard) {
 
         elementBoard[i].appendChild(img);
 
+        // is this needed? if the previous board is undefined, the game just started. perhaps we will spawn into a checked position, so i suppose this should be here.
         if (
+          (game.wcm && gameBoard[i] === 0b1100) ||
+          (game.bcm && gameBoard[i] === 0b1101)
+        ) {
+          let img = document.createElement("img");
+          img.setAttribute("src", "pieces/double_circle.svg");
+          img.setAttribute("draggable", "false");
+          img.setAttribute("id", "checked");
+          elementBoard[i].appendChild(img);
+        } else if (
           (game.wc && gameBoard[i] === 0b1100) ||
           (game.bc && gameBoard[i] === 0b1101)
         ) {
           let img = document.createElement("img");
           img.setAttribute("src", "pieces/circle.svg");
           img.setAttribute("draggable", "false");
-          img.setAttribute("id", "checked");
+          img.setAttribute("id", "checkmated");
           elementBoard[i].appendChild(img);
         }
       }
@@ -179,6 +190,15 @@ function updateBoard(gameBoard: ChessterBoard, previousBoard?: ChessterBoard) {
         }
 
       if (
+        (game.wcm && gameBoard[i] === 0b1100) ||
+        (game.bcm && gameBoard[i] === 0b1101)
+      ) {
+        let img = document.createElement("img");
+        img.setAttribute("src", "pieces/double_circle.svg");
+        img.setAttribute("draggable", "false");
+        img.setAttribute("id", "checkmated");
+        elementBoard[i].appendChild(img);
+      } else if (
         (game.wc === 1 && gameBoard[i] === 0b1100) ||
         (game.bc === 1 && gameBoard[i] === 0b1101)
       ) {
@@ -194,13 +214,19 @@ function updateBoard(gameBoard: ChessterBoard, previousBoard?: ChessterBoard) {
   // if (game.turn === BLACK) chessboard.classList.add("disabled");
   // else chessboard.classList.remove("disabled");
 
-  undo.disabled = game.history.length === 0;
+  undo.disabled = game.history.length === 0 || game.history.length % 2 !== 0;
 }
 
-function updateTurnIndicator(gameTurn: ChessterTeam) {
+function updateStatus(gameTurn: ChessterTeam) {
   turn_span.classList.remove("WHITE");
   turn_span.classList.remove("BLACK");
   turn_span.classList.add(gameTurn === 0 ? "WHITE" : "BLACK");
+
+  if (game.wcm || game.bcm) {
+    end_span.classList.remove("hidden");
+  } else {
+    end_span.classList.add("hidden");
+  }
 }
 
 promotion_close.addEventListener("click", () => {
@@ -221,7 +247,7 @@ function makeMove(move: ChessterMove) {
   game.move(move);
 
   updateBoard(game.board, previousBoard);
-  updateTurnIndicator(game.turn);
+  updateStatus(game.turn);
   updateLastMove(game.history);
   clearMove();
 
@@ -232,11 +258,12 @@ function makeMove(move: ChessterMove) {
 function clientUndo() {
   let previousBoard = [...game.board];
 
-  console.log("undoing");
+  console.log("undoing 2x");
+  game.undo();
   game.undo();
 
   updateBoard(game.board, previousBoard);
-  updateTurnIndicator(game.turn);
+  updateStatus(game.turn);
   updateLastMove(game.history);
   clearMove();
 
@@ -374,7 +401,7 @@ for (let i = 0; i < boardSize; i++) {
 
 // initialize board
 updateBoard(game.board);
-updateTurnIndicator(game.turn);
+updateStatus(game.turn);
 updateLastMove(game.history);
 
 // set onclick event for new game button
@@ -382,7 +409,7 @@ restart.addEventListener("click", async () => {
   game.init();
 
   updateBoard(game.board);
-  updateTurnIndicator(game.turn);
+  updateStatus(game.turn);
   updateLastMove(game.history);
   clearMove();
 
@@ -394,13 +421,24 @@ restart.addEventListener("click", async () => {
 //     dynamic css     //
 /////////////////////////
 
+const borderMultiplier = 0.005;
+const widthScalar = 0.93333333333;
+const heightScalar = 0.7;
+
+function getChessboardSize() {
+  const heightMax = window.innerHeight * heightScalar;
+  const widthMax = window.innerWidth * widthScalar;
+
+  let size = heightMax > widthMax ? widthMax : heightMax;
+
+  if (size > 860) size = 860;
+
+  return size;
+}
+
 document.documentElement.style.setProperty(
   "--chessboard-size",
-  (window.innerHeight > window.innerWidth
-    ? window.innerWidth
-    : window.innerHeight) *
-    0.6 +
-    "px"
+  getChessboardSize() + "px"
 );
 
 document.documentElement.style.setProperty(
@@ -408,25 +446,21 @@ document.documentElement.style.setProperty(
   (window.innerHeight > window.innerWidth
     ? window.innerWidth
     : window.innerHeight) *
-    0.005 +
+    borderMultiplier +
     "px"
 );
 
 window.addEventListener("resize", () => {
   document.documentElement.style.setProperty(
     "--chessboard-size",
-    (window.innerHeight > window.innerWidth
-      ? window.innerWidth
-      : window.innerHeight) *
-      0.6 +
-      "px"
+    getChessboardSize() + "px"
   );
   document.documentElement.style.setProperty(
     "--border-size",
     (window.innerHeight > window.innerWidth
       ? window.innerWidth
       : window.innerHeight) *
-      0.005 +
+      borderMultiplier +
       "px"
   );
 });
