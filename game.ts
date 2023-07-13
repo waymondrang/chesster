@@ -119,7 +119,6 @@ export class ChessterGame {
         }
 
         this.updateMoves();
-        this.sm = this.m.length === 0 ? 1 : 0;
       }
     }
   }
@@ -205,8 +204,6 @@ export class ChessterGame {
     if (this.wcm === 0 && this.bcm === 0) this.turn ^= 1;
 
     this.update();
-
-    this.sm = this.m.length === 0 ? 1 : 0;
   }
 
   /**
@@ -355,6 +352,8 @@ export class ChessterGame {
         this.m.push(...this.getAvailableMoves(i));
       }
     }
+
+    this.sm = this.m.length === 0 ? 1 : 0; // update stalemate
   }
 
   /**

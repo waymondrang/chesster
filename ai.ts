@@ -76,17 +76,6 @@ export class ChessterAI {
       }
     }
 
-    // score +=
-    //   this.game.history[this.game.history.length - 1] !== undefined
-    //     ? ((this.game.history[this.game.history.length - 1] & 0b1) === this.team
-    //         ? 1
-    //         : -1) *
-    //       pieceValues[
-    //         (this.game.history[this.game.history.length - 1] >>> 21) & 0b111
-    //       ] *
-    //       captureWeight
-    //     : 0;
-
     score +=
       (this.team === BLACK ? 1 : -1) *
       (checkWeight * this.game.wc +
@@ -120,7 +109,11 @@ export class ChessterAI {
 
       const moves = sortMoves(this.game.m);
 
+      if (moves.length === 0) console.error("no moves", moves);
+
       for (let j = moves.length - 1; j >= 0; j--) {
+        if (moves[j] === undefined) console.error("undefined move", moves[j]);
+
         this.game.move(moves[j]);
 
         const [_, value] = this.miniMax(
@@ -151,7 +144,11 @@ export class ChessterAI {
 
       const moves = sortMoves(this.game.m);
 
+      if (moves.length === 0) console.error("no moves", moves);
+
       for (let j = moves.length - 1; j >= 0; j--) {
+        if (moves[j] === undefined) console.error("undefined move", moves[j]);
+
         this.game.move(moves[j]);
 
         const [_, value] = this.miniMax(
