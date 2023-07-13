@@ -6,11 +6,13 @@ import {
   MIN_PLAYER,
   boardSize,
 } from "./types";
-import { moveToString, numberToPieceString } from "./util";
 
 const depth = 3;
 const mobilityWeight = 3;
-const pieceValueWeight = 20;
+const teamPieceValueWeight = 20;
+const enemyPieceValueWeight = 23;
+const checkWeight = 100;
+const checkmateWeight = 10000;
 
 const MVV_LVA: number[][] = [
   [0, 0, 0, 0, 0, 0, 0], // victim K, attacker K, Q, R, B, N, P, None
@@ -52,7 +54,7 @@ export class ChessterAI {
   }
 
   /**
-   * calculates the black player's score
+   * calculates the team player's score
    * @returns
    */
   calculateStateScore(): number {
@@ -61,14 +63,33 @@ export class ChessterAI {
     for (let i = 0; i < boardSize; i++) {
       if (this.game.board[i] !== 0) {
         score +=
-          pieceValueWeight *
-            ((this.game.board[i] & 0b1) === this.team ? 1 : -1) *
+          ((this.game.board[i] & 0b1) === this.team
+            ? teamPieceValueWeight
+            : -enemyPieceValueWeight) *
             pieceValues[(this.game.board[i] >>> 1) & 0b111] +
           mobilityWeight *
             ((this.game.board[i] & 0b1) === this.team ? 1 : -1) *
-            this.game.getAvailableMoves(i).length; // if white multiply by -1
+            this.game.getAvailableMoves(i).length;
       }
     }
+
+    // score +=
+    //   this.game.history[this.game.history.length - 1] !== undefined
+    //     ? ((this.game.history[this.game.history.length - 1] & 0b1) === this.team
+    //         ? 1
+    //         : -1) *
+    //       pieceValues[
+    //         (this.game.history[this.game.history.length - 1] >>> 21) & 0b111
+    //       ] *
+    //       captureWeight
+    //     : 0;
+
+    score +=
+      (this.team === BLACK ? 1 : -1) *
+      (checkWeight * this.game.wc +
+        -checkWeight * this.game.bc +
+        checkmateWeight * this.game.wcm +
+        -checkmateWeight * this.game.bcm);
 
     return score;
   }
@@ -79,7 +100,8 @@ export class ChessterAI {
     beta: number = Infinity,
     playerType: number = MAX_PLAYER
   ): [ChessterMove | undefined, number] {
-    if (depth === 0) return [undefined, this.calculateStateScore()];
+    if (depth === 0 || this.game.bcm || this.game.wcm)
+      return [undefined, this.calculateStateScore()];
 
     if (playerType === MAX_PLAYER) {
       // maximizer
@@ -104,8 +126,6 @@ export class ChessterAI {
             );
 
             this.game.undo();
-
-            // if (move === undefined) continue;
 
             if (value > bestValue) {
               // can add randomness to make AI "easier"
@@ -144,8 +164,6 @@ export class ChessterAI {
 
             this.game.undo();
 
-            // if (move === undefined) continue;
-
             if (value < bestValue) {
               // assume minimizer (opponent) plays optimally
               bestValue = value;
@@ -168,8 +186,10 @@ export class ChessterAI {
     const startTime = performance.now();
     // this.root = new ChessterAINode(this.game.getState(), MAX_PLAYER, 0);
     // this.buildMoveTree(this.root, depth);
-    const [bestMove, _] = this.miniMax(depth);
-    console.log("time taken: " + (performance.now() - startTime));
+    const [bestMove, value] = this.miniMax(depth);
+    console.log(
+      "time taken: " + (performance.now() - startTime) + "ms, value: " + value
+    );
     return bestMove;
   }
 

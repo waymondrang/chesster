@@ -16,16 +16,12 @@ import {
   boardSize,
   moveTypes,
   messageTypes,
-  ChessterBoardString,
-  WHITE,
 } from "../types";
 import {
   binaryToString,
-  boardStringToArray,
   fenStringToGameState,
   getKeyByValue,
   numberToFileName,
-  numberToPieceString,
 } from "../util";
 
 ////////////////////////////////
@@ -48,26 +44,13 @@ const undo = document.querySelector("#undo") as HTMLButtonElement;
 const game = new ChessterGame();
 const aiWorker = new Worker("worker.js");
 
-// const defaultBoardString: ChessterBoardString = [
-//   ["♜", "♞", "♝", "♛", "♚", "", "", ""],
-//   ["♟︎", "♟︎", "♟︎", "♟︎", "♟︎", "", "♙", ""],
-//   new Array(8).fill(undefined),
-//   new Array(8).fill(undefined),
-//   new Array(8).fill(undefined),
-//   new Array(8).fill(undefined),
-//   ["♙", "♙", "♙", "♙", "♙", "♙", "♙", "♙"],
-//   ["♖", "♘", "♗", "♕", "♔", "♗", "♘", "♖"],
-// ];
-
-// game.init({
-//   board: boardStringToArray(defaultBoardString),
-// });
-
 // game.init(
 //   fenStringToGameState(
 //     "rn3k1r/p1Bp2p1/5ppn/6N1/3pQ3/8/PP2PPPP/4KB1R w K - 4 21"
 //   )
 // );
+
+// rn3k1r/p1Bp2p1/5ppn/6N1/3pQ3/8/PP2PPPP/4KB1R w K - 4 21
 
 ///////////////////
 //     types     //
@@ -191,7 +174,10 @@ function updateBoard(gameBoard: ChessterBoard, previousBoard?: ChessterBoard) {
 
       if (elementBoard[i].children.length > 1)
         for (let j = 0; j < elementBoard[i].children.length; j++) {
-          if (elementBoard[i].children[j].id === "checked") {
+          if (
+            elementBoard[i].children[j].id === "checked" ||
+            elementBoard[i].children[j].id === "checkmated"
+          ) {
             elementBoard[i].children[j].remove();
             j--;
           }

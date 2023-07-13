@@ -84,11 +84,11 @@ nav {
     padding: 0;
     position: relative;
     z-index: 1;
-    background-color: #1b1b1b;
+    background: #1b1b1b;
 }
 
 #turn.WHITE {
-    background-color: #fefefe;
+    background: #fefefe;
     color: #1b1b1b;
     font-variation-settings:
         'FILL' 0,
@@ -98,7 +98,7 @@ nav {
 }
 
 #turn.BLACK {
-    background-color: #1b1b1b;
+    background: #1b1b1b;
     color: #fefefe;
     font-variation-settings:
         'FILL' 1,
