@@ -2,3 +2,4 @@ node_modules/
 public/fonts/
 public/bundle.js
 public/worker.js
+*.old.ts

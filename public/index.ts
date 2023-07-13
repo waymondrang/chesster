@@ -21,6 +21,7 @@ import {
   binaryToString,
   fenStringToGameState,
   getKeyByValue,
+  moveToString,
   numberToFileName,
 } from "../util";
 
@@ -44,11 +45,7 @@ const undo = document.querySelector("#undo") as HTMLButtonElement;
 const game = new ChessterGame();
 const aiWorker = new Worker("worker.js");
 
-// game.init(
-//   fenStringToGameState(
-//     "rn3k1r/p1Bp2p1/5ppn/6N1/3pQ3/8/PP2PPPP/4KB1R w K - 4 21"
-//   )
-// );
+// game.init(fenStringToGameState("8/8/4Q3/1k6/1p6/1P6/P1P2K1P/8 w - - 0 1"));
 
 // rn3k1r/p1Bp2p1/5ppn/6N1/3pQ3/8/PP2PPPP/4KB1R w K - 4 21
 
@@ -210,7 +207,7 @@ function updateBoard(gameBoard: ChessterBoard, previousBoard?: ChessterBoard) {
 
   undo.disabled =
     game.history.length === 0 ||
-    (game.wcm !== 0 || game.bcm !== 0 ? false : game.turn === BLACK);
+    (game.sm || game.wcm || game.bcm ? false : game.turn === BLACK);
 }
 
 function updateStatus(gameTurn: ChessterTeam) {
@@ -218,7 +215,7 @@ function updateStatus(gameTurn: ChessterTeam) {
   turn_span.classList.remove("BLACK");
   turn_span.classList.add(gameTurn === 0 ? "WHITE" : "BLACK");
 
-  if (game.wcm || game.bcm) {
+  if (game.wcm || game.bcm || game.sm) {
     end_span.classList.remove("hidden");
     turn_span.classList.add("game-over");
   } else {
@@ -236,14 +233,16 @@ promotion_close.addEventListener("click", () => {
 function clientMove(move: ChessterMove) {
   console.log("sending and making move", binaryToString(move));
   makeMove(move);
-  if (game.wcm === 0 && game.bcm === 0)
-    aiWorker.postMessage({ type: messageTypes.MOVE, state: game.getState() }); // disable to enable two player
+  // if (!game.wcm && !game.bcm && !game.sm)
+  //   aiWorker.postMessage({ type: messageTypes.MOVE, state: game.getState() }); // disable to enable two player
 }
 
 function makeMove(move: ChessterMove) {
   let previousBoard = [...game.board];
 
   game.move(move);
+
+  console.log(game.m);
 
   updateBoard(game.board, previousBoard);
   updateStatus(game.turn);
@@ -341,8 +340,6 @@ for (let i = 0; i < boardSize; i++) {
           for (let move of selectedMoves) {
             let button = document.createElement("button");
 
-            // button.textContent = move.promotion || "";
-
             let img = document.createElement("img");
             img.setAttribute(
               "src",
@@ -382,7 +379,12 @@ for (let i = 0; i < boardSize; i++) {
 
       cell.classList.toggle("selected");
 
-      const moves = game.getAvailableMoves(i);
+      const movesGen = game.getAvailableMoves(i);
+      console.log(
+        "movesgen",
+        movesGen.map((m) => moveToString(m))
+      );
+      const moves = game.m.filter((move) => ((move >>> 14) & 0b111111) === i);
       for (let move of moves) {
         let img = document.createElement("img");
         img.src = "pieces/xo.svg";
@@ -405,6 +407,8 @@ for (let i = 0; i < boardSize; i++) {
 updateBoard(game.board);
 updateStatus(game.turn);
 updateLastMove(game.history);
+
+console.log(game.m);
 
 // set onclick event for new game button
 restart.addEventListener("click", async () => {

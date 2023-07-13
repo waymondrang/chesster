@@ -10,7 +10,12 @@ import {
   defaultBoard,
   moveTypes,
 } from "./types";
-import { binaryToString, numberToPieceString } from "./util";
+import {
+  binaryToString,
+  moveToString,
+  numberToLetterString,
+  numberToPieceString,
+} from "./util";
 
 export class ChessterGame {
   board: number[]; // board is 64 bytes
@@ -22,9 +27,11 @@ export class ChessterGame {
   bckc: number; // black can castle kingside
   wcqc: number; // white can castle queenside
   bcqc: number; // black can castle queenside
+  sm: number; // stalemate
   turn: 0 | 1;
   simulation: 0 | 1;
   history: ChessterHistory;
+  m: ChessterMove[];
 
   /**
    * creates a new chesster game instance and initializes it
@@ -49,8 +56,9 @@ export class ChessterGame {
     this.bckc = state?.bckc ?? 1; // black can castle kingside
     this.bcqc = state?.bcqc ?? 1; // black can castle queenside
 
-    this.updateChecked();
-    this.updateCastle();
+    this.m = [];
+
+    this.update();
   }
 
   /**
@@ -109,6 +117,9 @@ export class ChessterGame {
             this.board[(move >>> 8) & 0b111111] = 0;
             break;
         }
+
+        this.updateMoves();
+        this.sm = this.m.length === 0 ? 1 : 0;
       }
     }
   }
@@ -190,10 +201,16 @@ export class ChessterGame {
         throw new Error("invalid move type: " + binaryToString(move));
     }
 
-    this.updateCastle();
-    this.updateChecked();
-    if (this.wcm === 0 && this.bcm === 0) this.turn ^= 1;
     this.history.push(history | (move & 0b11111111111111111111));
+    if (this.wcm === 0 && this.bcm === 0) this.turn ^= 1;
+
+    console.log(
+      "moves",
+      this.history.map((m) => moveToString(m))
+    );
+    this.update();
+
+    this.sm = this.m.length === 0 ? 1 : 0;
   }
 
   /**
@@ -270,13 +287,32 @@ export class ChessterGame {
    * Creates a printable string of the board
    * @returns The board as a string
    */
-  boardToString(): string {
-    let boardString = "";
+  ascii(): string {
+    let s = "   ┏------------------------┓\n";
     for (let i = 0; i < boardSize; i++) {
-      boardString += (numberToPieceString(this.board[i]) || " ") + " ";
-      if (i % 8 === 7) boardString += "\n";
+      // display the rank
+      if ((i & 0b111) === 0) {
+        s += " " + "87654321"[(i >>> 3) & 0b111] + " |";
+      }
+
+      if (this.board[i] !== 0) {
+        s += " " + numberToLetterString(this.board[i]) + " ";
+      } else {
+        s += " . ";
+      }
+
+      if ((i & 0b111) === 0b111) s += "|\n";
     }
-    return boardString;
+    s += "   ┗------------------------┛\n";
+    s += "     a  b  c  d  e  f  g  h";
+
+    return s;
+  }
+
+  update() {
+    this.updateChecked();
+    this.updateCastle();
+    this.updateMoves();
   }
 
   updateChecked() {
@@ -311,6 +347,28 @@ export class ChessterGame {
       (this.board[4] !== 0b1101 || this.board[0] !== 0b1001)
     )
       this.bcqc = 0;
+  }
+
+  updateMoves() {
+    if (this.simulation) return;
+
+    console.log("updating moves");
+    console.log(this.ascii());
+    this.m = [];
+
+    for (let i = 0; i < boardSize; i++) {
+      if (this.board[i] !== 0 && (this.board[i] & 0b1) === this.turn) {
+        this.m.push(...this.getAvailableMoves(i));
+      }
+    }
+
+    console.log(
+      this.getAvailableMoves(60).map((m) => moveToString(m)),
+      this.m
+        .filter((m) => ((m >>> 1) & 0b111) === 0b110)
+        .map((m) => moveToString(m)),
+      this.turn === WHITE ? "white" : "black"
+    );
   }
 
   /**
@@ -389,11 +447,12 @@ export class ChessterGame {
       case 0b110:
         return this.getKingMoves(this.board[location], location);
       default:
+        return [];
         throw new Error(
           "invalid piece while getting available moves: " +
             this.board[location] +
             " (decimal)\n" +
-            this.boardToString()
+            this.ascii()
         );
     }
   }

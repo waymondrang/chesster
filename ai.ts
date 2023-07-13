@@ -7,12 +7,15 @@ import {
   boardSize,
 } from "./types";
 
-const depth = 3;
 const mobilityWeight = 3;
 const teamPieceValueWeight = 20;
 const enemyPieceValueWeight = 23;
 const checkWeight = 100;
 const checkmateWeight = 10000;
+const stalemateWeight = 0;
+
+const miniMaxDepth = 6; // not necessary if not going off time
+const miniMaxTimeLimit = 5000;
 
 const MVV_LVA: number[][] = [
   [0, 0, 0, 0, 0, 0, 0], // victim K, attacker K, Q, R, B, N, P, None
@@ -95,12 +98,19 @@ export class ChessterAI {
   }
 
   miniMax(
-    depth: number,
+    depth: number = miniMaxDepth,
     alpha: number = -Infinity,
     beta: number = Infinity,
-    playerType: number = MAX_PLAYER
+    playerType: number = MAX_PLAYER,
+    timeStart: number = performance.now()
   ): [ChessterMove | undefined, number] {
-    if (depth === 0 || this.game.bcm || this.game.wcm)
+    if (
+      depth === 0 ||
+      this.game.bcm ||
+      this.game.wcm ||
+      this.game.sm ||
+      performance.now() - timeStart > miniMaxTimeLimit
+    )
       return [undefined, this.calculateStateScore()];
 
     if (playerType === MAX_PLAYER) {
@@ -108,35 +118,29 @@ export class ChessterAI {
       let bestValue = -Infinity;
       let bestMove: ChessterMove | undefined;
 
-      for (let i = 0; i < boardSize; i++) {
-        if (
-          this.game.board[i] !== 0 &&
-          (this.game.board[i] & 0b1) === this.game.turn
-        ) {
-          const moves = sortMoves(this.game.getAvailableMoves(i));
+      const moves = sortMoves(this.game.moves);
 
-          for (let j = moves.length - 1; j >= 0; j--) {
-            this.game.move(moves[j]);
+      for (let j = moves.length - 1; j >= 0; j--) {
+        this.game.move(moves[j]);
 
-            const [_, value] = this.miniMax(
-              depth - 1,
-              alpha,
-              beta,
-              1 ^ playerType
-            );
+        const [_, value] = this.miniMax(
+          depth - 1,
+          alpha,
+          beta,
+          1 ^ playerType,
+          timeStart
+        );
 
-            this.game.undo();
+        this.game.undo();
 
-            if (value > bestValue) {
-              // can add randomness to make AI "easier"
-              bestValue = value;
-              bestMove = moves[j];
-            }
-
-            if (bestValue > alpha) alpha = bestValue;
-            if (alpha >= beta) break;
-          }
+        if (value > bestValue) {
+          // can add randomness to make AI "easier"
+          bestValue = value;
+          bestMove = moves[j];
         }
+
+        if (bestValue > alpha) alpha = bestValue;
+        if (alpha >= beta) break;
       }
 
       return [bestMove, bestValue];
@@ -145,35 +149,29 @@ export class ChessterAI {
       let bestValue = Infinity;
       let bestMove: ChessterMove | undefined;
 
-      for (let i = 0; i < boardSize; i++) {
-        if (
-          this.game.board[i] !== 0 &&
-          (this.game.board[i] & 0b1) === this.game.turn
-        ) {
-          const moves = sortMoves(this.game.getAvailableMoves(i));
+      const moves = sortMoves(this.game.moves);
 
-          for (let j = moves.length - 1; j >= 0; j--) {
-            this.game.move(moves[j]);
+      for (let j = moves.length - 1; j >= 0; j--) {
+        this.game.move(moves[j]);
 
-            const [_, value] = this.miniMax(
-              depth - 1,
-              alpha,
-              beta,
-              1 ^ playerType
-            );
+        const [_, value] = this.miniMax(
+          depth - 1,
+          alpha,
+          beta,
+          1 ^ playerType,
+          timeStart
+        );
 
-            this.game.undo();
+        this.game.undo();
 
-            if (value < bestValue) {
-              // assume minimizer (opponent) plays optimally
-              bestValue = value;
-              bestMove = moves[j];
-            }
-
-            if (bestValue < beta) beta = bestValue;
-            if (alpha >= beta) break;
-          }
+        if (value < bestValue) {
+          // assume minimizer (opponent) plays optimally
+          bestValue = value;
+          bestMove = moves[j];
         }
+
+        if (bestValue < beta) beta = bestValue;
+        if (alpha >= beta) break;
       }
 
       return [bestMove, bestValue];
@@ -186,7 +184,8 @@ export class ChessterAI {
     const startTime = performance.now();
     // this.root = new ChessterAINode(this.game.getState(), MAX_PLAYER, 0);
     // this.buildMoveTree(this.root, depth);
-    const [bestMove, value] = this.miniMax(depth);
+    this.team = this.game.turn;
+    const [bestMove, value] = this.miniMax();
     console.log(
       "time taken: " + (performance.now() - startTime) + "ms, value: " + value
     );

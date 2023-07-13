@@ -3,7 +3,7 @@ import { ChessterGame } from "../game";
 import { BLACK, WHITE, messageTypes } from "../types";
 
 const game = new ChessterGame();
-const ai = new ChessterAI(game, BLACK);
+const ai = new ChessterAI(game);
 
 onmessage = function (event: MessageEvent) {
   switch (event.data.type) {

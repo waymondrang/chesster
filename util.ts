@@ -29,22 +29,37 @@ export function getKeyByValue(object: any, value: any) {
  * Given a valid fen string (currently, the params (w/b, etc) at the end aren't supported)
  * return a ChessterBoardString of the fen string
  */
-export function fenStringToBoard(fen: string): number[] {
+export function fenStringToBoard(fen: string, flip?: boolean): number[] {
   // conversions for fen characters to Chesster string pieces
-  let fenToPiece = {
-    p: 0b0011,
-    r: 0b1001,
-    n: 0b0101,
-    b: 0b0111,
-    q: 0b1011,
-    k: 0b1101,
-    P: 0b0010,
-    R: 0b1000,
-    N: 0b0100,
-    B: 0b0110,
-    Q: 0b1010,
-    K: 0b1100,
-  };
+  let fenToPiece = flip
+    ? {
+        P: 0b0011,
+        R: 0b1001,
+        N: 0b0101,
+        B: 0b0111,
+        Q: 0b1011,
+        K: 0b1101,
+        p: 0b0010,
+        r: 0b1000,
+        n: 0b0100,
+        b: 0b0110,
+        q: 0b1010,
+        k: 0b1100,
+      }
+    : {
+        p: 0b0011,
+        r: 0b1001,
+        n: 0b0101,
+        b: 0b0111,
+        q: 0b1011,
+        k: 0b1101,
+        P: 0b0010,
+        R: 0b1000,
+        N: 0b0100,
+        B: 0b0110,
+        Q: 0b1010,
+        K: 0b1100,
+      };
 
   // split by lines
   let lines = fen.split("/");
@@ -71,23 +86,16 @@ export function fenStringToBoard(fen: string): number[] {
 }
 
 export function fenStringToGameState(
-  fen: string
+  fen: string,
+  flip?: boolean
 ): RecursivePartial<ChessterGameState> {
   let fenToPlayer = {
     w: WHITE,
     b: BLACK,
   };
 
-  let fenToCastle = {
-    K: true,
-    Q: true,
-    k: true,
-    q: true,
-    "-": false,
-  };
-
   return {
-    board: fenStringToBoard(fen.split(" ")[0]),
+    board: fenStringToBoard(fen.split(" ")[0], flip),
     turn: fenToPlayer[fen.split(" ")[1]],
     wckc: fen.split(" ")[2].includes("K") ? 1 : 0,
     wcqc: fen.split(" ")[2].includes("Q") ? 1 : 0,
@@ -159,7 +167,7 @@ export function pieceStringToNumber(
  * @param pieceNumber
  * @returns
  */
-export function pieceNumberToLetter(pieceNumber: number): string {
+export function numberToLetterString(pieceNumber: number): string {
   switch (pieceNumber) {
     case 0b0011:
       return "p";
