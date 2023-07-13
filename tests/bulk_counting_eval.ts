@@ -12,7 +12,7 @@ const game = new ChessterGame();
 const chess = new Chess();
 
 const n = 2;
-const depth = 5;
+const depth = 3;
 const fen = "";
 const counter: number = 0; // default is 0
 
@@ -34,17 +34,17 @@ function countBulkPositionsCompare(depth: number): number {
           console.log(moveToString(moves[j]));
           console.log(chess.fen());
           console.log(chess.ascii());
-          console.log(game.boardToString());
+          console.log(game.ascii());
           game.undo();
-          console.log(game.boardToString());
+          console.log(game.ascii());
           throw e;
         }
 
         if (!compareChessJSBoardWithChessterBoard(chess.board(), game.board)) {
           console.log(chess.ascii());
-          console.log(game.boardToString());
+          console.log(game.ascii());
           game.undo();
-          console.log(game.boardToString());
+          console.log(game.ascii());
           chess.undo();
           console.log(chess.ascii());
           console.log(chess.fen());

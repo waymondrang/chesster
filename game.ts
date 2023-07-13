@@ -204,10 +204,6 @@ export class ChessterGame {
     this.history.push(history | (move & 0b11111111111111111111));
     if (this.wcm === 0 && this.bcm === 0) this.turn ^= 1;
 
-    console.log(
-      "moves",
-      this.history.map((m) => moveToString(m))
-    );
     this.update();
 
     this.sm = this.m.length === 0 ? 1 : 0;
@@ -352,8 +348,6 @@ export class ChessterGame {
   updateMoves() {
     if (this.simulation) return;
 
-    console.log("updating moves");
-    console.log(this.ascii());
     this.m = [];
 
     for (let i = 0; i < boardSize; i++) {
@@ -361,14 +355,6 @@ export class ChessterGame {
         this.m.push(...this.getAvailableMoves(i));
       }
     }
-
-    console.log(
-      this.getAvailableMoves(60).map((m) => moveToString(m)),
-      this.m
-        .filter((m) => ((m >>> 1) & 0b111) === 0b110)
-        .map((m) => moveToString(m)),
-      this.turn === WHITE ? "white" : "black"
-    );
   }
 
   /**

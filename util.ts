@@ -250,7 +250,7 @@ export function compareChessJSBoardWithChessterBoard(
       return false;
     }
 
-    let chessterPiece = pieceNumberToLetter(chessterBoard[i]);
+    let chessterPiece = numberToLetterString(chessterBoard[i]);
 
     if (
       chessterPiece.toLowerCase() !== flattenedChessJSBoard[i].type ||

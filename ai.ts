@@ -9,7 +9,7 @@ import {
 
 const mobilityWeight = 3;
 const teamPieceValueWeight = 20;
-const enemyPieceValueWeight = 23;
+const enemyPieceValueWeight = 21;
 const checkWeight = 100;
 const checkmateWeight = 10000;
 const stalemateWeight = 0;
@@ -118,7 +118,7 @@ export class ChessterAI {
       let bestValue = -Infinity;
       let bestMove: ChessterMove | undefined;
 
-      const moves = sortMoves(this.game.moves);
+      const moves = sortMoves(this.game.m);
 
       for (let j = moves.length - 1; j >= 0; j--) {
         this.game.move(moves[j]);
@@ -149,7 +149,7 @@ export class ChessterAI {
       let bestValue = Infinity;
       let bestMove: ChessterMove | undefined;
 
-      const moves = sortMoves(this.game.moves);
+      const moves = sortMoves(this.game.m);
 
       for (let j = moves.length - 1; j >= 0; j--) {
         this.game.move(moves[j]);

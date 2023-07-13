@@ -233,16 +233,14 @@ promotion_close.addEventListener("click", () => {
 function clientMove(move: ChessterMove) {
   console.log("sending and making move", binaryToString(move));
   makeMove(move);
-  // if (!game.wcm && !game.bcm && !game.sm)
-  //   aiWorker.postMessage({ type: messageTypes.MOVE, state: game.getState() }); // disable to enable two player
+  if (!game.wcm && !game.bcm && !game.sm)
+    aiWorker.postMessage({ type: messageTypes.MOVE, state: game.getState() }); // disable to enable two player
 }
 
 function makeMove(move: ChessterMove) {
   let previousBoard = [...game.board];
 
   game.move(move);
-
-  console.log(game.m);
 
   updateBoard(game.board, previousBoard);
   updateStatus(game.turn);
@@ -323,8 +321,6 @@ for (let i = 0; i < boardSize; i++) {
       );
 
       if (selectedMoves.length > 0) {
-        console.log("selectedMoves", selectedMoves);
-
         // if selected move is promotion
         if (selectedMoves.length > 1) {
           if (((selectedMoves[0] >>> 7) & 0b1) !== 1)
@@ -379,11 +375,6 @@ for (let i = 0; i < boardSize; i++) {
 
       cell.classList.toggle("selected");
 
-      const movesGen = game.getAvailableMoves(i);
-      console.log(
-        "movesgen",
-        movesGen.map((m) => moveToString(m))
-      );
       const moves = game.m.filter((move) => ((move >>> 14) & 0b111111) === i);
       for (let move of moves) {
         let img = document.createElement("img");
@@ -407,8 +398,6 @@ for (let i = 0; i < boardSize; i++) {
 updateBoard(game.board);
 updateStatus(game.turn);
 updateLastMove(game.history);
-
-console.log(game.m);
 
 // set onclick event for new game button
 restart.addEventListener("click", async () => {
