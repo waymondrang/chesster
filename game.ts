@@ -308,162 +308,117 @@ export class ChessterGame {
   update() {
     // this.updateChecked();
 
-    // let checkedA = 0;
-    // let checkedB = 0;
-
-    // boardLoop: for (let i = 0; i < boardSize; i++) {
-    //   if (
-    //     !checkedA &&
-    //     this.board[i] !== 0 &&
-    //     (this.board[i] & 0b1) !== this.turn
-    //   ) {
-    //     const moves = this.getAllMoves(i);
-
-    //     for (let j = 0; j < moves.length; j++) {
-    //       if (
-    //         (((moves[j] >>> 4) & 0b1111) === moveTypes.CAPTURE ||
-    //           ((moves[j] >>> 6) & 0b11) === 0b11) && // if any promotion capture moves
-    //         this.board[(moves[j] >>> 8) & 0b111111] === (0b1100 | this.turn)
-    //       ) {
-    //         // 0b110 is king value
-    //         checkedA = 1;
-    //         break;
-    //       }
-    //     }
-    //   } else if (
-    //     !checkedB &&
-    //     this.board[i] !== 0 &&
-    //     ((this.turn === BLACK && this.wc) ||
-    //       (this.turn === WHITE && this.bc)) &&
-    //     (this.board[i] & 0b1) === this.turn
-    //   ) {
-    //     const moves = this.getAllMoves(i);
-
-    //     for (let j = 0; j < moves.length; j++) {
-    //       if (
-    //         (((moves[j] >>> 4) & 0b1111) === moveTypes.CAPTURE ||
-    //           ((moves[j] >>> 6) & 0b11) === 0b11) && // if any promotion capture moves
-    //         this.board[(moves[j] >>> 8) & 0b111111] ===
-    //           (0b1100 | (1 ^ this.turn))
-    //       ) {
-    //         // 0b110 is king value
-    //         checkedB = 1;
-    //         break;
-    //       }
-    //     }
-    //   }
-
-    //   if (checkedA && checkedB) break;
+    // if (this.turn === WHITE && this.bc) {
+    //   this.bc = 0;
+    //   return;
     // }
 
-    // if (this.turn === WHITE) {
-    //   this.wc = checkedA;
-    //   this.bc = this.bc || checkedB;
-    // } else {
-    //   this.bc = checkedA;
-    //   this.wc = this.wc || checkedB;
+    // if (this.turn === BLACK && this.wc) {
+    //   this.wc = 0;
+    //   return;
     // }
 
-    let wc = 0;
-    let bc = 0;
-    let sm = 1;
+    let checked = 0b00; // left bit is currentChecked, right bit is pastChecked
 
+    // check if past team is still in check
     for (let i = 0; i < boardSize; i++) {
-      if (this.board[i] !== 0 && (this.board[i] & 0b1) === BLACK) {
+      if (
+        (checked & 0b01) === 0 &&
+        this.board[i] !== 0 &&
+        (this.board[i] & 0b1) === this.turn
+      ) {
         const moves = this.getAllMoves(i);
 
         for (let j = 0; j < moves.length; j++) {
           if (
-            ((moves[j] >>> 4) & 0b1111) === moveTypes.CAPTURE ||
-            ((moves[j] >>> 6) & 0b11) === 0b11 // if any promotion capture moves
+            (((moves[j] >>> 4) & 0b1111) === moveTypes.CAPTURE ||
+              ((moves[j] >>> 6) & 0b11) === 0b11) && // if any promotion capture moves
+            this.board[(moves[j] >>> 8) & 0b111111] ===
+              (0b1100 | (1 ^ this.turn))
           ) {
-            if (this.board[(moves[j] >>> 8) & 0b111111] === (0b1100 | WHITE)) {
-              // 0b110 is king value
-              wc = 1;
-              break;
-            }
+            // 0b110 is king value
+            checked |= 0b01; // set pastChecked
+            break;
           }
         }
-      } else if (this.board[i] !== 0 && (this.board[i] & 0b1) === WHITE) {
+      } else if (
+        (checked & 0b10) === 0 &&
+        this.board[i] !== 0 &&
+        (this.board[i] & 0b1) !== this.turn
+      ) {
+        // check if current turn is in check
         const moves = this.getAllMoves(i);
 
         for (let j = 0; j < moves.length; j++) {
           if (
-            ((moves[j] >>> 4) & 0b1111) === moveTypes.CAPTURE ||
-            ((moves[j] >>> 6) & 0b11) === 0b11 // if any promotion capture moves
+            (((moves[j] >>> 4) & 0b1111) === moveTypes.CAPTURE ||
+              ((moves[j] >>> 6) & 0b11) === 0b11) && // if any promotion capture moves
+            this.board[(moves[j] >>> 8) & 0b111111] === (0b1100 | this.turn)
           ) {
-            if (this.board[(moves[j] >>> 8) & 0b111111] === (0b1100 | BLACK)) {
-              // 0b110 is king value
-              bc = 1;
-              break;
-            }
+            // 0b110 is king value
+            checked |= 0b10; // set currentChecked
+            break;
           }
         }
       }
 
-      if (wc && bc) break;
-    }
-    this.wc = wc;
-    this.bc = bc;
-
-    if (wc && bc) {
-      console.log(this.history.map((m) => moveToString(m)));
-      console.log(this.ascii());
-      console.log("WTF BOTH TEAMS CHECKED!!11!!");
+      if (checked === 0b11) break;
     }
 
-    // from updateCastle()
-    if (
+    this.wc = this.turn === WHITE ? (checked & 0b10) >>> 1 : checked & 0b01;
+    this.bc = this.turn === WHITE ? checked & 0b01 : (checked & 0b10) >>> 1;
+
+    // modified from updateCastle()
+    this.wckc =
       this.wckc === 1 &&
       (this.board[60] !== 0b1100 || this.board[63] !== 0b1000)
-    )
-      this.wckc = 0;
+        ? 0
+        : 1;
 
-    if (
+    this.wcqc =
       this.wcqc === 1 &&
       (this.board[60] !== 0b1100 || this.board[56] !== 0b1000)
-    )
-      this.wcqc = 0;
+        ? 0
+        : 1;
 
-    if (
-      this.bckc === 1 &&
-      (this.board[4] !== 0b1101 || this.board[7] !== 0b1001)
-    )
-      this.bckc = 0;
+    this.bckc =
+      this.bckc === 1 && (this.board[4] !== 0b1101 || this.board[7] !== 0b1001)
+        ? 0
+        : 1;
 
-    if (
-      this.bcqc === 1 &&
-      (this.board[4] !== 0b1101 || this.board[0] !== 0b1001)
-    )
-      this.bcqc = 0;
+    this.bcqc =
+      this.bcqc === 1 && (this.board[4] !== 0b1101 || this.board[0] !== 0b1001)
+        ? 0
+        : 1;
 
     if (this.simulation) return;
 
     // modified from isCheckmated()
     let wcm = this.wc;
     let bcm = this.bc;
+    let sm = 1;
 
     for (let i = 0; i < boardSize; i++) {
       if (this.board[i] !== 0) {
         if (
-          (this.board[i] & 0b1) === WHITE &&
           wcm &&
+          (this.board[i] & 0b1) === WHITE &&
           this.getAvailableMoves(i).length > 0
         ) {
           wcm = 0;
         }
 
         if (
-          (this.board[i] & 0b1) === BLACK &&
           bcm &&
+          (this.board[i] & 0b1) === BLACK &&
           this.getAvailableMoves(i).length > 0
         ) {
           bcm = 0;
         }
 
         if (
-          (this.board[i] & 0b1) === this.turn &&
           sm &&
+          (this.board[i] & 0b1) === this.turn &&
           this.getAvailableMoves(i).length > 0
         ) {
           sm = 0; // no stalemate if the current player can move

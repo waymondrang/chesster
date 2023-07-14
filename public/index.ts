@@ -127,7 +127,6 @@ function updateMove(move: ChessterMove) {
 }
 
 function updateBoard(gameBoard: ChessterBoard, previousBoard?: ChessterBoard) {
-  console.log("update board", game.getState());
   if (previousBoard === undefined) {
     for (let i = 0; i < boardSize; i++) {
       elementBoard[i].innerHTML = "";
@@ -243,10 +242,7 @@ promotion_close.addEventListener("click", () => {
 });
 
 function clientMove(move: ChessterMove) {
-  console.log("sending and making move", binaryToString(move));
-  console.log("game state", game.getState());
   makeMove(move);
-  console.log("game state", game.getState());
   // if (!game.wcm && !game.bcm && !game.sm)
   //   aiWorker.postMessage({ type: messageTypes.MOVE, state: game.getState() }); // disable to enable two player
 }
@@ -289,7 +285,6 @@ undo.addEventListener("click", () => {
 });
 
 aiWorker.onmessage = function (event) {
-  console.log("aiWorker.onmessage", event.data);
   switch (event.data.type) {
     case messageTypes.MOVE:
       if (event.data.move === undefined) {
@@ -324,10 +319,7 @@ for (let i = 0; i < boardSize; i++) {
       // toggle selected cell
       event.preventDefault();
 
-      console.log("selected piece: " + binaryToString(game.board[i]));
-
       if (selectedPieceElement === cell) {
-        console.log("deselecting piece");
         clearMove();
         selectedPieceElement = null;
         selectedPieceMoves = [];
