@@ -405,6 +405,14 @@ nav {
     background-color: #CDA3A7;
 } */
 
+.cell.moved_from {
+    background-color: #BBA2DE;
+}
+
+.cell.moved_to {
+    background-color: #BBA2DE;
+}
+
 .cell.CAPTURE,
 .cell.EN_PASSANT,
 .cell.EN_PASSANT_WHITE,
@@ -444,14 +452,6 @@ nav {
     z-index: 0;
     transition: border-color 0.2s ease-in-out;
 } */
-
-.cell.moved_from {
-    background-color: #BBA2DE;
-}
-
-.cell.moved_to {
-    background-color: #BBA2DE;
-}
 
 .cell.selected {
     background-color: #F25116;

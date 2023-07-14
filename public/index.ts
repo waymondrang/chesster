@@ -195,8 +195,8 @@ function updateBoard(gameBoard: ChessterBoard, previousBoard?: ChessterBoard) {
         img.setAttribute("id", "checkmated");
         elementBoard[i].appendChild(img);
       } else if (
-        (game.wc === 1 && gameBoard[i] === 0b1100) ||
-        (game.bc === 1 && gameBoard[i] === 0b1101)
+        (game.wc && gameBoard[i] === 0b1100) ||
+        (game.bc && gameBoard[i] === 0b1101)
       ) {
         let img = document.createElement("img");
         img.setAttribute("src", "pieces/circle.svg");
@@ -238,8 +238,8 @@ promotion_close.addEventListener("click", () => {
 function clientMove(move: ChessterMove) {
   console.log("sending and making move", binaryToString(move));
   makeMove(move);
-  // if (!game.wcm && !game.bcm && !game.sm)
-  //   aiWorker.postMessage({ type: messageTypes.MOVE, state: game.getState() }); // disable to enable two player
+  if (!game.wcm && !game.bcm && !game.sm)
+    aiWorker.postMessage({ type: messageTypes.MOVE, state: game.getState() }); // disable to enable two player
 }
 
 function makeMove(move: ChessterMove) {

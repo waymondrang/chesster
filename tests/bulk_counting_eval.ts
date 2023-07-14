@@ -11,8 +11,8 @@ import {
 const game = new ChessterGame();
 const chess = new Chess();
 
-const n = 2;
-const depth = 5;
+const n = 20;
+const depth = 4;
 const fen = "";
 const counter: number = 0; // default is 0
 
@@ -137,19 +137,21 @@ function measureCountBulkPositions(depth: number) {
   switch (counter) {
     case 2: {
       const count = countBulkPositionsCompare(depth);
+      const time = performance.now() - startTime;
       console.log(
         "Depth: " +
           depth +
           "\tNumber of positions: " +
           count +
           "\tTime: " +
-          (performance.now() - startTime) +
+          time +
           "ms"
       );
-      break;
+      return time;
     }
     case 1: {
       const count = countBulkPositions(depth);
+      const time = performance.now() - startTime;
       console.log(
         "Depth: " +
           depth +
@@ -164,32 +166,43 @@ function measureCountBulkPositions(depth: number) {
           "\tNumber of stalemates: " +
           count[4] +
           "\tTime: " +
-          (performance.now() - startTime) +
+          time +
           "ms"
       );
-      break;
+      return time;
     }
     case 0: {
       const count = countBulkPositionsSimple(depth);
+      const time = performance.now() - startTime;
       console.log(
         "Depth: " +
           depth +
           "\tNumber of positions: " +
           count +
           "\tTime: " +
-          (performance.now() - startTime) +
+          time +
           "ms"
       );
-      break;
+      return time;
     }
   }
 }
+
+var depthTimeAverages = new Array(depth).fill(0);
 
 console.log("CHESSTER BULK COUNTING EVALUATION");
 console.log();
 for (var i = 0; i < n; i++) {
   for (var d = 0; d < depth; d++) {
-    measureCountBulkPositions(d + 1);
+    const time = measureCountBulkPositions(d + 1);
+    depthTimeAverages[d] += time;
   }
   console.log();
+}
+
+console.log("AVERAGE TIME PER DEPTH");
+for (var d = 0; d < depth; d++) {
+  console.log(
+    "Depth: " + (d + 1) + "\tAverage time: " + depthTimeAverages[d] / n + "ms"
+  );
 }

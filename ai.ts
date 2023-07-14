@@ -14,7 +14,7 @@ const checkWeight = 100;
 const checkmateWeight = 10000;
 const stalemateWeight = 0;
 
-const miniMaxDepth = 3; // not necessary if not going off time
+const miniMaxDepth = 4; // not necessary if not going off time
 const miniMaxTimeLimit = 5000;
 
 const MVV_LVA: number[][] = [

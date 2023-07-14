@@ -307,36 +307,29 @@ export class ChessterGame {
     let sm = 1;
 
     boardLoop: for (let i = 0; i < boardSize; i++) {
-      if (this.board[i] === 0) continue;
+      if (this.board[i] !== 0 && (this.board[i] & 0b1) === (1 ^ this.turn)) {
+        const moves = this.getAllMoves(i);
 
-      const moves = this.getAllMoves(i);
+        if (moves.length === 0) continue;
 
-      if ((this.board[i] & 0b1) === (1 ^ this.turn)) {
-        if (moves.length > 0) sm = 0; // no stalemate if black can move
+        sm = 0; // no stalemate if black can move
 
         for (let j = 0; j < moves.length; j++) {
           if (
-            ((moves[j] >>> 4) & 0b1111) === moveTypes.CAPTURE ||
-            ((moves[j] >>> 6) & 0b11) === 0b11 // if any promotion capture moves
+            (((moves[j] >>> 4) & 0b1111) === moveTypes.CAPTURE ||
+              ((moves[j] >>> 6) & 0b11) === 0b11) && // if any promotion capture moves
+            this.board[(moves[j] >>> 8) & 0b111111] === (0b1100 | this.turn)
           ) {
-            if (
-              this.board[(moves[j] >>> 8) & 0b111111] ===
-              (0b1100 | this.turn)
-            ) {
-              // 0b110 is king value
-              checked = 1;
-              break boardLoop;
-            }
+            // 0b110 is king value
+            checked = 1;
+            break boardLoop;
           }
         }
       }
     }
 
-    if (this.turn === WHITE) {
-      this.wc = checked;
-    } else {
-      this.bc = checked;
-    }
+    if (this.turn === WHITE) this.wc = checked;
+    else this.bc = checked;
 
     this.sm = sm;
 
@@ -346,15 +339,13 @@ export class ChessterGame {
       let bcm = this.bc;
 
       for (let i = 0; i < boardSize; i++) {
-        if (this.board[i] === 0) continue;
-
-        if (wcm && (this.board[i] & 0b1) === WHITE)
+        if (this.board[i] === 0 && wcm && (this.board[i] & 0b1) === WHITE)
           if (this.getAvailableMoves(i).length > 0) {
             wcm = 0;
             break;
           }
 
-        if (bcm && (this.board[i] & 0b1) === BLACK)
+        if (this.board[i] === 0 && bcm && (this.board[i] & 0b1) === BLACK)
           if (this.getAvailableMoves(i).length > 0) {
             bcm = 0;
             break;
@@ -466,36 +457,36 @@ export class ChessterGame {
 
     this.simulation = 1;
 
-    for (let move of moves) {
-      this.move(move);
+    for (let i = 0; i < moves.length; i++) {
+      this.move(moves[i]);
 
       if ((team === WHITE && !this.wc) || (team === BLACK && !this.bc)) {
         this.undo();
 
-        if (((move >>> 4) & 0b1111) === moveTypes.CASTLE_KINGSIDE) {
+        if (((moves[i] >>> 4) & 0b1111) === moveTypes.CASTLE_KINGSIDE) {
           this.move(
-            (move & 0b11111100000000001111) |
-              (((move >>> 14) + 1) << 8) |
+            (moves[i] & 0b11111100000000001111) |
+              (((moves[i] >>> 14) + 1) << 8) |
               (moveTypes.MOVE << 4)
           );
 
           if ((team === WHITE && !this.wc) || (team === BLACK && !this.bc))
-            finalMoves.push(move);
+            finalMoves.push(moves[i]);
 
           this.undo();
-        } else if (((move >>> 4) & 0b1111) === moveTypes.CASTLE_QUEENSIDE) {
+        } else if (((moves[i] >>> 4) & 0b1111) === moveTypes.CASTLE_QUEENSIDE) {
           this.move(
-            (move & 0b11111100000000001111) |
-              (((move >>> 14) - 1) << 8) |
+            (moves[i] & 0b11111100000000001111) |
+              (((moves[i] >>> 14) - 1) << 8) |
               (moveTypes.MOVE << 4)
           );
 
           if ((team === WHITE && !this.wc) || (team === BLACK && !this.bc))
-            finalMoves.push(move);
+            finalMoves.push(moves[i]);
 
           this.undo();
         } else {
-          finalMoves.push(move);
+          finalMoves.push(moves[i]);
         }
       } else {
         this.undo();
@@ -1035,7 +1026,7 @@ export class ChessterGame {
     }
 
     // left
-    for (let i = 1; ((location - i) & 0b111) != 0b111; i++) {
+    for (let i = 1; i < (location & 0b111) + 1; i++) {
       if (this.board[location - i] === 0) {
         moves.push(
           (location << 14) |
@@ -1079,7 +1070,7 @@ export class ChessterGame {
     }
 
     // up
-    for (let i = 1; location - 8 * i >= 0; i++) {
+    for (let i = 1; location - 7 * i > 0; i++) {
       if (this.board[location - 8 * i] === 0) {
         moves.push(
           (location << 14) |
