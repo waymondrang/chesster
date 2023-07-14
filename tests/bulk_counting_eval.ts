@@ -12,7 +12,7 @@ const game = new ChessterGame();
 const chess = new Chess();
 
 const n = 2;
-const depth = 3;
+const depth = 5;
 const fen = "";
 const counter: number = 0; // default is 0
 
@@ -63,23 +63,28 @@ function countBulkPositionsCompare(depth: number): number {
 }
 
 // counter 1
-function countBulkPositions(depth: number): [number, number, number, number] {
+function countBulkPositions(
+  depth: number
+): [number, number, number, number, number] {
   if (depth <= 0)
     return [
       1,
       ((game.history[game.history.length - 1] >>> 20) & 0b1111) !== 0 ? 1 : 0,
       game.wc || game.bc ? 1 : 0,
       game.wcm || game.bcm ? 1 : 0,
+      game.sm ? 1 : 0,
     ];
 
   let count = 0;
   let captures = 0;
   let checks = 0;
   let checkmates = 0;
+  let stalemates = 0;
 
   for (let i = 0; i < boardSize; i++) {
     if (game.board[i] !== 0 && (game.board[i] & 0b1) === game.turn) {
       const moves = game.getAvailableMoves(i);
+
       for (let j = 0; j < moves.length; j++) {
         game.move(moves[j]);
 
@@ -89,13 +94,14 @@ function countBulkPositions(depth: number): [number, number, number, number] {
         captures += positions[1];
         checks += positions[2];
         checkmates += positions[3];
+        stalemates += positions[4];
 
         game.undo();
       }
     }
   }
 
-  return [count, captures, checks, checkmates];
+  return [count, captures, checks, checkmates, stalemates];
 }
 
 // counter 0
@@ -120,6 +126,8 @@ function countBulkPositionsSimple(depth: number): number {
 
 function measureCountBulkPositions(depth: number) {
   const startTime = performance.now();
+
+  // console.log(game.getState());
 
   if (fen !== "") {
     game.init(fenStringToGameState(fen));
@@ -153,6 +161,8 @@ function measureCountBulkPositions(depth: number) {
           count[2] +
           "\tNumber of checkmates: " +
           count[3] +
+          "\tNumber of stalemates: " +
+          count[4] +
           "\tTime: " +
           (performance.now() - startTime) +
           "ms"

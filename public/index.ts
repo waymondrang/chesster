@@ -46,6 +46,11 @@ const game = new ChessterGame();
 const aiWorker = new Worker("worker.js");
 
 // game.init(fenStringToGameState("8/8/4Q3/1k6/1p6/1P6/P1P2K1P/8 w - - 0 1"));
+// game.init(
+//   fenStringToGameState(
+//     "rnbqkbnr/pppp1ppp/4p3/8/8/1P6/PBPPPPPP/RN1QKBNR w KQkq - 1 2"
+//   )
+// );
 
 // rn3k1r/p1Bp2p1/5ppn/6N1/3pQ3/8/PP2PPPP/4KB1R w K - 4 21
 
@@ -138,7 +143,7 @@ function updateBoard(gameBoard: ChessterBoard, previousBoard?: ChessterBoard) {
           let img = document.createElement("img");
           img.setAttribute("src", "pieces/double_circle.svg");
           img.setAttribute("draggable", "false");
-          img.setAttribute("id", "checked");
+          img.setAttribute("id", "checkmated");
           elementBoard[i].appendChild(img);
         } else if (
           (game.wc && gameBoard[i] === 0b1100) ||
@@ -147,7 +152,7 @@ function updateBoard(gameBoard: ChessterBoard, previousBoard?: ChessterBoard) {
           let img = document.createElement("img");
           img.setAttribute("src", "pieces/circle.svg");
           img.setAttribute("draggable", "false");
-          img.setAttribute("id", "checkmated");
+          img.setAttribute("id", "checked");
           elementBoard[i].appendChild(img);
         }
       }
@@ -233,8 +238,8 @@ promotion_close.addEventListener("click", () => {
 function clientMove(move: ChessterMove) {
   console.log("sending and making move", binaryToString(move));
   makeMove(move);
-  if (!game.wcm && !game.bcm && !game.sm)
-    aiWorker.postMessage({ type: messageTypes.MOVE, state: game.getState() }); // disable to enable two player
+  // if (!game.wcm && !game.bcm && !game.sm)
+  //   aiWorker.postMessage({ type: messageTypes.MOVE, state: game.getState() }); // disable to enable two player
 }
 
 function makeMove(move: ChessterMove) {
@@ -375,7 +380,10 @@ for (let i = 0; i < boardSize; i++) {
 
       cell.classList.toggle("selected");
 
-      const moves = game.m.filter((move) => ((move >>> 14) & 0b111111) === i);
+      const moves = game
+        .moves()
+        .filter((move) => ((move >>> 14) & 0b111111) === i);
+
       for (let move of moves) {
         let img = document.createElement("img");
         img.src = "pieces/xo.svg";

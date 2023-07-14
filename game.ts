@@ -340,54 +340,7 @@ export class ChessterGame {
 
     this.sm = sm;
 
-    // let wc = 0;
-    // let bc = 0;
-    // let sm = 1;
-
-    // for (let i = 0; i < boardSize; i++) {
-    //   if (this.board[i] === 0) continue;
-
-    //   const moves = this.getAllMoves(i);
-
-    //   if ((this.board[i] & 0b1) === BLACK) {
-    //     if (this.turn === BLACK && moves.length > 0) sm = 0; // no stalemate if black can move
-
-    //     for (let j = 0; j < moves.length; j++) {
-    //       if (
-    //         ((moves[j] >>> 4) & 0b1111) === moveTypes.CAPTURE ||
-    //         ((moves[j] >>> 6) & 0b11) === 0b11 // if any promotion capture moves
-    //       ) {
-    //         if (this.board[(moves[j] >>> 8) & 0b111111] === (0b1100 | WHITE)) {
-    //           // 0b110 is king value
-    //           wc = 1;
-    //           break;
-    //         }
-    //       }
-    //     }
-    //   } else {
-    //     if (this.turn === WHITE && moves.length > 0) sm = 0; // no stalemate if white can move
-
-    //     for (let j = 0; j < moves.length; j++) {
-    //       if (
-    //         ((moves[j] >>> 4) & 0b1111) === moveTypes.CAPTURE ||
-    //         ((moves[j] >>> 6) & 0b11) === 0b11 // if any promotion capture moves
-    //       ) {
-    //         if (this.board[(moves[j] >>> 8) & 0b111111] === (0b1100 | BLACK)) {
-    //           // 0b110 is king value
-    //           bc = 1;
-    //           break;
-    //         }
-    //       }
-    //     }
-    //   }
-
-    //   if (wc && bc) break;
-    // }
-
-    // this.wc = wc;
-    // this.bc = bc;
-    // this.sm = sm;
-
+    // modified from isCheckmated()
     if (this.wc || this.bc) {
       let wcm = this.wc;
       let bcm = this.bc;
@@ -412,20 +365,7 @@ export class ChessterGame {
       this.bcm = bcm;
     }
 
-    this.updateCastle();
-  }
-
-  updateChecked() {
-    this.wc = this.isChecked(WHITE);
-    this.bc = this.isChecked(BLACK);
-    // updateChecked runs after turn is updated
-    this.wcm = this.isCheckmated(WHITE);
-    this.bcm = this.isCheckmated(BLACK);
-
-    this.sm = this.moves().length === 0 ? 1 : 0; // update stalemate
-  }
-
-  updateCastle() {
+    // from updateCastle()
     if (
       this.wckc === 1 &&
       (this.board[60] !== 0b1100 || this.board[63] !== 0b1000)
@@ -461,44 +401,6 @@ export class ChessterGame {
     }
 
     return moves;
-  }
-
-  /**
-   * Is the king under attack?
-   * @param team The team to check
-   * @returns Whether the given team is checked
-   */
-  isChecked(team: ChessterTeam): number {
-    for (let i = 0; i < boardSize; i++) {
-      if (this.board[i] !== 0 && (this.board[i] & 0b1) !== team) {
-        const moves = this.getAllMoves(i);
-        for (let j = 0; j < moves.length; j++) {
-          if (
-            ((moves[j] >>> 4) & 0b1111) === moveTypes.CAPTURE ||
-            ((moves[j] >>> 6) & 0b11) === 0b11 // if any promotion capture moves
-          ) {
-            if (this.board[(moves[j] >>> 8) & 0b111111] === (0b1100 | team)) {
-              // 0b110 is king value
-              return 1;
-            }
-          }
-        }
-      }
-    }
-    return 0;
-  }
-
-  /**
-   * Are there any moves to get out of check?
-   * @param team The team to check
-   * @returns Whether the enemy team is checkmated
-   * @todo Implement this
-   */
-  isCheckmated(team: ChessterTeam): number {
-    for (let i = 0; i < boardSize; i++)
-      if (this.board[i] !== 0 && (this.board[i] & 0b1) === team)
-        if (this.getAvailableMoves(i).length > 0) return 0;
-    return 1;
   }
 
   getState(): ChessterGameState {

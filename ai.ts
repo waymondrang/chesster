@@ -14,7 +14,7 @@ const checkWeight = 100;
 const checkmateWeight = 10000;
 const stalemateWeight = 0;
 
-const miniMaxDepth = 6; // not necessary if not going off time
+const miniMaxDepth = 3; // not necessary if not going off time
 const miniMaxTimeLimit = 5000;
 
 const MVV_LVA: number[][] = [
@@ -107,7 +107,7 @@ export class ChessterAI {
       let bestValue = -Infinity;
       let bestMove: ChessterMove | undefined;
 
-      const moves = sortMoves(this.game.m);
+      const moves = sortMoves(this.game.moves());
 
       if (moves.length === 0) console.error("no moves", moves);
 
@@ -142,7 +142,7 @@ export class ChessterAI {
       let bestValue = Infinity;
       let bestMove: ChessterMove | undefined;
 
-      const moves = sortMoves(this.game.m);
+      const moves = sortMoves(this.game.moves());
 
       if (moves.length === 0) console.error("no moves", moves);
 

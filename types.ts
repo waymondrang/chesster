@@ -83,6 +83,7 @@ export type ChessterGameState = {
   wcqc: number; // can white castle queenside
   bckc: number; // can black castle kingside
   bcqc: number; // can black castle queenside
+  sm: number; // stalemate
   turn: 0 | 1;
   history: ChessterHistory;
   simulation: 0 | 1;

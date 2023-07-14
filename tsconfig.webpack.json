@@ -1,0 +1,9 @@
+{
+  "compilerOptions": {
+    "sourceMap": true,
+    "esModuleInterop": true,
+    "target": "ESNext",
+    "moduleResolution": "Node"
+  },
+  "files": ["./public/index.ts", "./public/worker.ts"]
+}
