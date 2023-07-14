@@ -27,6 +27,7 @@ function measureCountBulkPositions(depth: number) {
   if (fen !== "") chess.load(fen);
 
   const count = countBulkPositions(depth);
+  const time = performance.now() - startTime;
 
   console.log(
     "Depth: " +
@@ -34,16 +35,28 @@ function measureCountBulkPositions(depth: number) {
       "\tNumber of positions: " +
       count +
       "\tTime: " +
-      (performance.now() - startTime) +
+      time +
       "ms"
   );
+
+  return time;
 }
+
+var depthTimeAverages = new Array(depth).fill(0);
 
 console.log("CHESSTER BULK COUNTING EVALUATION");
 console.log();
 for (var i = 0; i < n; i++) {
   for (var d = 0; d < depth; d++) {
-    measureCountBulkPositions(d + 1);
+    const time = measureCountBulkPositions(d + 1);
+    depthTimeAverages[d] += time;
   }
   console.log();
+}
+
+console.log("AVERAGE TIME PER DEPTH");
+for (var d = 0; d < depth; d++) {
+  console.log(
+    "Depth: " + (d + 1) + "\tAverage time: " + depthTimeAverages[d] / n + "ms"
+  );
 }

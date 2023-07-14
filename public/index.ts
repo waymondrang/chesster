@@ -23,6 +23,7 @@ import {
   getKeyByValue,
   moveToString,
   numberToFileName,
+  rCompare,
 } from "../util";
 
 ////////////////////////////////
@@ -45,7 +46,11 @@ const undo = document.querySelector("#undo") as HTMLButtonElement;
 const game = new ChessterGame();
 const aiWorker = new Worker("worker.js");
 
-// game.init(fenStringToGameState("8/8/4Q3/1k6/1p6/1P6/P1P2K1P/8 w - - 0 1"));
+game.init(
+  fenStringToGameState(
+    "rnb1kbnr/pp1ppppp/8/q1P5/8/8/PPP1PPPP/RNBQKBNR w KQkq - 1 3"
+  )
+);
 // game.init(
 //   fenStringToGameState(
 //     "rnbqkbnr/pppp1ppp/4p3/8/8/1P6/PBPPPPPP/RN1QKBNR w KQkq - 1 2"
@@ -70,6 +75,7 @@ var elementBoard: ElementBoard = [];
 // contains game data, mini version of game state
 // var gameState: GameState;
 
+var turnMoves: ChessterMove[] = [];
 var selectedPieceElement: HTMLElement = null;
 var selectedPieceMoves: ChessterMove[] = [];
 
@@ -121,6 +127,7 @@ function updateMove(move: ChessterMove) {
 }
 
 function updateBoard(gameBoard: ChessterBoard, previousBoard?: ChessterBoard) {
+  console.log("update board", game.getState());
   if (previousBoard === undefined) {
     for (let i = 0; i < boardSize; i++) {
       elementBoard[i].innerHTML = "";
@@ -237,9 +244,11 @@ promotion_close.addEventListener("click", () => {
 
 function clientMove(move: ChessterMove) {
   console.log("sending and making move", binaryToString(move));
+  console.log("game state", game.getState());
   makeMove(move);
-  if (!game.wcm && !game.bcm && !game.sm)
-    aiWorker.postMessage({ type: messageTypes.MOVE, state: game.getState() }); // disable to enable two player
+  console.log("game state", game.getState());
+  // if (!game.wcm && !game.bcm && !game.sm)
+  //   aiWorker.postMessage({ type: messageTypes.MOVE, state: game.getState() }); // disable to enable two player
 }
 
 function makeMove(move: ChessterMove) {
@@ -254,6 +263,9 @@ function makeMove(move: ChessterMove) {
 
   selectedPieceElement = null;
   selectedPieceMoves = [];
+  const preMovesGameState = game.getState();
+  turnMoves = game.moves();
+  rCompare(preMovesGameState, game.getState());
 }
 
 function clientUndo() {
@@ -269,6 +281,7 @@ function clientUndo() {
 
   selectedPieceElement = null;
   selectedPieceMoves = [];
+  turnMoves = game.moves();
 }
 
 undo.addEventListener("click", () => {
@@ -380,9 +393,9 @@ for (let i = 0; i < boardSize; i++) {
 
       cell.classList.toggle("selected");
 
-      const moves = game
-        .moves()
-        .filter((move) => ((move >>> 14) & 0b111111) === i);
+      const moves = turnMoves.filter(
+        (move) => ((move >>> 14) & 0b111111) === i
+      );
 
       for (let move of moves) {
         let img = document.createElement("img");
@@ -393,6 +406,7 @@ for (let i = 0; i < boardSize; i++) {
         elementBoard[(move >>> 8) & 0b111111].classList.add(
           getKeyByValue(moveTypes, (move >>> 4) & 0b1111) as string
         );
+
         elementBoard[(move >>> 8) & 0b111111].appendChild(img);
       }
 
@@ -407,6 +421,8 @@ updateBoard(game.board);
 updateStatus(game.turn);
 updateLastMove(game.history);
 
+turnMoves = game.moves();
+
 // set onclick event for new game button
 restart.addEventListener("click", async () => {
   game.init();
@@ -418,6 +434,7 @@ restart.addEventListener("click", async () => {
 
   selectedPieceElement = null;
   selectedPieceMoves = [];
+  turnMoves = game.moves();
 });
 
 /////////////////////////

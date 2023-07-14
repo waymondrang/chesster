@@ -74,6 +74,10 @@ export class ChessterGame {
         this.wcqc = (move >>> 30) & 0b1;
         this.bckc = (move >>> 29) & 0b1;
         this.wckc = (move >>> 28) & 0b1;
+        // this.bcm = this.turn === WHITE ? (move >>> 27) & 0b1 : this.bcm;
+        // this.wcm = this.turn === BLACK ? (move >>> 26) & 0b1 : this.wcm;
+        // this.bc = this.turn === WHITE ? (move >>> 25) & 0b1 : this.bc;
+        // this.wc = this.turn === BLACK ? (move >>> 24) & 0b1 : this.wc;
         this.bcm = (move >>> 27) & 0b1;
         this.wcm = (move >>> 26) & 0b1;
         this.bc = (move >>> 25) & 0b1;
@@ -198,11 +202,11 @@ export class ChessterGame {
         throw new Error("invalid move type: " + binaryToString(move));
     }
 
-    this.history.push(history | (move & 0b11111111111111111111));
-
-    this.update();
+    this.history.push(history | (move & 0b11111111111111111111)); // order independent
 
     this.turn ^= 1;
+
+    this.update();
   }
 
   /**
@@ -303,57 +307,109 @@ export class ChessterGame {
 
   update() {
     // this.updateChecked();
-    let checked = 0;
+
+    // let checkedA = 0;
+    // let checkedB = 0;
+
+    // boardLoop: for (let i = 0; i < boardSize; i++) {
+    //   if (
+    //     !checkedA &&
+    //     this.board[i] !== 0 &&
+    //     (this.board[i] & 0b1) !== this.turn
+    //   ) {
+    //     const moves = this.getAllMoves(i);
+
+    //     for (let j = 0; j < moves.length; j++) {
+    //       if (
+    //         (((moves[j] >>> 4) & 0b1111) === moveTypes.CAPTURE ||
+    //           ((moves[j] >>> 6) & 0b11) === 0b11) && // if any promotion capture moves
+    //         this.board[(moves[j] >>> 8) & 0b111111] === (0b1100 | this.turn)
+    //       ) {
+    //         // 0b110 is king value
+    //         checkedA = 1;
+    //         break;
+    //       }
+    //     }
+    //   } else if (
+    //     !checkedB &&
+    //     this.board[i] !== 0 &&
+    //     ((this.turn === BLACK && this.wc) ||
+    //       (this.turn === WHITE && this.bc)) &&
+    //     (this.board[i] & 0b1) === this.turn
+    //   ) {
+    //     const moves = this.getAllMoves(i);
+
+    //     for (let j = 0; j < moves.length; j++) {
+    //       if (
+    //         (((moves[j] >>> 4) & 0b1111) === moveTypes.CAPTURE ||
+    //           ((moves[j] >>> 6) & 0b11) === 0b11) && // if any promotion capture moves
+    //         this.board[(moves[j] >>> 8) & 0b111111] ===
+    //           (0b1100 | (1 ^ this.turn))
+    //       ) {
+    //         // 0b110 is king value
+    //         checkedB = 1;
+    //         break;
+    //       }
+    //     }
+    //   }
+
+    //   if (checkedA && checkedB) break;
+    // }
+
+    // if (this.turn === WHITE) {
+    //   this.wc = checkedA;
+    //   this.bc = this.bc || checkedB;
+    // } else {
+    //   this.bc = checkedA;
+    //   this.wc = this.wc || checkedB;
+    // }
+
+    let wc = 0;
+    let bc = 0;
     let sm = 1;
 
-    boardLoop: for (let i = 0; i < boardSize; i++) {
-      if (this.board[i] !== 0 && (this.board[i] & 0b1) === (1 ^ this.turn)) {
+    for (let i = 0; i < boardSize; i++) {
+      if (this.board[i] !== 0 && (this.board[i] & 0b1) === BLACK) {
         const moves = this.getAllMoves(i);
-
-        if (moves.length === 0) continue;
-
-        sm = 0; // no stalemate if black can move
 
         for (let j = 0; j < moves.length; j++) {
           if (
-            (((moves[j] >>> 4) & 0b1111) === moveTypes.CAPTURE ||
-              ((moves[j] >>> 6) & 0b11) === 0b11) && // if any promotion capture moves
-            this.board[(moves[j] >>> 8) & 0b111111] === (0b1100 | this.turn)
+            ((moves[j] >>> 4) & 0b1111) === moveTypes.CAPTURE ||
+            ((moves[j] >>> 6) & 0b11) === 0b11 // if any promotion capture moves
           ) {
-            // 0b110 is king value
-            checked = 1;
-            break boardLoop;
+            if (this.board[(moves[j] >>> 8) & 0b111111] === (0b1100 | WHITE)) {
+              // 0b110 is king value
+              wc = 1;
+              break;
+            }
+          }
+        }
+      } else if (this.board[i] !== 0 && (this.board[i] & 0b1) === WHITE) {
+        const moves = this.getAllMoves(i);
+
+        for (let j = 0; j < moves.length; j++) {
+          if (
+            ((moves[j] >>> 4) & 0b1111) === moveTypes.CAPTURE ||
+            ((moves[j] >>> 6) & 0b11) === 0b11 // if any promotion capture moves
+          ) {
+            if (this.board[(moves[j] >>> 8) & 0b111111] === (0b1100 | BLACK)) {
+              // 0b110 is king value
+              bc = 1;
+              break;
+            }
           }
         }
       }
+
+      if (wc && bc) break;
     }
+    this.wc = wc;
+    this.bc = bc;
 
-    if (this.turn === WHITE) this.wc = checked;
-    else this.bc = checked;
-
-    this.sm = sm;
-
-    // modified from isCheckmated()
-    if (this.wc || this.bc) {
-      let wcm = this.wc;
-      let bcm = this.bc;
-
-      for (let i = 0; i < boardSize; i++) {
-        if (this.board[i] === 0 && wcm && (this.board[i] & 0b1) === WHITE)
-          if (this.getAvailableMoves(i).length > 0) {
-            wcm = 0;
-            break;
-          }
-
-        if (this.board[i] === 0 && bcm && (this.board[i] & 0b1) === BLACK)
-          if (this.getAvailableMoves(i).length > 0) {
-            bcm = 0;
-            break;
-          }
-      }
-
-      this.wcm = wcm;
-      this.bcm = bcm;
+    if (wc && bc) {
+      console.log(this.history.map((m) => moveToString(m)));
+      console.log(this.ascii());
+      console.log("WTF BOTH TEAMS CHECKED!!11!!");
     }
 
     // from updateCastle()
@@ -380,6 +436,93 @@ export class ChessterGame {
       (this.board[4] !== 0b1101 || this.board[0] !== 0b1001)
     )
       this.bcqc = 0;
+
+    if (this.simulation) return;
+
+    // modified from isCheckmated()
+    let wcm = this.wc;
+    let bcm = this.bc;
+
+    for (let i = 0; i < boardSize; i++) {
+      if (this.board[i] !== 0) {
+        if (
+          (this.board[i] & 0b1) === WHITE &&
+          wcm &&
+          this.getAvailableMoves(i).length > 0
+        ) {
+          wcm = 0;
+        }
+
+        if (
+          (this.board[i] & 0b1) === BLACK &&
+          bcm &&
+          this.getAvailableMoves(i).length > 0
+        ) {
+          bcm = 0;
+        }
+
+        if (
+          (this.board[i] & 0b1) === this.turn &&
+          sm &&
+          this.getAvailableMoves(i).length > 0
+        ) {
+          sm = 0; // no stalemate if the current player can move
+        }
+      }
+
+      if (wcm && bcm && sm) break;
+    }
+
+    this.wcm = wcm;
+    this.bcm = bcm;
+    this.sm = sm;
+  }
+
+  updateChecked() {
+    this.wc = this.isChecked(WHITE);
+    this.bc = this.isChecked(BLACK);
+    // updateChecked runs after turn is updated
+    if (this.wc) this.wcm = this.isCheckmated(WHITE);
+    if (this.bc) this.bcm = this.isCheckmated(BLACK);
+
+    this.sm = this.moves().length === 0 ? 1 : 0; // update stalemate
+  }
+
+  /**
+   * Is the king under attack?
+   * @param team The team to check
+   * @returns Whether the given team is checked
+   */
+  isChecked(team: ChessterTeam): number {
+    for (let i = 0; i < boardSize; i++) {
+      if (this.board[i] !== 0 && (this.board[i] & 0b1) !== team) {
+        const moves = this.getAllMoves(i);
+        for (let j = 0; j < moves.length; j++) {
+          if (
+            ((moves[j] >>> 4) & 0b1111) === moveTypes.CAPTURE ||
+            ((moves[j] >>> 6) & 0b11) === 0b11 // if any promotion capture moves
+          ) {
+            if (this.board[(moves[j] >>> 8) & 0b111111] === (0b1100 | team)) {
+              // 0b110 is king value
+              return 1;
+            }
+          }
+        }
+      }
+    }
+    return 0;
+  }
+  /**
+   * Are there any moves to get out of check?
+   * @param team The team to check
+   * @returns Whether the enemy team is checkmated
+   * @todo Implement this
+   */
+  isCheckmated(team: ChessterTeam): number {
+    for (let i = 0; i < boardSize; i++)
+      if (this.board[i] !== 0 && (this.board[i] & 0b1) === team)
+        if (this.getAvailableMoves(i).length > 0) return 0;
+    return 1;
   }
 
   moves() {
