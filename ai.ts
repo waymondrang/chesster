@@ -4,18 +4,20 @@ import {
   ChessterMove,
   MAX_PLAYER,
   MIN_PLAYER,
+  WHITE,
   boardSize,
+  moveTypes,
 } from "./types";
 import { moveToString } from "./util";
 
-const mobilityWeight = 3;
+const mobilityWeight = 2;
+const pieceValueWeight = 20;
 const teamPieceValueWeight = 20;
-const enemyPieceValueWeight = 21;
-const checkWeight = 100;
-const checkmateWeight = 10000;
+const enemyPieceValueWeight = 20;
+const checkWeight = 0;
+const checkmateWeight = 9999;
 
-const miniMaxDepth = 4; // not necessary if not going off time
-const miniMaxTimeLimit = 5000;
+const miniMaxDepth = 3;
 
 const MVV_LVA: number[][] = [
   [0, 0, 0, 0, 0, 0, 0], // victim K, attacker K, Q, R, B, N, P, None
@@ -27,7 +29,7 @@ const MVV_LVA: number[][] = [
   [0, 0, 0, 0, 0, 0, 0], // victim None, attacker K, Q, R, B, N, P, None
 ];
 
-const pieceValues: number[] = [0, 100, 310, 320, 500, 900, 2000, 0];
+const pieceValues: number[] = [0, 100, 320, 330, 550, 1000, 0, 0];
 
 function sortMoves(moves: number[]): number[] {
   const sortedMoves: number[] = [];
@@ -66,45 +68,133 @@ export class ChessterAI {
    * @returns
    */
   calculateStateScore(): number {
+    if (this.game.wcm)
+      return this.game.turn === WHITE ? -checkmateWeight : checkmateWeight;
+    if (this.game.bcm)
+      return this.game.turn === BLACK ? -checkmateWeight : checkmateWeight;
+    if (this.game.sm) return 0;
+
     let score = 0;
 
     for (let i = 0; i < boardSize; i++) {
-      if (this.game.board[i] !== 0) {
+      if (this.game.board[i]) {
         score +=
-          ((this.game.board[i] & 0b1) === this.team
-            ? teamPieceValueWeight
-            : -enemyPieceValueWeight) *
+          ((this.game.board[i] & 0b1) === this.game.turn ? 1 : -1) *
             pieceValues[(this.game.board[i] >>> 1) & 0b111] +
           mobilityWeight *
-            ((this.game.board[i] & 0b1) === this.team ? 1 : -1) *
-            this.game.getAvailableMoves(i).length;
+            ((this.game.board[i] & 0b1) === this.game.turn ? 1 : -1) *
+            this.game.getAvailableMoves(i).length; // if white multiply by -1
       }
     }
 
-    score +=
-      (this.team === BLACK ? 1 : -1) *
-      (checkWeight * (this.game.wc ? 1 : 0) +
-        -checkWeight * (this.game.bc ? 1 : 0) +
-        checkmateWeight * (this.game.wcm ? 1 : 0) +
-        -checkmateWeight * (this.game.bcm ? 1 : 0));
-
     return score;
+  }
+
+  quiesce(alpha: number = -Infinity, beta: number = Infinity) {
+    let standPat = this.calculateStateScore();
+
+    if (standPat >= beta) return beta;
+    if (standPat > alpha) alpha = standPat;
+
+    const moves = sortMoves(this.game.moves());
+
+    for (let i = moves.length - 1; i >= 0; i--) {
+      if (
+        ((moves[i] >>> 4) & 0b1111) === moveTypes.CAPTURE ||
+        ((moves[i] >>> 4) & 0b1111) === moveTypes.EN_PASSANT_BLACK ||
+        ((moves[i] >>> 4) & 0b1111) === moveTypes.EN_PASSANT_WHITE ||
+        ((moves[i] >>> 6) & 0b11) === 0b11 ||
+        this.game.wc ||
+        this.game.bc
+      ) {
+        this.game.move(moves[i]);
+
+        const score = -this.quiesce(-beta, -alpha);
+
+        this.game.undo();
+
+        if (score >= beta) return beta;
+        if (score > alpha) alpha = score;
+      }
+    }
+
+    return alpha;
+  }
+
+  negaScout(
+    alpha: number = -Infinity,
+    beta: number = Infinity,
+    depth: number = miniMaxDepth
+  ): number {
+    if (depth === 0 || this.game.wcm || this.game.bcm || this.game.sm)
+      return this.calculateStateScore();
+    // if (depth === 0) return this.quiesce(alpha, beta);
+
+    let b = beta;
+    let bestScore = -Infinity;
+
+    const moves = sortMoves(this.game.moves());
+
+    for (let i = moves.length - 1; i >= 0; i--) {
+      this.game.move(moves[i]);
+
+      let score = -this.negaScout(-b, -alpha, depth - 1);
+
+      // if (score > bestScore)
+      //   if (alpha < score && score < beta)
+      //     bestScore = Math.max(score, bestScore);
+      //   else bestScore = -this.negaScout(-beta, -score, depth - 1);
+
+      if (score > alpha && score < beta && i > 1)
+        score = -this.negaScout(-beta, -score, depth - 1);
+
+      bestScore = Math.max(score, bestScore);
+      alpha = Math.max(alpha, bestScore);
+
+      this.game.undo();
+
+      if (alpha >= beta) return alpha;
+
+      b = alpha + 1;
+    }
+
+    return bestScore;
+  }
+
+  negaScoutSearch(): [ChessterMove | undefined, number] {
+    let bestMove: ChessterMove | undefined;
+    let bestScore = -Infinity;
+
+    let alpha = -Infinity;
+    let beta = Infinity;
+
+    const moves = sortMoves(this.game.moves());
+
+    for (let i = moves.length - 1; i >= 0; i--) {
+      this.game.move(moves[i]);
+
+      let score = -this.negaScout(-beta, -alpha, miniMaxDepth - 1);
+
+      if (score > bestScore) {
+        bestScore = score;
+        bestMove = moves[i];
+      }
+
+      alpha = Math.max(alpha, score);
+
+      this.game.undo();
+    }
+
+    return [bestMove, bestScore];
   }
 
   miniMax(
     depth: number = miniMaxDepth,
     alpha: number = -Infinity,
     beta: number = Infinity,
-    playerType: number = MAX_PLAYER,
-    timeStart: number = performance.now()
+    playerType: number = MAX_PLAYER
   ): [ChessterMove | undefined, number] {
-    if (
-      depth === 0 ||
-      this.game.bcm ||
-      this.game.wcm ||
-      this.game.sm ||
-      performance.now() - timeStart > miniMaxTimeLimit
-    )
+    if (depth === 0 || this.game.bcm || this.game.wcm || this.game.sm)
       return [undefined, this.calculateStateScore()];
 
     if (playerType === MAX_PLAYER) {
@@ -121,13 +211,7 @@ export class ChessterAI {
 
         this.game.move(moves[j]);
 
-        const [_, value] = this.miniMax(
-          depth - 1,
-          alpha,
-          beta,
-          1 ^ playerType,
-          timeStart
-        );
+        const [_, value] = this.miniMax(depth - 1, alpha, beta, 1 ^ playerType);
 
         this.game.undo();
 
@@ -156,13 +240,7 @@ export class ChessterAI {
 
         this.game.move(moves[j]);
 
-        const [_, value] = this.miniMax(
-          depth - 1,
-          alpha,
-          beta,
-          1 ^ playerType,
-          timeStart
-        );
+        const [_, value] = this.miniMax(depth - 1, alpha, beta, 1 ^ playerType);
 
         this.game.undo();
 
@@ -187,11 +265,11 @@ export class ChessterAI {
     // this.root = new ChessterAINode(this.game.getState(), MAX_PLAYER, 0);
     // this.buildMoveTree(this.root, depth);
     this.team = this.game.turn;
-    const [bestMove, value] = this.miniMax();
+    const [move, value] = this.negaScoutSearch();
     console.log(
-      "time taken: " + (performance.now() - startTime) + "ms, value: " + value
+      "time taken: " + (performance.now() - startTime) + "ms. value: " + value
     );
-    return bestMove;
+    return move;
   }
 
   makeMove(): ChessterMove | undefined {
