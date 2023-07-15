@@ -97,10 +97,10 @@ export function fenStringToGameState(
   return {
     board: fenStringToBoard(fen.split(" ")[0], flip),
     turn: fenToPlayer[fen.split(" ")[1]],
-    wckc: fen.split(" ")[2].includes("K") ? 1 : 0,
-    wcqc: fen.split(" ")[2].includes("Q") ? 1 : 0,
-    bckc: fen.split(" ")[2].includes("k") ? 1 : 0,
-    bcqc: fen.split(" ")[2].includes("q") ? 1 : 0,
+    wckc: fen.split(" ")[2].includes("K"),
+    wcqc: fen.split(" ")[2].includes("Q"),
+    bckc: fen.split(" ")[2].includes("k"),
+    bcqc: fen.split(" ")[2].includes("q"),
   };
 }
 

@@ -10,26 +10,21 @@ import {
   defaultBoard,
   moveTypes,
 } from "./types";
-import {
-  binaryToString,
-  moveToString,
-  numberToLetterString,
-  numberToPieceString,
-} from "./util";
+import { binaryToString, numberToLetterString } from "./util";
 
 export class ChessterGame {
   board: number[]; // board is 64 bytes
-  wc: number; // white check
-  bc: number; // black check
-  wcm: number; // white checkmate
-  bcm: number; // black checkmate
-  wckc: number; // white can castle kingside
-  bckc: number; // black can castle kingside
-  wcqc: number; // white can castle queenside
-  bcqc: number; // black can castle queenside
-  sm: number; // stalemate
-  turn: 0 | 1;
-  simulation: 0 | 1;
+  wc: boolean; // white check
+  bc: boolean; // black check
+  wcm: boolean; // white checkmate
+  bcm: boolean; // black checkmate
+  wckc: boolean; // white can castle kingside
+  bckc: boolean; // black can castle kingside
+  wcqc: boolean; // white can castle queenside
+  bcqc: boolean; // black can castle queenside
+  sm: boolean; // stalemate
+  simulation: boolean;
+  turn: 1 | 0; // false is white, true is black
   history: ChessterHistory;
 
   /**
@@ -43,19 +38,19 @@ export class ChessterGame {
     this.board = state?.board ?? [...defaultBoard];
     this.turn = state?.turn ?? WHITE;
     this.history = state?.history ?? [];
-    this.simulation = state?.simulation ?? 0;
+    this.simulation = state?.simulation ?? false;
 
-    this.wc = state?.wc ?? 0; // white check
-    this.bc = state?.bc ?? 0; // black check
-    this.wcm = state?.wcm ?? 0; // white checkmate
-    this.bcm = state?.bcm ?? 0; // black checkmate
+    this.wc = state?.wc ?? false; // white check
+    this.bc = state?.bc ?? false; // black check
+    this.wcm = state?.wcm ?? false; // white checkmate
+    this.bcm = state?.bcm ?? false; // black checkmate
 
-    this.wckc = state?.wckc ?? 1; // white can castle kingside
-    this.wcqc = state?.wcqc ?? 1; // white can castle queenside
-    this.bckc = state?.bckc ?? 1; // black can castle kingside
-    this.bcqc = state?.bcqc ?? 1; // black can castle queenside
+    this.wckc = state?.wckc ?? true; // white can castle kingside
+    this.wcqc = state?.wcqc ?? true; // white can castle queenside
+    this.bckc = state?.bckc ?? true; // black can castle kingside
+    this.bcqc = state?.bcqc ?? true; // black can castle queenside
 
-    this.sm = state?.sm ?? 0; // stalemate
+    this.sm = state?.sm ?? false; // stalemate
 
     this.update();
   }
@@ -68,20 +63,16 @@ export class ChessterGame {
       const move = this.history.pop();
       if (move) {
         this.turn ^= 1;
-        this.sm = 0; // update stalemate
+        this.sm = false; // update stalemate
 
-        this.bcqc = (move >>> 31) & 0b1;
-        this.wcqc = (move >>> 30) & 0b1;
-        this.bckc = (move >>> 29) & 0b1;
-        this.wckc = (move >>> 28) & 0b1;
-        // this.bcm = this.turn === WHITE ? (move >>> 27) & 0b1 : this.bcm;
-        // this.wcm = this.turn === BLACK ? (move >>> 26) & 0b1 : this.wcm;
-        // this.bc = this.turn === WHITE ? (move >>> 25) & 0b1 : this.bc;
-        // this.wc = this.turn === BLACK ? (move >>> 24) & 0b1 : this.wc;
-        this.bcm = (move >>> 27) & 0b1;
-        this.wcm = (move >>> 26) & 0b1;
-        this.bc = (move >>> 25) & 0b1;
-        this.wc = (move >>> 24) & 0b1;
+        this.bcqc = ((move >>> 31) & 0b1) === 1;
+        this.wcqc = ((move >>> 30) & 0b1) === 1;
+        this.bckc = ((move >>> 29) & 0b1) === 1;
+        this.wckc = ((move >>> 28) & 0b1) === 1;
+        this.bcm = ((move >>> 27) & 0b1) === 1;
+        this.wcm = ((move >>> 26) & 0b1) === 1;
+        this.bc = ((move >>> 25) & 0b1) === 1;
+        this.wc = ((move >>> 24) & 0b1) === 1;
 
         switch ((move >>> 4) & 0b1111) {
           case moveTypes.PROMOTION_BISHOP_CAPTURE:
@@ -128,14 +119,14 @@ export class ChessterGame {
   move(move: ChessterMove) {
     // 32 bit number
     let history =
-      (this.bcqc << 31) |
-      (this.wcqc << 30) |
-      (this.bckc << 29) |
-      (this.wckc << 28) |
-      (this.bcm << 27) |
-      (this.wcm << 26) |
-      (this.bc << 25) |
-      (this.wc << 24);
+      ((this.bcqc ? 1 : 0) << 31) |
+      ((this.wcqc ? 1 : 0) << 30) |
+      ((this.bckc ? 1 : 0) << 29) |
+      ((this.wckc ? 1 : 0) << 28) |
+      ((this.bcm ? 1 : 0) << 27) |
+      ((this.wcm ? 1 : 0) << 26) |
+      ((this.bc ? 1 : 0) << 25) |
+      ((this.wc ? 1 : 0) << 24);
 
     switch ((move >>> 4) & 0b1111) {
       case moveTypes.CAPTURE:
@@ -306,18 +297,6 @@ export class ChessterGame {
   }
 
   update() {
-    // this.updateChecked();
-
-    // if (this.turn === WHITE && this.bc) {
-    //   this.bc = 0;
-    //   return;
-    // }
-
-    // if (this.turn === BLACK && this.wc) {
-    //   this.wc = 0;
-    //   return;
-    // }
-
     let checked = 0b00; // left bit is currentChecked, right bit is pastChecked
 
     // check if past team is still in check
@@ -365,119 +344,53 @@ export class ChessterGame {
       if (checked === 0b11) break;
     }
 
-    this.wc = this.turn === WHITE ? (checked & 0b10) >>> 1 : checked & 0b01;
-    this.bc = this.turn === WHITE ? checked & 0b01 : (checked & 0b10) >>> 1;
+    this.wc =
+      (this.turn === WHITE ? (checked & 0b10) >>> 1 : checked & 0b01) === 1;
+    this.bc =
+      (this.turn === WHITE ? checked & 0b01 : (checked & 0b10) >>> 1) === 1;
 
     // modified from updateCastle()
     this.wckc =
-      this.wckc === 1 &&
-      (this.board[60] !== 0b1100 || this.board[63] !== 0b1000)
-        ? 0
-        : 1;
+      this.wckc || (this.board[60] === 0b1100 && this.board[63] === 0b1000);
 
     this.wcqc =
-      this.wcqc === 1 &&
-      (this.board[60] !== 0b1100 || this.board[56] !== 0b1000)
-        ? 0
-        : 1;
+      this.wcqc || (this.board[60] === 0b1100 && this.board[56] === 0b1000);
 
     this.bckc =
-      this.bckc === 1 && (this.board[4] !== 0b1101 || this.board[7] !== 0b1001)
-        ? 0
-        : 1;
+      this.bckc || (this.board[4] === 0b1101 && this.board[7] === 0b1001);
 
     this.bcqc =
-      this.bcqc === 1 && (this.board[4] !== 0b1101 || this.board[0] !== 0b1001)
-        ? 0
-        : 1;
+      this.bcqc || (this.board[4] === 0b1101 && this.board[0] === 0b1001);
 
     if (this.simulation) return;
+
+    /*
+     * the below code utilizes the fact that both teams cannot be checked at the same time. additionally,
+     * we only need to check if the current team is in checkmate. we do not need to check the previous team
+     * as they could not make any moves that would result in check.
+     */
 
     // modified from isCheckmated()
     let wcm = this.wc;
     let bcm = this.bc;
-    let sm = 1;
+    let sm = true;
 
     for (let i = 0; i < boardSize; i++) {
-      if (this.board[i] !== 0) {
-        if (
-          wcm &&
-          (this.board[i] & 0b1) === WHITE &&
-          this.getAvailableMoves(i).length > 0
-        ) {
-          wcm = 0;
-        }
-
-        if (
-          bcm &&
-          (this.board[i] & 0b1) === BLACK &&
-          this.getAvailableMoves(i).length > 0
-        ) {
-          bcm = 0;
-        }
-
-        if (
-          sm &&
-          (this.board[i] & 0b1) === this.turn &&
-          this.getAvailableMoves(i).length > 0
-        ) {
-          sm = 0; // no stalemate if the current player can move
-        }
+      if (
+        this.board[i] !== 0 &&
+        (this.board[i] & 0b1) === this.turn &&
+        this.getAvailableMoves(i).length > 0
+      ) {
+        if (this.turn === WHITE && wcm) wcm = false;
+        else if (this.turn === BLACK && bcm) bcm = false;
+        sm = false;
+        break;
       }
-
-      if (wcm && bcm && sm) break;
     }
 
     this.wcm = wcm;
     this.bcm = bcm;
-    this.sm = sm;
-  }
-
-  updateChecked() {
-    this.wc = this.isChecked(WHITE);
-    this.bc = this.isChecked(BLACK);
-    // updateChecked runs after turn is updated
-    if (this.wc) this.wcm = this.isCheckmated(WHITE);
-    if (this.bc) this.bcm = this.isCheckmated(BLACK);
-
-    this.sm = this.moves().length === 0 ? 1 : 0; // update stalemate
-  }
-
-  /**
-   * Is the king under attack?
-   * @param team The team to check
-   * @returns Whether the given team is checked
-   */
-  isChecked(team: ChessterTeam): number {
-    for (let i = 0; i < boardSize; i++) {
-      if (this.board[i] !== 0 && (this.board[i] & 0b1) !== team) {
-        const moves = this.getAllMoves(i);
-        for (let j = 0; j < moves.length; j++) {
-          if (
-            ((moves[j] >>> 4) & 0b1111) === moveTypes.CAPTURE ||
-            ((moves[j] >>> 6) & 0b11) === 0b11 // if any promotion capture moves
-          ) {
-            if (this.board[(moves[j] >>> 8) & 0b111111] === (0b1100 | team)) {
-              // 0b110 is king value
-              return 1;
-            }
-          }
-        }
-      }
-    }
-    return 0;
-  }
-  /**
-   * Are there any moves to get out of check?
-   * @param team The team to check
-   * @returns Whether the enemy team is checkmated
-   * @todo Implement this
-   */
-  isCheckmated(team: ChessterTeam): number {
-    for (let i = 0; i < boardSize; i++)
-      if (this.board[i] !== 0 && (this.board[i] & 0b1) === team)
-        if (this.getAvailableMoves(i).length > 0) return 0;
-    return 1;
+    this.sm = wcm === false && bcm === false && sm === true;
   }
 
   moves() {
@@ -551,14 +464,17 @@ export class ChessterGame {
     if (this.simulation) return moves;
 
     const finalMoves = [];
-    const team = this.board[location] & 0b1;
+    // const team = this.board[location] & 0b1;
 
-    this.simulation = 1;
+    this.simulation = true;
 
     for (let i = 0; i < moves.length; i++) {
       this.move(moves[i]);
 
-      if ((team === WHITE && !this.wc) || (team === BLACK && !this.bc)) {
+      if (
+        (this.turn === BLACK && this.wc === false) ||
+        (this.turn === WHITE && this.bc === false)
+      ) {
         this.undo();
 
         if (((moves[i] >>> 4) & 0b1111) === moveTypes.CASTLE_KINGSIDE) {
@@ -568,7 +484,10 @@ export class ChessterGame {
               (moveTypes.MOVE << 4)
           );
 
-          if ((team === WHITE && !this.wc) || (team === BLACK && !this.bc))
+          if (
+            (this.turn === WHITE && this.wc === false) ||
+            (this.turn === BLACK && this.bc === false)
+          )
             finalMoves.push(moves[i]);
 
           this.undo();
@@ -579,7 +498,10 @@ export class ChessterGame {
               (moveTypes.MOVE << 4)
           );
 
-          if ((team === WHITE && !this.wc) || (team === BLACK && !this.bc))
+          if (
+            (this.turn === WHITE && this.wc === false) ||
+            (this.turn === BLACK && this.bc === false)
+          )
             finalMoves.push(moves[i]);
 
           this.undo();
@@ -591,7 +513,7 @@ export class ChessterGame {
       }
     }
 
-    this.simulation = 0;
+    this.simulation = false;
 
     return finalMoves;
   }
@@ -767,7 +689,7 @@ export class ChessterGame {
     }
 
     // castling
-    if ((piece & 0b1) === 0 && this.wc === 0) {
+    if ((piece & 0b1) === 0 && this.wc === false) {
       // white king-side
       if (
         this.wckc &&
@@ -798,7 +720,7 @@ export class ChessterGame {
         );
     }
 
-    if ((piece & 0b1) === 1 && this.bc === 0) {
+    if ((piece & 0b1) === 1 && this.bc === false) {
       // black king-side
       if (
         this.bckc &&
@@ -1193,8 +1115,6 @@ export class ChessterGame {
   }
 
   getQueenMoves(piece: number, location: number): number[] {
-    const moves: number[] = [];
-
     // how performant is this?
     return [
       ...this.getBishopMoves(piece, location),

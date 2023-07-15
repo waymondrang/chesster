@@ -74,19 +74,19 @@ export type ChessterPlayer = {
 export type ChessterMove = number;
 
 export type ChessterGameState = {
-  board: Array<number>;
-  wc: number; // white check
-  bc: number; // black check
-  wcm: number; // white checkmate
-  bcm: number; // black checkmate
-  wckc: number; // can white castle kingside
-  wcqc: number; // can white castle queenside
-  bckc: number; // can black castle kingside
-  bcqc: number; // can black castle queenside
-  sm: number; // stalemate
+  board: number[];
+  wc: boolean; // white check
+  bc: boolean; // black check
+  wcm: boolean; // white checkmate
+  bcm: boolean; // black checkmate
+  wckc: boolean; // can white castle kingside
+  wcqc: boolean; // can white castle queenside
+  bckc: boolean; // can black castle kingside
+  bcqc: boolean; // can black castle queenside
+  sm: boolean; // stalemate
+  simulation: boolean;
   turn: 0 | 1;
   history: ChessterHistory;
-  simulation: 0 | 1;
 };
 
 export type PartialChessterGameState = {

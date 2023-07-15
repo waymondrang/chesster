@@ -78,10 +78,10 @@ export class ChessterAI {
 
     score +=
       (this.team === BLACK ? 1 : -1) *
-      (checkWeight * this.game.wc +
-        -checkWeight * this.game.bc +
-        checkmateWeight * this.game.wcm +
-        -checkmateWeight * this.game.bcm);
+      (checkWeight * (this.game.wc ? 1 : 0) +
+        -checkWeight * (this.game.bc ? 1 : 0) +
+        checkmateWeight * (this.game.wcm ? 1 : 0) +
+        -checkmateWeight * (this.game.bcm ? 1 : 0));
 
     return score;
   }
