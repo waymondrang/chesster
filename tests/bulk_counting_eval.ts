@@ -23,7 +23,7 @@ function countBulkPositionsCompare(depth: number): number {
   let count = 0;
 
   for (let i = 0; i < boardSize; i++) {
-    if (game.board[i] !== 0 && (game.board[i] & 0b1) === game.turn) {
+    if (game.board[i] && (game.board[i] & 0b1) === game.turn) {
       const moves = game.getAvailableMoves(i);
       for (let j = 0; j < moves.length; j++) {
         game.move(moves[j]);
@@ -69,7 +69,7 @@ function countBulkPositions(
   if (depth <= 0)
     return [
       1,
-      ((game.history[game.history.length - 1] >>> 20) & 0b1111) !== 0 ? 1 : 0,
+      (game.history[game.history.length - 1] >>> 20) & 0b1111 ? 1 : 0,
       game.wc || game.bc ? 1 : 0,
       game.wcm || game.bcm ? 1 : 0,
       game.sm ? 1 : 0,
@@ -82,7 +82,7 @@ function countBulkPositions(
   let stalemates = 0;
 
   for (let i = 0; i < boardSize; i++) {
-    if (game.board[i] !== 0 && (game.board[i] & 0b1) === game.turn) {
+    if (game.board[i] && (game.board[i] & 0b1) === game.turn) {
       const moves = game.getAvailableMoves(i);
 
       for (let j = 0; j < moves.length; j++) {
@@ -111,7 +111,7 @@ function countBulkPositionsSimple(depth: number): number {
   let count = 0;
 
   for (let i = 0; i < boardSize; i++) {
-    if (game.board[i] !== 0 && (game.board[i] & 0b1) === game.turn) {
+    if (game.board[i] && (game.board[i] & 0b1) === game.turn) {
       const moves = game.getAvailableMoves(i);
       for (let j = 0; j < moves.length; j++) {
         game.move(moves[j]);
