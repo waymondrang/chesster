@@ -301,11 +301,9 @@ export class ChessterGame {
 
     // check if past team is still in check
     for (let i = 0; i < boardSize; i++) {
-      if (
-        (checked & 0b01) === 0 &&
-        this.board[i] !== 0 &&
-        (this.board[i] & 0b1) === this.turn
-      ) {
+      if (this.board[i] === 0) continue; // saved ~170ms
+
+      if ((checked & 0b01) === 0 && (this.board[i] & 0b1) === this.turn) {
         const moves = this.getAllMoves(i);
 
         for (let j = 0; j < moves.length; j++) {
@@ -322,7 +320,6 @@ export class ChessterGame {
         }
       } else if (
         (checked & 0b10) === 0 &&
-        this.board[i] !== 0 &&
         (this.board[i] & 0b1) !== this.turn
       ) {
         // check if current turn is in check
