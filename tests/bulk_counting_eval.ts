@@ -11,10 +11,10 @@ import {
 const game = new ChessterGame();
 const chess = new Chess();
 
-const n = 2;
-const depth = 5;
+const n = 1;
+const depth = 4;
 const fen = "";
-const counter: number = 0; // default is 0
+const counter: number = 1; // default is 0
 
 // counter 2
 function countBulkPositionsCompare(depth: number): number {

@@ -371,9 +371,10 @@ export class ChessterGame {
      */
 
     // modified from isCheckmated()
-    let wcm = this.wc;
-    let bcm = this.bc;
-    let sm = true;
+
+    this.wcm = this.wc;
+    this.bcm = this.bc;
+    this.sm = true;
 
     for (let i = 0; i < boardSize; i++) {
       if (
@@ -381,16 +382,14 @@ export class ChessterGame {
         (this.board[i] & 0b1) === this.turn &&
         this.getAvailableMoves(i).length > 0
       ) {
-        if (this.turn === WHITE && wcm) wcm = false;
-        else if (this.turn === BLACK && bcm) bcm = false;
-        sm = false;
+        if (this.turn === WHITE && this.wcm) this.wcm = false;
+        else if (this.turn === BLACK && this.bcm) this.bcm = false;
+        this.sm = false;
         break;
       }
     }
 
-    this.wcm = wcm;
-    this.bcm = bcm;
-    this.sm = wcm === false && bcm === false && sm === true;
+    this.sm = !this.wcm && !this.bcm && this.sm;
   }
 
   moves() {
@@ -472,8 +471,7 @@ export class ChessterGame {
       this.move(moves[i]);
 
       if (
-        (this.turn === BLACK && this.wc === false) ||
-        (this.turn === WHITE && this.bc === false)
+        !((this.turn === WHITE || this.wc) && (this.turn === BLACK || this.bc))
       ) {
         this.undo();
 
@@ -485,8 +483,10 @@ export class ChessterGame {
           );
 
           if (
-            (this.turn === WHITE && this.wc === false) ||
-            (this.turn === BLACK && this.bc === false)
+            !(
+              (this.turn === BLACK || this.wc) &&
+              (this.turn === WHITE || this.bc)
+            )
           )
             finalMoves.push(moves[i]);
 
@@ -499,8 +499,10 @@ export class ChessterGame {
           );
 
           if (
-            (this.turn === WHITE && this.wc === false) ||
-            (this.turn === BLACK && this.bc === false)
+            !(
+              (this.turn === BLACK || this.wc) &&
+              (this.turn === WHITE || this.bc)
+            )
           )
             finalMoves.push(moves[i]);
 
