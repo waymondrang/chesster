@@ -394,43 +394,24 @@ export class ChessterGame {
     if (this.simulation) return;
 
     // modified from isCheckmated()
-    let wcm = this.wc;
-    let bcm = this.bc;
-    let sm = 1;
+    this.wcm = this.wc;
+    this.bcm = this.bc;
+    this.sm = 1;
 
     for (let i = 0; i < boardSize; i++) {
-      if (this.board[i] !== 0) {
-        if (
-          wcm &&
-          (this.board[i] & 0b1) === WHITE &&
-          this.getAvailableMoves(i).length > 0
-        ) {
-          wcm = 0;
-        }
-
-        if (
-          bcm &&
-          (this.board[i] & 0b1) === BLACK &&
-          this.getAvailableMoves(i).length > 0
-        ) {
-          bcm = 0;
-        }
-
-        if (
-          sm &&
-          (this.board[i] & 0b1) === this.turn &&
-          this.getAvailableMoves(i).length > 0
-        ) {
-          sm = 0; // no stalemate if the current player can move
-        }
+      if (
+        this.board[i] !== 0 &&
+        (this.board[i] & 0b1) === this.turn &&
+        this.getAvailableMoves(i).length > 0
+      ) {
+        if (this.turn === WHITE && this.wcm) this.wcm = 0;
+        else if (this.turn === BLACK && this.bcm) this.bcm = 0;
+        this.sm = 0;
+        break;
       }
-
-      if (wcm && bcm && sm) break;
     }
 
-    this.wcm = wcm;
-    this.bcm = bcm;
-    this.sm = sm;
+    this.sm = (1 ^ this.wcm) & (1 ^ this.bcm) & this.sm;
   }
 
   updateChecked() {
