@@ -347,17 +347,21 @@ export class ChessterGame {
       (this.turn === WHITE ? checked & 0b01 : (checked & 0b10) >>> 1) === 1;
 
     // modified from updateCastle()
-    this.wckc =
-      this.wckc || (this.board[60] === 0b1100 && this.board[63] === 0b1000);
+    this.wckc = this.wckc
+      ? this.board[60] === 0b1100 && this.board[63] === 0b1000
+      : false;
 
-    this.wcqc =
-      this.wcqc || (this.board[60] === 0b1100 && this.board[56] === 0b1000);
+    this.wcqc = this.wcqc
+      ? this.board[60] === 0b1100 && this.board[56] === 0b1000
+      : false;
 
-    this.bckc =
-      this.bckc || (this.board[4] === 0b1101 && this.board[7] === 0b1001);
+    this.bckc = this.bckc
+      ? this.board[4] === 0b1101 && this.board[7] === 0b1001
+      : false;
 
-    this.bcqc =
-      this.bcqc || (this.board[4] === 0b1101 && this.board[0] === 0b1001);
+    this.bcqc = this.bcqc
+      ? this.board[4] === 0b1101 && this.board[0] === 0b1001
+      : false;
 
     if (this.simulation) return;
 
@@ -481,8 +485,8 @@ export class ChessterGame {
 
           if (
             !(
-              (this.turn === BLACK || this.wc) &&
-              (this.turn === WHITE || this.bc)
+              (this.turn === WHITE || this.wc) &&
+              (this.turn === BLACK || this.bc)
             )
           )
             finalMoves.push(moves[i]);
@@ -497,8 +501,8 @@ export class ChessterGame {
 
           if (
             !(
-              (this.turn === BLACK || this.wc) &&
-              (this.turn === WHITE || this.bc)
+              (this.turn === WHITE || this.wc) &&
+              (this.turn === BLACK || this.bc)
             )
           )
             finalMoves.push(moves[i]);
@@ -1089,7 +1093,7 @@ export class ChessterGame {
     }
 
     // up
-    for (let i = 1; location - 7 * i > 0; i++) {
+    for (let i = 1; location - 8 * i >= 0; i++) {
       if (this.board[location - 8 * i] === 0) {
         moves.push(
           (location << 14) |
@@ -1114,11 +1118,210 @@ export class ChessterGame {
   }
 
   getQueenMoves(piece: number, location: number): number[] {
-    // how performant is this?
-    return [
-      ...this.getBishopMoves(piece, location),
-      ...this.getRookMoves(piece, location),
-    ];
+    const moves: number[] = [];
+
+    ////////////////////////////
+    //     getBishopMoves     //
+    ////////////////////////////
+
+    // down right
+    for (
+      let i = 1;
+      ((location + 9 * i) & 0b111) > 0 && location + 9 * i < 64;
+      i++
+    ) {
+      if (this.board[location + 9 * i] === 0) {
+        moves.push(
+          (location << 14) |
+            ((location + 9 * i) << 8) |
+            (moveTypes.MOVE << 4) |
+            piece
+        );
+      } else if ((this.board[location + 9 * i] & 0b1) !== (piece & 0b1)) {
+        moves.push(
+          (location << 14) |
+            ((location + 9 * i) << 8) |
+            (moveTypes.CAPTURE << 4) |
+            piece
+        );
+        break;
+      } else {
+        break;
+      }
+    }
+
+    // up right
+    for (
+      let i = 1;
+      ((location - 7 * i) & 0b111) !== 0b000 && location - 7 * i > 0;
+      i++
+    ) {
+      if (this.board[location - 7 * i] === 0) {
+        moves.push(
+          (location << 14) |
+            ((location - 7 * i) << 8) |
+            (moveTypes.MOVE << 4) |
+            piece
+        );
+      } else if ((this.board[location - 7 * i] & 0b1) !== (piece & 0b1)) {
+        moves.push(
+          (location << 14) |
+            ((location - 7 * i) << 8) |
+            (moveTypes.CAPTURE << 4) |
+            piece
+        );
+        break;
+      } else {
+        break;
+      }
+    }
+
+    // down left
+    for (
+      let i = 1;
+      ((location + 7 * i) & 0b111) < 7 && location + 7 * i < 64;
+      i++
+    ) {
+      if (this.board[location + 7 * i] === 0) {
+        moves.push(
+          (location << 14) |
+            ((location + 7 * i) << 8) |
+            (moveTypes.MOVE << 4) |
+            piece
+        );
+      } else if ((this.board[location + 7 * i] & 0b1) !== (piece & 0b1)) {
+        moves.push(
+          (location << 14) |
+            ((location + 7 * i) << 8) |
+            (moveTypes.CAPTURE << 4) |
+            piece
+        );
+        break;
+      } else {
+        // friendly piece
+        break;
+      }
+    }
+
+    // up left
+    for (
+      let i = 1;
+      ((location - 9 * i) & 0b111) < 7 && location - 9 * i >= 0;
+      i++
+    ) {
+      if (this.board[location - 9 * i] === 0) {
+        moves.push(
+          (location << 14) |
+            ((location - 9 * i) << 8) |
+            (moveTypes.MOVE << 4) |
+            piece
+        );
+      } else if ((this.board[location - 9 * i] & 0b1) !== (piece & 0b1)) {
+        moves.push(
+          (location << 14) |
+            ((location - 9 * i) << 8) |
+            (moveTypes.CAPTURE << 4) |
+            piece
+        );
+        break;
+      } else {
+        break;
+      }
+    }
+
+    //////////////////////////
+    //     getRookMoves     //
+    //////////////////////////
+
+    // right
+    for (let i = 1; i < 8 - (location & 0b111); i++) {
+      if (this.board[location + i] === 0) {
+        moves.push(
+          (location << 14) |
+            ((location + i) << 8) |
+            (moveTypes.MOVE << 4) |
+            piece
+        );
+      } else if ((this.board[location + i] & 0b1) !== (piece & 0b1)) {
+        moves.push(
+          (location << 14) |
+            ((location + i) << 8) |
+            (moveTypes.CAPTURE << 4) |
+            piece
+        );
+        break;
+      } else {
+        break;
+      }
+    }
+
+    // left
+    for (let i = 1; i < (location & 0b111) + 1; i++) {
+      if (this.board[location - i] === 0) {
+        moves.push(
+          (location << 14) |
+            ((location - i) << 8) |
+            (moveTypes.MOVE << 4) |
+            piece
+        );
+      } else if ((this.board[location - i] & 0b1) !== (piece & 0b1)) {
+        moves.push(
+          (location << 14) |
+            ((location - i) << 8) |
+            (moveTypes.CAPTURE << 4) |
+            piece
+        );
+        break;
+      } else {
+        break;
+      }
+    }
+
+    // down
+    for (let i = 1; location + 8 * i < 64; i++) {
+      if (this.board[location + 8 * i] === 0) {
+        moves.push(
+          (location << 14) |
+            ((location + 8 * i) << 8) |
+            (moveTypes.MOVE << 4) |
+            piece
+        );
+      } else if ((this.board[location + 8 * i] & 0b1) !== (piece & 0b1)) {
+        moves.push(
+          (location << 14) |
+            ((location + 8 * i) << 8) |
+            (moveTypes.CAPTURE << 4) |
+            piece
+        );
+        break;
+      } else {
+        break;
+      }
+    }
+
+    // up
+    for (let i = 1; location - 8 * i >= 0; i++) {
+      if (this.board[location - 8 * i] === 0) {
+        moves.push(
+          (location << 14) |
+            ((location - 8 * i) << 8) |
+            (moveTypes.MOVE << 4) |
+            piece
+        );
+      } else if ((this.board[location - 8 * i] & 0b1) !== (piece & 0b1)) {
+        moves.push(
+          (location << 14) |
+            ((location - 8 * i) << 8) |
+            (moveTypes.CAPTURE << 4) |
+            piece
+        );
+        break;
+      } else {
+        break;
+      }
+    }
+
+    return moves;
   }
 
   getPawnMoves(piece: number, location: number): number[] {

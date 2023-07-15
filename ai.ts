@@ -6,13 +6,13 @@ import {
   MIN_PLAYER,
   boardSize,
 } from "./types";
+import { moveToString } from "./util";
 
 const mobilityWeight = 3;
 const teamPieceValueWeight = 20;
 const enemyPieceValueWeight = 21;
 const checkWeight = 100;
 const checkmateWeight = 10000;
-const stalemateWeight = 0;
 
 const miniMaxDepth = 4; // not necessary if not going off time
 const miniMaxTimeLimit = 5000;
@@ -33,14 +33,19 @@ function sortMoves(moves: number[]): number[] {
   const sortedMoves: number[] = [];
 
   for (let i = 0; i < moves.length; i++) {
-    const move = moves[i];
+    try {
+      const move = moves[i];
 
-    let score = MVV_LVA[(moves[i] >>> 21) & 0b111][(moves[i] >>> 1) & 0b111];
+      let score = MVV_LVA[(moves[i] >>> 21) & 0b111][(moves[i] >>> 1) & 0b111];
 
-    let j = 0;
-    while (j < sortedMoves.length && score < sortedMoves[j]) j++;
+      let j = 0;
+      while (j < sortedMoves.length && score < sortedMoves[j]) j++;
 
-    sortedMoves.splice(j, 0, move);
+      sortedMoves.splice(j, 0, move);
+    } catch (e) {
+      console.log(moveToString(moves[i]));
+      throw e;
+    }
   }
 
   return sortedMoves;

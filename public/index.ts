@@ -46,19 +46,6 @@ const undo = document.querySelector("#undo") as HTMLButtonElement;
 const game = new ChessterGame();
 const aiWorker = new Worker("worker.js");
 
-game.init(
-  fenStringToGameState(
-    "rnb1kbnr/pp1ppppp/8/q1P5/8/8/PPP1PPPP/RNBQKBNR w KQkq - 1 3"
-  )
-);
-// game.init(
-//   fenStringToGameState(
-//     "rnbqkbnr/pppp1ppp/4p3/8/8/1P6/PBPPPPPP/RN1QKBNR w KQkq - 1 2"
-//   )
-// );
-
-// rn3k1r/p1Bp2p1/5ppn/6N1/3pQ3/8/PP2PPPP/4KB1R w K - 4 21
-
 ///////////////////
 //     types     //
 ///////////////////
