@@ -278,11 +278,11 @@ export class ChessterGame {
     let s = "   ┏------------------------┓\n";
     for (let i = 0; i < boardSize; i++) {
       // display the rank
-      if ((i & 0b111) === 0) {
+      if (!(i & 0b111)) {
         s += " " + "87654321"[(i >>> 3) & 0b111] + " |";
       }
 
-      if (this.board[i] !== 0) {
+      if (this.board[i]) {
         s += " " + numberToLetterString(this.board[i]) + " ";
       } else {
         s += " . ";
@@ -301,9 +301,9 @@ export class ChessterGame {
 
     // check if past team is still in check
     for (let i = 0; i < boardSize; i++) {
-      if (this.board[i] === 0) continue; // saved ~170ms
+      if (!this.board[i]) continue; // saved ~170ms
 
-      if ((checked & 0b01) === 0 && (this.board[i] & 0b1) === this.turn) {
+      if (!(checked & 0b01) && (this.board[i] & 0b1) === this.turn) {
         const moves = this.getAllMoves(i);
 
         for (let j = 0; j < moves.length; j++) {
@@ -318,10 +318,7 @@ export class ChessterGame {
             break;
           }
         }
-      } else if (
-        (checked & 0b10) === 0 &&
-        (this.board[i] & 0b1) !== this.turn
-      ) {
+      } else if (!(checked & 0b10) && (this.board[i] & 0b1) !== this.turn) {
         // check if current turn is in check
         const moves = this.getAllMoves(i);
 
@@ -379,7 +376,7 @@ export class ChessterGame {
 
     for (let i = 0; i < boardSize; i++) {
       if (
-        this.board[i] !== 0 &&
+        this.board[i] &&
         (this.board[i] & 0b1) === this.turn &&
         this.getAvailableMoves(i).length > 0
       ) {
@@ -397,7 +394,7 @@ export class ChessterGame {
     let moves = [];
 
     for (let i = 0; i < boardSize; i++) {
-      if (this.board[i] !== 0 && (this.board[i] & 0b1) === this.turn) {
+      if (this.board[i] && (this.board[i] & 0b1) === this.turn) {
         moves.push(...this.getAvailableMoves(i));
       }
     }
@@ -533,7 +530,7 @@ export class ChessterGame {
     // bottom row (if not bottom row)
     if ((location & 0b111000) !== 0b111000) {
       // if location contains enemy piece
-      if (this.board[location + 8] === 0) {
+      if (!this.board[location + 8]) {
         moves.push(
           (location << 14) |
             ((location + 8) << 8) |
@@ -552,9 +549,9 @@ export class ChessterGame {
     }
 
     // top row
-    if ((location & 0b111000) !== 0) {
+    if (location & 0b111000) {
       // if location contains enemy piece
-      if (this.board[location - 8] === 0) {
+      if (!this.board[location - 8]) {
         moves.push(
           (location << 14) |
             ((location - 8) << 8) |
@@ -574,7 +571,7 @@ export class ChessterGame {
 
     // right-most column
     if ((location & 0b111) !== 0b111) {
-      if (this.board[location + 1] === 0) {
+      if (!this.board[location + 1]) {
         moves.push(
           (location << 14) |
             ((location + 1) << 8) |
@@ -593,7 +590,7 @@ export class ChessterGame {
       // bottom row
       if ((location & 0b111000) !== 0b111000) {
         // alternatively could do < 56
-        if (this.board[location + 9] === 0) {
+        if (!this.board[location + 9]) {
           moves.push(
             (location << 14) |
               ((location + 9) << 8) |
@@ -611,9 +608,9 @@ export class ChessterGame {
       }
 
       // top row
-      if ((location & 0b111000) !== 0) {
+      if (location & 0b111000) {
         // moves.push(-7);
-        if (this.board[location - 7] === 0) {
+        if (!this.board[location - 7]) {
           moves.push(
             (location << 14) |
               ((location - 7) << 8) |
@@ -631,10 +628,10 @@ export class ChessterGame {
       }
     }
 
-    if ((location & 0b111) !== 0) {
+    if (location & 0b111) {
       // left-most column
       // moves.push(-1);
-      if (this.board[location - 1] === 0) {
+      if (!this.board[location - 1]) {
         moves.push(
           (location << 14) |
             ((location - 1) << 8) |
@@ -651,9 +648,9 @@ export class ChessterGame {
       }
 
       // top row
-      if ((location & 0b111000) !== 0) {
+      if (location & 0b111000) {
         // moves.push(-9);
-        if (this.board[location - 9] === 0) {
+        if (!this.board[location - 9]) {
           moves.push(
             (location << 14) |
               ((location - 9) << 8) |
@@ -673,7 +670,7 @@ export class ChessterGame {
       // bottom row
       if ((location & 0b111000) !== 0b111000) {
         // moves.push(7);
-        if (this.board[location + 7] === 0) {
+        if (!this.board[location + 7]) {
           moves.push(
             (location << 14) |
               ((location + 7) << 8) |
@@ -692,13 +689,9 @@ export class ChessterGame {
     }
 
     // castling
-    if ((piece & 0b1) === 0 && this.wc === false) {
+    if (!(piece & 0b1) && !this.wc) {
       // white king-side
-      if (
-        this.wckc &&
-        this.board[location + 1] === 0 &&
-        this.board[location + 2] === 0
-      )
+      if (this.wckc && !this.board[location + 1] && !this.board[location + 2])
         moves.push(
           (location << 14) |
             ((location + 2) << 8) |
@@ -710,9 +703,9 @@ export class ChessterGame {
       // white queen-side
       if (
         this.wcqc &&
-        this.board[location - 1] === 0 &&
-        this.board[location - 2] === 0 &&
-        this.board[location - 3] === 0
+        !this.board[location - 1] &&
+        !this.board[location - 2] &&
+        !this.board[location - 3]
       )
         moves.push(
           (location << 14) |
@@ -725,11 +718,7 @@ export class ChessterGame {
 
     if ((piece & 0b1) === 1 && this.bc === false) {
       // black king-side
-      if (
-        this.bckc &&
-        this.board[location + 1] === 0 &&
-        this.board[location + 2] === 0
-      )
+      if (this.bckc && !this.board[location + 1] && !this.board[location + 2])
         moves.push(
           (location << 14) |
             ((location + 2) << 8) |
@@ -741,9 +730,9 @@ export class ChessterGame {
       // black queen-side
       if (
         this.bcqc &&
-        this.board[location - 1] === 0 &&
-        this.board[location - 2] === 0 &&
-        this.board[location - 3] === 0
+        !this.board[location - 1] &&
+        !this.board[location - 2] &&
+        !this.board[location - 3]
       )
         moves.push(
           (location << 14) |
@@ -762,7 +751,7 @@ export class ChessterGame {
 
     if (location < 48) {
       if ((location & 0b111) !== 0b111)
-        if (this.board[location + 17] === 0) {
+        if (!this.board[location + 17]) {
           // can do 2 down 1 right
           moves.push(
             (location << 14) |
@@ -779,8 +768,8 @@ export class ChessterGame {
           );
         }
 
-      if ((location & 0b111) !== 0)
-        if (this.board[location + 15] === 0) {
+      if (location & 0b111)
+        if (!this.board[location + 15]) {
           moves.push(
             (location << 14) |
               ((location + 15) << 8) |
@@ -799,7 +788,7 @@ export class ChessterGame {
 
     if (location > 15) {
       if ((location & 0b111) !== 0b111)
-        if (this.board[location - 15] === 0) {
+        if (!this.board[location - 15]) {
           moves.push(
             (location << 14) |
               ((location - 15) << 8) |
@@ -815,8 +804,8 @@ export class ChessterGame {
           );
         }
 
-      if ((location & 0b111) !== 0)
-        if (this.board[location - 17] === 0) {
+      if (location & 0b111)
+        if (!this.board[location - 17]) {
           moves.push(
             (location << 14) |
               ((location - 17) << 8) |
@@ -835,7 +824,7 @@ export class ChessterGame {
 
     if ((location & 0b111) > 1) {
       if (location < 56) {
-        if (this.board[location + 6] === 0) {
+        if (!this.board[location + 6]) {
           moves.push(
             (location << 14) |
               ((location + 6) << 8) |
@@ -853,7 +842,7 @@ export class ChessterGame {
       }
 
       if (location > 7) {
-        if (this.board[location - 10] === 0) {
+        if (!this.board[location - 10]) {
           moves.push(
             (location << 14) |
               ((location - 10) << 8) |
@@ -873,7 +862,7 @@ export class ChessterGame {
 
     if ((location & 0b111) < 6) {
       if (location < 56) {
-        if (this.board[location + 10] === 0) {
+        if (!this.board[location + 10]) {
           moves.push(
             (location << 14) |
               ((location + 10) << 8) |
@@ -891,7 +880,7 @@ export class ChessterGame {
       }
 
       if (location > 7) {
-        if (this.board[location - 6] === 0) {
+        if (!this.board[location - 6]) {
           moves.push(
             (location << 14) |
               ((location - 6) << 8) |
@@ -921,7 +910,7 @@ export class ChessterGame {
       ((location + 9 * i) & 0b111) > 0 && location + 9 * i < 64;
       i++
     ) {
-      if (this.board[location + 9 * i] === 0) {
+      if (!this.board[location + 9 * i]) {
         moves.push(
           (location << 14) |
             ((location + 9 * i) << 8) |
@@ -942,12 +931,8 @@ export class ChessterGame {
     }
 
     // up right
-    for (
-      let i = 1;
-      ((location - 7 * i) & 0b111) !== 0b000 && location - 7 * i > 0;
-      i++
-    ) {
-      if (this.board[location - 7 * i] === 0) {
+    for (let i = 1; (location - 7 * i) & 0b111 && location - 7 * i > 0; i++) {
+      if (!this.board[location - 7 * i]) {
         moves.push(
           (location << 14) |
             ((location - 7 * i) << 8) |
@@ -973,7 +958,7 @@ export class ChessterGame {
       ((location + 7 * i) & 0b111) < 7 && location + 7 * i < 64;
       i++
     ) {
-      if (this.board[location + 7 * i] === 0) {
+      if (!this.board[location + 7 * i]) {
         moves.push(
           (location << 14) |
             ((location + 7 * i) << 8) |
@@ -1000,7 +985,7 @@ export class ChessterGame {
       ((location - 9 * i) & 0b111) < 7 && location - 9 * i >= 0;
       i++
     ) {
-      if (this.board[location - 9 * i] === 0) {
+      if (!this.board[location - 9 * i]) {
         moves.push(
           (location << 14) |
             ((location - 9 * i) << 8) |
@@ -1028,7 +1013,7 @@ export class ChessterGame {
 
     // right
     for (let i = 1; i < 8 - (location & 0b111); i++) {
-      if (this.board[location + i] === 0) {
+      if (!this.board[location + i]) {
         moves.push(
           (location << 14) |
             ((location + i) << 8) |
@@ -1050,7 +1035,7 @@ export class ChessterGame {
 
     // left
     for (let i = 1; i < (location & 0b111) + 1; i++) {
-      if (this.board[location - i] === 0) {
+      if (!this.board[location - i]) {
         moves.push(
           (location << 14) |
             ((location - i) << 8) |
@@ -1072,7 +1057,7 @@ export class ChessterGame {
 
     // down
     for (let i = 1; location + 8 * i < 64; i++) {
-      if (this.board[location + 8 * i] === 0) {
+      if (!this.board[location + 8 * i]) {
         moves.push(
           (location << 14) |
             ((location + 8 * i) << 8) |
@@ -1094,7 +1079,7 @@ export class ChessterGame {
 
     // up
     for (let i = 1; location - 8 * i >= 0; i++) {
-      if (this.board[location - 8 * i] === 0) {
+      if (!this.board[location - 8 * i]) {
         moves.push(
           (location << 14) |
             ((location - 8 * i) << 8) |
@@ -1130,7 +1115,7 @@ export class ChessterGame {
       ((location + 9 * i) & 0b111) > 0 && location + 9 * i < 64;
       i++
     ) {
-      if (this.board[location + 9 * i] === 0) {
+      if (!this.board[location + 9 * i]) {
         moves.push(
           (location << 14) |
             ((location + 9 * i) << 8) |
@@ -1151,12 +1136,8 @@ export class ChessterGame {
     }
 
     // up right
-    for (
-      let i = 1;
-      ((location - 7 * i) & 0b111) !== 0b000 && location - 7 * i > 0;
-      i++
-    ) {
-      if (this.board[location - 7 * i] === 0) {
+    for (let i = 1; (location - 7 * i) & 0b111 && location - 7 * i > 0; i++) {
+      if (!this.board[location - 7 * i]) {
         moves.push(
           (location << 14) |
             ((location - 7 * i) << 8) |
@@ -1182,7 +1163,7 @@ export class ChessterGame {
       ((location + 7 * i) & 0b111) < 7 && location + 7 * i < 64;
       i++
     ) {
-      if (this.board[location + 7 * i] === 0) {
+      if (!this.board[location + 7 * i]) {
         moves.push(
           (location << 14) |
             ((location + 7 * i) << 8) |
@@ -1209,7 +1190,7 @@ export class ChessterGame {
       ((location - 9 * i) & 0b111) < 7 && location - 9 * i >= 0;
       i++
     ) {
-      if (this.board[location - 9 * i] === 0) {
+      if (!this.board[location - 9 * i]) {
         moves.push(
           (location << 14) |
             ((location - 9 * i) << 8) |
@@ -1235,7 +1216,7 @@ export class ChessterGame {
 
     // right
     for (let i = 1; i < 8 - (location & 0b111); i++) {
-      if (this.board[location + i] === 0) {
+      if (!this.board[location + i]) {
         moves.push(
           (location << 14) |
             ((location + i) << 8) |
@@ -1257,7 +1238,7 @@ export class ChessterGame {
 
     // left
     for (let i = 1; i < (location & 0b111) + 1; i++) {
-      if (this.board[location - i] === 0) {
+      if (!this.board[location - i]) {
         moves.push(
           (location << 14) |
             ((location - i) << 8) |
@@ -1279,7 +1260,7 @@ export class ChessterGame {
 
     // down
     for (let i = 1; location + 8 * i < 64; i++) {
-      if (this.board[location + 8 * i] === 0) {
+      if (!this.board[location + 8 * i]) {
         moves.push(
           (location << 14) |
             ((location + 8 * i) << 8) |
@@ -1301,7 +1282,7 @@ export class ChessterGame {
 
     // up
     for (let i = 1; location - 8 * i >= 0; i++) {
-      if (this.board[location - 8 * i] === 0) {
+      if (!this.board[location - 8 * i]) {
         moves.push(
           (location << 14) |
             ((location - 8 * i) << 8) |
@@ -1328,12 +1309,12 @@ export class ChessterGame {
     const moves: number[] = [];
 
     // white piece
-    if ((piece & 0b1) === 0) {
+    if (!(piece & 0b1)) {
       // promotion
 
       // up
-      if (this.board[location - 8] === 0) {
-        if ((location - 8) >>> 3 === 0) {
+      if (!this.board[location - 8]) {
+        if (!((location - 8) >>> 3)) {
           // this piece can only do promotion
           moves.push(
             (location << 14) |
@@ -1361,7 +1342,7 @@ export class ChessterGame {
               piece
           );
 
-          if (location >>> 3 === 6 && this.board[location - 16] === 0) {
+          if (location >>> 3 === 6 && !this.board[location - 16]) {
             // double move
             moves.push(
               (location << 14) |
@@ -1374,8 +1355,8 @@ export class ChessterGame {
       }
 
       // upper left capture
-      if ((location & 0b111) !== 0 && (this.board[location - 9] & 0b1) === 1) {
-        if ((location - 9) >>> 3 === 0) {
+      if (location & 0b111 && (this.board[location - 9] & 0b1) === 1) {
+        if (!((location - 9) >>> 3)) {
           moves.push(
             (location << 14) |
               ((location - 9) << 8) |
@@ -1406,7 +1387,7 @@ export class ChessterGame {
 
       // upper right capture
       if ((location & 0b111) !== 7 && (this.board[location - 7] & 0b1) === 1) {
-        if ((location - 7) >>> 3 === 0) {
+        if (!((location - 7) >>> 3)) {
           moves.push(
             (location << 14) |
               ((location - 7) << 8) |
@@ -1436,7 +1417,7 @@ export class ChessterGame {
       }
 
       // en passant
-      if (this.history[this.history.length - 1] !== 0) {
+      if (this.history[this.history.length - 1]) {
         if (
           ((this.history[this.history.length - 1] >>> 4) & 0b1111) ===
             moveTypes.DOUBLE_PAWN_PUSH &&
@@ -1459,7 +1440,7 @@ export class ChessterGame {
       }
     } else {
       // black piece
-      if (this.board[location + 8] === 0) {
+      if (!this.board[location + 8]) {
         // promotion
         if (location >>> 3 === 6) {
           moves.push(
@@ -1488,7 +1469,7 @@ export class ChessterGame {
               piece
           );
 
-          if (location >>> 3 === 1 && this.board[location + 16] === 0) {
+          if (location >>> 3 === 1 && !this.board[location + 16]) {
             // double move
             moves.push(
               (location << 14) |
@@ -1503,8 +1484,8 @@ export class ChessterGame {
       // upper left capture
       if (
         (location & 0b111) !== 7 && // or < 7
-        this.board[location + 9] !== 0 &&
-        (this.board[location + 9] & 0b1) === 0
+        this.board[location + 9] &&
+        !(this.board[location + 9] & 0b1)
       ) {
         if ((location + 9) >>> 3 === 7) {
           moves.push(
@@ -1538,8 +1519,8 @@ export class ChessterGame {
       // upper right capture
       if (
         location & 0b111 &&
-        this.board[location + 7] !== 0 &&
-        (this.board[location + 7] & 0b1) === 0
+        this.board[location + 7] &&
+        !(this.board[location + 7] & 0b1)
       )
         if ((location + 7) >>> 3 === 7) {
           moves.push(
@@ -1570,7 +1551,7 @@ export class ChessterGame {
         }
 
       // en passant
-      if (this.history[this.history.length - 1] !== 0) {
+      if (this.history[this.history.length - 1]) {
         if (
           ((this.history[this.history.length - 1] >>> 4) & 0b1111) ===
             moveTypes.DOUBLE_PAWN_PUSH &&
