@@ -21,7 +21,6 @@ import {
   binaryToString,
   fenStringToGameState,
   getKeyByValue,
-  moveToString,
   numberToFileName,
   rCompare,
 } from "../util";
@@ -42,9 +41,19 @@ const promotion_options = document.querySelector(
   "#promotion-options"
 ) as HTMLDivElement;
 const undo = document.querySelector("#undo") as HTMLButtonElement;
+const settings = document.querySelector("#settings") as HTMLDivElement;
+const settingboard = document.querySelector("#settingboard") as HTMLDivElement;
+const save_settings = document.querySelector("#save") as HTMLButtonElement;
 
 const game = new ChessterGame();
 const aiWorker = new Worker("worker.js");
+const enableAI = true;
+
+// game.init(
+//   fenStringToGameState(
+//     "r4bnr/1ppkpppp/2n5/p2N4/3P2b1/3B4/PPP1NP1P/R1B2K1R w - - 4 12"
+//   )
+// );
 
 ///////////////////
 //     types     //
@@ -56,12 +65,7 @@ type ElementBoard = HTMLElement[];
 //     variable variables     //
 ////////////////////////////////
 
-// contains the board's positions as elements
-var elementBoard: ElementBoard = [];
-
-// contains game data, mini version of game state
-// var gameState: GameState;
-
+var elementBoard: ElementBoard = []; // contains the board's positions as elements
 var turnMoves: ChessterMove[] = [];
 var selectedPieceElement: HTMLElement = null;
 var selectedPieceMoves: ChessterMove[] = [];
@@ -230,8 +234,8 @@ promotion_close.addEventListener("click", () => {
 
 function clientMove(move: ChessterMove) {
   makeMove(move);
-  // if (!game.wcm && !game.bcm && !game.sm)
-  //   aiWorker.postMessage({ type: messageTypes.MOVE, state: game.getState() }); // disable to enable two player
+  if (enableAI && !game.wcm && !game.bcm && !game.sm)
+    aiWorker.postMessage({ type: messageTypes.MOVE, state: game.getState() }); // disable to enable two player
 }
 
 function makeMove(move: ChessterMove) {
@@ -279,6 +283,15 @@ aiWorker.onmessage = function (event) {
         return;
       }
       makeMove(event.data.move);
+      break;
+    case messageTypes.SETTINGS:
+      (document.querySelector("#depth") as HTMLInputElement).value =
+        event.data.settings.depth.toString();
+      (
+        document.querySelector("#pseudoLegalEvaluation") as HTMLInputElement
+      ).value = event.data.settings.pseudoLegalEvaluation.toString();
+      (document.querySelector("#searchAlgorithm") as HTMLInputElement).value =
+        event.data.settings.searchAlgorithm;
       break;
   }
 };
@@ -414,6 +427,39 @@ restart.addEventListener("click", async () => {
   selectedPieceElement = null;
   selectedPieceMoves = [];
   turnMoves = game.moves();
+});
+
+function animateSettings() {
+  settings.classList.toggle("enabled");
+  settingboard.classList.toggle("hidden");
+  const children = settingboard.children;
+
+  for (let i = 0; i < children.length; i++) {
+    setTimeout(() => {
+      children[i].classList.toggle("hidden");
+    }, i * 50);
+  }
+}
+
+settings.addEventListener("click", animateSettings);
+
+save_settings.addEventListener("click", () => {
+  animateSettings();
+
+  aiWorker.postMessage({
+    type: messageTypes.SETTINGS,
+    settings: {
+      depth: parseInt(
+        (document.querySelector("#depth") as HTMLInputElement).value
+      ),
+      pseudoLegalEvaluation:
+        (document.querySelector("#pseudoLegalEvaluation") as HTMLInputElement)
+          .value === "true",
+      searchAlgorithm: (
+        document.querySelector("#searchAlgorithm") as HTMLInputElement
+      ).value,
+    },
+  });
 });
 
 /////////////////////////

@@ -1,3 +1,8 @@
+### todo
+
+- [] miniMax is currently broken because of modified evaluation function. restore previous evaluation function
+- [] settings font size is not responsive
+
 ### piece representation
 
 | piece      | bit pattern |

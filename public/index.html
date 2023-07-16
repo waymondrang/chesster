@@ -13,7 +13,9 @@
   <body>
     <nav>
       <h1>CHESSTER</h1>
-      <span id="labs">WR ● LABS</span>
+      <div id="settings">
+        <span class="material-symbols-outlined"> settings </span>
+      </div>
     </nav>
     <div id="game">
       <div id="info">
@@ -39,6 +41,48 @@
         <button id="promotion-close">
           <span class="material-symbols-outlined">close</span>
         </button>
+      </div>
+      <div id="settingboard" class="hidden">
+        <div class="setting hidden">
+          <div>
+            <label for="depth">Search Depth</label>
+            <p>
+              The search depth will determine how many future moves are
+              evaluated. Larger depths will result in stronger play but will
+              take longer to compute.
+            </p>
+          </div>
+          <select name="depth" id="depth">
+            <option value="1">1</option>
+            <option value="2">2</option>
+            <option value="3">3</option>
+            <option value="4">4</option>
+            <option value="5">5</option>
+            <option value="6">6</option>
+          </select>
+        </div>
+        <div class="setting hidden">
+          <div>
+            <label for="pseudoLegalEvaluation">Psuedo-Legal Evaluation</label>
+            <p>
+              If true, the evaluation function will use getAllMoves instead of
+              getAvailableMoves. This may result in much faster but more
+              inaccurate move generation, especially in the endgame.
+            </p>
+          </div>
+          <select name="pseudoLegalEvaluation" id="pseudoLegalEvaluation">
+            <option value="true">True</option>
+            <option value="false">False</option>
+          </select>
+        </div>
+        <div class="setting hidden">
+          <label for="searchAlgorithm">Search Algorithm</label>
+          <select name="searchAlgorithm" id="searchAlgorithm">
+            <option value="negaScout">negaScout</option>
+            <option value="miniMax">miniMax</option>
+          </select>
+        </div>
+        <button id="save" class="hidden">Save</button>
       </div>
       <div id="chessboard"></div>
     </div>

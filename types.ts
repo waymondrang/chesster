@@ -39,6 +39,7 @@ export const boardSize = 64,
   ],
   messageTypes = {
     MOVE: 0b00000001,
+    SETTINGS: 0b00000010,
   };
 
 export type ChessterPieceString =

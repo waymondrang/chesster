@@ -15,9 +15,17 @@ const pieceValueWeight = 20;
 const teamPieceValueWeight = 20;
 const enemyPieceValueWeight = 20;
 const checkWeight = 0;
+const castlingRightsWeight = 12; // tested, but still arbitrary
 const checkmateWeight = 9999;
+const targetedPiecesWeight = 5;
 
-const miniMaxDepth = 3;
+/////////////////////////////////
+//     default ai settings     //
+/////////////////////////////////
+
+const defaultDepth = 4;
+const defaultPseudoLegalEvaluation = false; // evaluate state using legal moves?
+const defaultSearchAlgorithm = "negaScout";
 
 const MVV_LVA: number[][] = [
   [0, 0, 0, 0, 0, 0, 0], // victim K, attacker K, Q, R, B, N, P, None
@@ -29,7 +37,7 @@ const MVV_LVA: number[][] = [
   [0, 0, 0, 0, 0, 0, 0], // victim None, attacker K, Q, R, B, N, P, None
 ];
 
-const pieceValues: number[] = [0, 100, 320, 330, 550, 1000, 0, 0];
+const pieceValues: number[] = [0, 100, 310, 340, 550, 1000, 0, 0];
 
 function sortMoves(moves: number[]): number[] {
   const sortedMoves: number[] = [];
@@ -57,10 +65,82 @@ export class ChessterAI {
   game: ChessterGame;
   team: number;
 
-  constructor(game: ChessterGame, team: number = BLACK) {
-    // game.turn will indicate the ai's team
+  //////////////////////
+  //     settings     //
+  //////////////////////
+  depth: number;
+  pseudoLegalEvaluation: boolean;
+  searchAlgorithm: "negaScout" | "miniMax";
+
+  constructor(game: ChessterGame) {
     this.game = game;
-    this.team = team;
+    this.team = BLACK; // default to black
+
+    this.depth = defaultDepth;
+    this.pseudoLegalEvaluation = defaultPseudoLegalEvaluation;
+    this.searchAlgorithm = defaultSearchAlgorithm;
+  }
+
+  getMVV_LVA(move: number): number {
+    let victim = 0;
+
+    switch ((move >>> 4) & 0b1111) {
+      case moveTypes.CAPTURE:
+        victim = this.game.board[(move >>> 8) & 0b111111];
+        break;
+      case moveTypes.EN_PASSANT_WHITE:
+        victim = this.game.board[((move >>> 8) & 0b111111) + 8];
+        break;
+      case moveTypes.EN_PASSANT_BLACK:
+        victim = this.game.board[((move >>> 8) & 0b111111) - 8];
+        break;
+      case moveTypes.PROMOTION_QUEEN_CAPTURE:
+      case moveTypes.PROMOTION_QUEEN:
+        victim = this.game.board[(move >>> 8) & 0b111111];
+        break;
+      case moveTypes.PROMOTION_ROOK_CAPTURE:
+      case moveTypes.PROMOTION_ROOK:
+        victim = this.game.board[(move >>> 8) & 0b111111];
+        break;
+      case moveTypes.PROMOTION_BISHOP_CAPTURE:
+      case moveTypes.PROMOTION_BISHOP:
+        victim = this.game.board[(move >>> 8) & 0b111111];
+        break;
+      case moveTypes.PROMOTION_KNIGHT_CAPTURE:
+      case moveTypes.PROMOTION_KNIGHT:
+        victim = this.game.board[(move >>> 8) & 0b111111];
+        break;
+    }
+
+    return MVV_LVA[(victim >>> 1) & 0b111][(move >>> 1) & 0b111];
+  }
+
+  compareMoves(move1: number, move2: number): number {
+    return this.getMVV_LVA(move2) - this.getMVV_LVA(move1);
+  }
+
+  getMoves(): number[] {
+    if (this.game.wcm || this.game.bcm || this.game.sm) return [];
+
+    let moves = [];
+
+    for (let i = 0; i < boardSize; i++) {
+      if (this.game.board[i] && (this.game.board[i] & 0b1) === this.game.turn) {
+        const pieceMoves = this.game.getAvailableMoves(i);
+        for (let j = 0; j < pieceMoves.length; j++) {
+          moves.push(pieceMoves[j]);
+          let k = moves.length - 1;
+          while (k > 0 && this.compareMoves(moves[k - 1], moves[k]) > 0) {
+            [moves[k - 1], moves[k]] = [moves[k], moves[k - 1]]; // swap
+            k--;
+          }
+        }
+      }
+    }
+
+    // console.log(moves.map((move) => this.getMVV_LVA(move)));
+
+    return moves;
   }
 
   /**
@@ -78,35 +158,44 @@ export class ChessterAI {
 
     for (let i = 0; i < boardSize; i++) {
       if (this.game.board[i]) {
+        const moves = this.pseudoLegalEvaluation
+          ? this.game.getAvailableMoves(i)
+          : this.game.getAllMoves(i);
         score +=
           ((this.game.board[i] & 0b1) === this.game.turn ? 1 : -1) *
             pieceValues[(this.game.board[i] >>> 1) & 0b111] +
           mobilityWeight *
             ((this.game.board[i] & 0b1) === this.game.turn ? 1 : -1) *
-            this.game.getAvailableMoves(i).length; // if white multiply by -1
+            moves.length; // if white multiply by -1
       }
     }
+
+    // attempt to add castling rights weight
+    score +=
+      castlingRightsWeight *
+      (this.game.turn === WHITE
+        ? (this.game.wckc ? 1 : 0) + (this.game.wcqc ? 1 : 0)
+        : (this.game.bckc ? 1 : 0) + (this.game.bcqc ? 1 : 0));
 
     return score;
   }
 
+  /**
+   * currently is not behaving properly
+   * @param alpha
+   * @param beta
+   * @returns
+   */
   quiesce(alpha: number = -Infinity, beta: number = Infinity) {
     let standPat = this.calculateStateScore();
 
     if (standPat >= beta) return beta;
-    if (standPat > alpha) alpha = standPat;
+    if (alpha < standPat) alpha = standPat;
 
-    const moves = sortMoves(this.game.moves());
+    const moves = this.getMoves();
 
-    for (let i = moves.length - 1; i >= 0; i--) {
-      if (
-        ((moves[i] >>> 4) & 0b1111) === moveTypes.CAPTURE ||
-        ((moves[i] >>> 4) & 0b1111) === moveTypes.EN_PASSANT_BLACK ||
-        ((moves[i] >>> 4) & 0b1111) === moveTypes.EN_PASSANT_WHITE ||
-        ((moves[i] >>> 6) & 0b11) === 0b11 ||
-        this.game.wc ||
-        this.game.bc
-      ) {
+    for (let i = 0; i < moves.length; i++) {
+      if (((moves[i] >>> 4) & 0b1111) === moveTypes.CAPTURE) {
         this.game.move(moves[i]);
 
         const score = -this.quiesce(-beta, -alpha);
@@ -124,26 +213,21 @@ export class ChessterAI {
   negaScout(
     alpha: number = -Infinity,
     beta: number = Infinity,
-    depth: number = miniMaxDepth
+    depth: number = defaultDepth
   ): number {
     if (depth === 0 || this.game.wcm || this.game.bcm || this.game.sm)
       return this.calculateStateScore();
-    // if (depth === 0) return this.quiesce(alpha, beta);
+    // if (depth === 0) return this.quiesce(alpha, beta); // works better with depth 3 or less
 
     let b = beta;
     let bestScore = -Infinity;
 
-    const moves = sortMoves(this.game.moves());
+    const moves = this.getMoves();
 
-    for (let i = moves.length - 1; i >= 0; i--) {
+    for (let i = 0; i < moves.length; i++) {
       this.game.move(moves[i]);
 
       let score = -this.negaScout(-b, -alpha, depth - 1);
-
-      // if (score > bestScore)
-      //   if (alpha < score && score < beta)
-      //     bestScore = Math.max(score, bestScore);
-      //   else bestScore = -this.negaScout(-beta, -score, depth - 1);
 
       if (score > alpha && score < beta && i > 1)
         score = -this.negaScout(-beta, -score, depth - 1);
@@ -168,12 +252,12 @@ export class ChessterAI {
     let alpha = -Infinity;
     let beta = Infinity;
 
-    const moves = sortMoves(this.game.moves());
+    const moves = this.getMoves();
 
-    for (let i = moves.length - 1; i >= 0; i--) {
+    for (let i = 0; i < moves.length; i++) {
       this.game.move(moves[i]);
 
-      let score = -this.negaScout(-beta, -alpha, miniMaxDepth - 1);
+      let score = -this.negaScout(-beta, -alpha, this.depth - 1);
 
       if (score > bestScore) {
         bestScore = score;
@@ -189,7 +273,7 @@ export class ChessterAI {
   }
 
   miniMax(
-    depth: number = miniMaxDepth,
+    depth: number = this.depth,
     alpha: number = -Infinity,
     beta: number = Infinity,
     playerType: number = MAX_PLAYER
@@ -202,13 +286,9 @@ export class ChessterAI {
       let bestValue = -Infinity;
       let bestMove: ChessterMove | undefined;
 
-      const moves = sortMoves(this.game.moves());
+      const moves = this.getMoves();
 
-      if (moves.length === 0) console.error("no moves", moves);
-
-      for (let j = moves.length - 1; j >= 0; j--) {
-        if (moves[j] === undefined) console.error("undefined move", moves[j]);
-
+      for (let j = 0; j < moves.length; j++) {
         this.game.move(moves[j]);
 
         const [_, value] = this.miniMax(depth - 1, alpha, beta, 1 ^ playerType);
@@ -231,13 +311,9 @@ export class ChessterAI {
       let bestValue = Infinity;
       let bestMove: ChessterMove | undefined;
 
-      const moves = sortMoves(this.game.moves());
+      const moves = this.getMoves();
 
-      if (moves.length === 0) console.error("no moves", moves);
-
-      for (let j = moves.length - 1; j >= 0; j--) {
-        if (moves[j] === undefined) console.error("undefined move", moves[j]);
-
+      for (let j = 0; j < moves.length; j++) {
         this.game.move(moves[j]);
 
         const [_, value] = this.miniMax(depth - 1, alpha, beta, 1 ^ playerType);
@@ -255,20 +331,32 @@ export class ChessterAI {
       }
 
       return [bestMove, bestValue];
-    } else {
-      throw new Error("invalid player type");
     }
   }
 
   getMove(): ChessterMove | undefined {
     const startTime = performance.now();
-    // this.root = new ChessterAINode(this.game.getState(), MAX_PLAYER, 0);
-    // this.buildMoveTree(this.root, depth);
+
     this.team = this.game.turn;
-    const [move, value] = this.negaScoutSearch();
+
+    const [move, value] = (() => {
+      switch (this.searchAlgorithm) {
+        case "negaScout":
+          return this.negaScoutSearch();
+        case "miniMax":
+          return this.miniMax();
+      }
+    })();
+
     console.log(
-      "time taken: " + (performance.now() - startTime) + "ms. value: " + value
+      "algorithm: " +
+        this.searchAlgorithm +
+        ". time taken: " +
+        (performance.now() - startTime) +
+        "ms. value: " +
+        value
     );
+
     return move;
   }
 

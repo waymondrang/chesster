@@ -10,7 +10,11 @@ import {
   defaultBoard,
   moveTypes,
 } from "./types";
-import { binaryToString, numberToLetterString } from "./util";
+import {
+  binaryToString,
+  numberToLetterString,
+  numberToPieceString,
+} from "./util";
 
 export class ChessterGame {
   board: number[]; // board is 64 bytes
@@ -372,7 +376,7 @@ export class ChessterGame {
 
     this.wcm = this.wc;
     this.bcm = this.bc;
-    this.sm = true;
+    let sm = true;
 
     for (let i = 0; i < boardSize; i++) {
       if (
@@ -380,17 +384,19 @@ export class ChessterGame {
         (this.board[i] & 0b1) === this.turn &&
         this.getAvailableMoves(i).length > 0
       ) {
-        if (this.turn === WHITE && this.wcm) this.wcm = false;
-        else if (this.turn === BLACK && this.bcm) this.bcm = false;
-        this.sm = false;
+        if (this.turn === WHITE) this.wcm = false;
+        if (this.turn === BLACK) this.bcm = false;
+        sm = false;
         break;
       }
     }
 
-    this.sm = !this.wcm && !this.bcm && this.sm;
+    this.sm = !this.wcm && !this.bcm && sm;
   }
 
   moves() {
+    if (this.wcm || this.bcm || this.sm) return [];
+
     let moves = [];
 
     for (let i = 0; i < boardSize; i++) {
