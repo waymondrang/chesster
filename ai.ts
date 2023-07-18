@@ -26,6 +26,8 @@ const targetedPiecesWeight = 5;
 const defaultDepth = 4;
 const defaultPseudoLegalEvaluation = false; // evaluate state using legal moves?
 const defaultSearchAlgorithm = "negaScout";
+const defaultQuiesceDepth = 4;
+const defaultUseQuiesceSearch = false;
 
 const MVV_LVA: number[][] = [
   [0, 0, 0, 0, 0, 0, 0], // victim K, attacker K, Q, R, B, N, P, None
@@ -39,28 +41,6 @@ const MVV_LVA: number[][] = [
 
 const pieceValues: number[] = [0, 100, 310, 340, 550, 1000, 0, 0];
 
-function sortMoves(moves: number[]): number[] {
-  const sortedMoves: number[] = [];
-
-  for (let i = 0; i < moves.length; i++) {
-    try {
-      const move = moves[i];
-
-      let score = MVV_LVA[(moves[i] >>> 21) & 0b111][(moves[i] >>> 1) & 0b111];
-
-      let j = 0;
-      while (j < sortedMoves.length && score < sortedMoves[j]) j++;
-
-      sortedMoves.splice(j, 0, move);
-    } catch (e) {
-      console.log(moveToString(moves[i]));
-      throw e;
-    }
-  }
-
-  return sortedMoves;
-}
-
 export class ChessterAI {
   game: ChessterGame;
   team: number;
@@ -68,9 +48,12 @@ export class ChessterAI {
   //////////////////////
   //     settings     //
   //////////////////////
+
   depth: number;
   pseudoLegalEvaluation: boolean;
   searchAlgorithm: "negaScout" | "miniMax";
+  quietSearchDepth: number;
+  useQuiesceSearch: boolean;
 
   constructor(game: ChessterGame) {
     this.game = game;
@@ -79,6 +62,8 @@ export class ChessterAI {
     this.depth = defaultDepth;
     this.pseudoLegalEvaluation = defaultPseudoLegalEvaluation;
     this.searchAlgorithm = defaultSearchAlgorithm;
+    this.quietSearchDepth = defaultQuiesceDepth;
+    this.useQuiesceSearch = defaultUseQuiesceSearch;
   }
 
   getMVV_LVA(move: number): number {
@@ -144,10 +129,45 @@ export class ChessterAI {
   }
 
   /**
-   * calculates the team player's score
-   * @returns
+   * Calculates the score of the current state based on the AI's team
+   * @returns score
    */
-  calculateStateScore(): number {
+  calculateAbsolute(): number {
+    if (this.game.wcm)
+      return this.game.turn === this.team ? -checkmateWeight : checkmateWeight;
+    if (this.game.bcm)
+      return this.game.turn === this.team ? -checkmateWeight : checkmateWeight;
+    if (this.game.sm) return 0;
+
+    let score = 0;
+
+    for (let i = 0; i < boardSize; i++) {
+      if (this.game.board[i] !== 0) {
+        score +=
+          ((this.game.board[i] & 0b1) === this.team
+            ? teamPieceValueWeight
+            : -enemyPieceValueWeight) *
+            pieceValues[(this.game.board[i] >>> 1) & 0b111] +
+          mobilityWeight *
+            ((this.game.board[i] & 0b1) === this.team ? 1 : -1) *
+            this.game.getAvailableMoves(i).length;
+      }
+    }
+
+    score +=
+      castlingRightsWeight *
+      (this.team === WHITE
+        ? (this.game.wckc ? 1 : 0) + (this.game.wcqc ? 1 : 0)
+        : (this.game.bckc ? 1 : 0) + (this.game.bcqc ? 1 : 0));
+
+    return score;
+  }
+
+  /**
+   * Calculates the score of the current state relative to team corresponding to the turn
+   * @returns score
+   */
+  calculateRelative(): number {
     if (this.game.wcm)
       return this.game.turn === WHITE ? -checkmateWeight : checkmateWeight;
     if (this.game.bcm)
@@ -186,25 +206,25 @@ export class ChessterAI {
    * @param beta
    * @returns
    */
-  quiesce(alpha: number = -Infinity, beta: number = Infinity) {
-    let standPat = this.calculateStateScore();
+  quiesce(alpha: number, beta: number, depth: number) {
+    let standPat = this.calculateRelative();
+
+    if (depth === 0) return standPat;
 
     if (standPat >= beta) return beta;
     if (alpha < standPat) alpha = standPat;
 
     const moves = this.getMoves();
 
-    for (let i = 0; i < moves.length; i++) {
-      if (((moves[i] >>> 4) & 0b1111) === moveTypes.CAPTURE) {
-        this.game.move(moves[i]);
+    for (let i = 0; i < moves.length && moves[i] !== 0; i++) {
+      this.game.move(moves[i]);
 
-        const score = -this.quiesce(-beta, -alpha);
+      const score = -this.quiesce(-beta, -alpha, depth - 1);
 
-        this.game.undo();
+      this.game.undo();
 
-        if (score >= beta) return beta;
-        if (score > alpha) alpha = score;
-      }
+      if (score >= beta) return beta;
+      if (score > alpha) alpha = score;
     }
 
     return alpha;
@@ -215,9 +235,15 @@ export class ChessterAI {
     beta: number = Infinity,
     depth: number = defaultDepth
   ): number {
-    if (depth === 0 || this.game.wcm || this.game.bcm || this.game.sm)
-      return this.calculateStateScore();
-    // if (depth === 0) return this.quiesce(alpha, beta); // works better with depth 3 or less
+    // terminal case
+    if (
+      (!this.useQuiesceSearch && depth === 0) ||
+      this.game.wcm ||
+      this.game.bcm ||
+      this.game.sm
+    )
+      return this.calculateRelative();
+    if (depth === 0) return this.quiesce(alpha, beta, this.quietSearchDepth);
 
     let b = beta;
     let bestScore = -Infinity;
@@ -279,7 +305,7 @@ export class ChessterAI {
     playerType: number = MAX_PLAYER
   ): [ChessterMove | undefined, number] {
     if (depth === 0 || this.game.bcm || this.game.wcm || this.game.sm)
-      return [undefined, this.calculateStateScore()];
+      return [undefined, this.calculateAbsolute()];
 
     if (playerType === MAX_PLAYER) {
       // maximizer

@@ -47,11 +47,11 @@ const save_settings = document.querySelector("#save") as HTMLButtonElement;
 
 const game = new ChessterGame();
 const aiWorker = new Worker("worker.js");
-const enableAI = true;
+const enableAI = false;
 
 // game.init(
 //   fenStringToGameState(
-//     "r4bnr/1ppkpppp/2n5/p2N4/3P2b1/3B4/PPP1NP1P/R1B2K1R w - - 4 12"
+//     "r6r/1ppk1ppp/p1nbpn2/3b4/8/3BBN2/1PN2PPP/2R1R1K1 w - - 4 15"
 //   )
 // );
 
@@ -209,7 +209,11 @@ function updateBoard(gameBoard: ChessterBoard, previousBoard?: ChessterBoard) {
 
   undo.disabled =
     game.history.length === 0 ||
-    (game.sm || game.wcm || game.bcm ? false : game.turn === BLACK);
+    (game.sm || game.wcm || game.bcm
+      ? false
+      : enableAI
+      ? game.turn === BLACK
+      : false);
 }
 
 function updateStatus(gameTurn: ChessterTeam) {
@@ -241,7 +245,11 @@ function clientMove(move: ChessterMove) {
 function makeMove(move: ChessterMove) {
   let previousBoard = [...game.board];
 
+  console.log(game.zobrist);
+
   game.move(move);
+
+  console.log(game.zobrist);
 
   updateBoard(game.board, previousBoard);
   updateStatus(game.turn);
@@ -250,16 +258,15 @@ function makeMove(move: ChessterMove) {
 
   selectedPieceElement = null;
   selectedPieceMoves = [];
-  const preMovesGameState = game.getState();
   turnMoves = game.moves();
-  rCompare(preMovesGameState, game.getState());
 }
 
 function clientUndo() {
   let previousBoard = [...game.board];
 
   game.undo();
-  if (game.turn === BLACK) game.undo();
+  // if (game.turn === BLACK) game.undo();
+  console.log(game.zobrist);
 
   updateBoard(game.board, previousBoard);
   updateStatus(game.turn);

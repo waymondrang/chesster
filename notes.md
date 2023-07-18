@@ -109,6 +109,18 @@
 | 48  | 110000 | 110001 | 110010 | 110011 | 110100 | 110101 | 110110 | 110111 |
 | 56  | 111000 | 111001 | 111010 | 111011 | 111100 | 111101 | 111110 | 111111 |
 
+### zobrist hashing
+
+| index     | significance             |
+| --------- | ------------------------ |
+| 0 - 767   | 12 pieces for each space |
+| 768       | black to move            |
+| 769       | white king side castle   |
+| 770       | white queen side castle  |
+| 771       | black king side castle   |
+| 772       | black queen side castle  |
+| 773 - 780 | en passant file (1-8)    |
+
 ### fen strings
 
 rn3k1r/p1Bp2p1/5ppn/6N1/3pQ3/8/PP2PPPP/4KB1R w K - 4 21

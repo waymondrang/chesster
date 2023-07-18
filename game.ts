@@ -30,9 +30,11 @@ export class ChessterGame {
   simulation: boolean;
   turn: 1 | 0; // false is white, true is black
   history: ChessterHistory;
+  #zobristKeys: bigint[];
+  zobrist: bigint;
 
   /**
-   * creates a new chesster game instance and initializes it
+   * Creates a new Chesster game instance
    */
   constructor(state?: RecursivePartial<ChessterGameState>) {
     this.init(state);
@@ -56,11 +58,57 @@ export class ChessterGame {
 
     this.sm = state?.sm ?? false; // stalemate
 
+    ///////////////////////////////////
+    //     generate zobrist keys     //
+    ///////////////////////////////////
+
+    this.#zobristKeys = [8746989176631517180n];
+
+    for (let i = 1; i < 780; i++) {
+      this.#zobristKeys.push(
+        this.#LinearCongruentialGenerator(this.#zobristKeys[i - 1])
+      );
+    }
+
+    //////////////////////////////////////
+    //     generate initial zobrist     //
+    //////////////////////////////////////
+
+    this.zobrist = 0n;
+
+    for (let i = 0; i < boardSize; i++)
+      if (this.board[i])
+        this.zobrist ^= this.#zobristKeys[i * 12 + (this.board[i] - 1)];
+
+    if (this.turn === BLACK) this.zobrist ^= this.#zobristKeys[768];
+
+    // if (this.wckc) this.zobrist ^= this.#zobristKeys[769];
+    // if (this.wcqc) this.zobrist ^= this.#zobristKeys[770];
+    // if (this.bckc) this.zobrist ^= this.#zobristKeys[771];
+    // if (this.bcqc) this.zobrist ^= this.#zobristKeys[772];
+
+    // todo: add en passant
+
+    console.log(this.zobrist);
+
+    ////////////////////////////
+    //     update on init     //
+    ////////////////////////////
+
     this.update();
   }
 
   /**
-   * undo the last move
+   * Generates a random 64-bit integer
+   * @param seed The seed to use for the random number generator
+   * @returns A random 64-bit integer
+   */
+  #LinearCongruentialGenerator(seed: bigint): bigint {
+    return (2862933555777941757n * seed + 3037000493n) % 18446744073709551616n;
+  }
+
+  /**
+   * Takes back the last move
    */
   undo() {
     if (this.history.length > 0) {
@@ -68,7 +116,6 @@ export class ChessterGame {
       if (move) {
         this.turn ^= 1;
         this.sm = false; // update stalemate
-
         this.bcqc = ((move >>> 31) & 0b1) === 1;
         this.wcqc = ((move >>> 30) & 0b1) === 1;
         this.bckc = ((move >>> 29) & 0b1) === 1;
@@ -84,8 +131,21 @@ export class ChessterGame {
           case moveTypes.PROMOTION_KNIGHT_CAPTURE:
           case moveTypes.PROMOTION_QUEEN_CAPTURE:
           case moveTypes.CAPTURE:
+            this.zobrist ^=
+              this.#zobristKeys[
+                ((move >>> 8) & 0b111111) * 12 +
+                  ((((move >>> 20) & 0b1111) >>> 1) - 1) // add captured piece
+              ] ^
+              this.#zobristKeys[
+                ((move >>> 8) & 0b111111) * 12 + (((move & 0b1111) >>> 1) - 1) // remove moved piece
+              ] ^
+              this.#zobristKeys[
+                ((move >>> 14) & 0b111111) * 12 + (((move & 0b1111) >>> 1) - 1) // add moved piece
+              ];
+
             this.board[(move >>> 8) & 0b111111] = (move >>> 20) & 0b1111;
             this.board[(move >>> 14) & 0b111111] = move & 0b1111;
+
             break;
           case moveTypes.CASTLE_KINGSIDE:
             this.board[(move >>> 14) & 0b111111] = move & 0b1111;
@@ -93,6 +153,7 @@ export class ChessterGame {
             this.board[((move >>> 14) & 0b111111) + 3] =
               this.board[((move >>> 14) & 0b111111) + 1];
             this.board[((move >>> 14) & 0b111111) + 1] = 0;
+
             break;
           case moveTypes.CASTLE_QUEENSIDE:
             this.board[(move >>> 14) & 0b111111] = move & 0b1111;
@@ -100,22 +161,69 @@ export class ChessterGame {
             this.board[((move >>> 14) & 0b111111) - 4] =
               this.board[((move >>> 14) & 0b111111) - 1];
             this.board[((move >>> 14) & 0b111111) - 1] = 0;
+
             break;
           case moveTypes.EN_PASSANT_WHITE:
+            this.zobrist ^=
+              this.#zobristKeys[
+                (((move >>> 8) & 0b111111) + 8) * 12 +
+                  ((((move >>> 20) & 0b1111) >>> 1) - 1) // remove captured piece
+              ] ^
+              this.#zobristKeys[
+                ((move >>> 8) & 0b111111) * 12 + (((move & 0b1111) >>> 1) - 1) // add moved piece
+              ] ^
+              this.#zobristKeys[
+                ((move >>> 14) & 0b111111) * 12 + (((move & 0b1111) >>> 1) - 1) // remove moved piece
+              ];
+
             this.board[(move >>> 14) & 0b111111] = move & 0b1111;
             this.board[((move >>> 8) & 0b111111) + 8] = (move >>> 20) & 0b1111;
             this.board[(move >>> 8) & 0b111111] = 0;
+
             break;
           case moveTypes.EN_PASSANT_BLACK:
+            this.zobrist ^=
+              this.#zobristKeys[
+                (((move >>> 8) & 0b111111) - 8) * 12 +
+                  (((move >>> 20) & 0b1111) - 1) // remove captured piece
+              ] ^
+              this.#zobristKeys[
+                ((move >>> 8) & 0b111111) * 12 + (((move & 0b1111) >>> 1) - 1) // add moved piece
+              ] ^
+              this.#zobristKeys[
+                ((move >>> 14) & 0b111111) * 12 + (((move & 0b1111) >>> 1) - 1) // remove moved piece
+              ];
+
             this.board[(move >>> 14) & 0b111111] = move & 0b1111;
             this.board[((move >>> 8) & 0b111111) - 8] = (move >>> 20) & 0b1111;
             this.board[(move >>> 8) & 0b111111] = 0;
+
             break;
           default:
+            this.zobrist ^=
+              this.#zobristKeys[
+                ((move >>> 14) & 0b111111) * 12 + (((move & 0b1111) >>> 1) - 1)
+              ] ^
+              this.#zobristKeys[
+                ((move >>> 8) & 0b111111) * 12 + (((move & 0b1111) >>> 1) - 1) // re-move
+              ];
+
             this.board[(move >>> 14) & 0b111111] = move & 0b1111;
             this.board[(move >>> 8) & 0b111111] = 0;
+
             break;
         }
+
+        ////////////////////////////
+        //     update zobrist     //
+        ////////////////////////////
+
+        this.zobrist ^= this.#zobristKeys[768]; // flip turn
+
+        // if (this.wckc) this.zobrist ^= this.#zobristKeys[769];
+        // if (this.wcqc) this.zobrist ^= this.#zobristKeys[770];
+        // if (this.bckc) this.zobrist ^= this.#zobristKeys[771];
+        // if (this.bcqc) this.zobrist ^= this.#zobristKeys[772];
       }
     }
   }
@@ -135,17 +243,30 @@ export class ChessterGame {
     switch ((move >>> 4) & 0b1111) {
       case moveTypes.CAPTURE:
         history |= this.board[(move >>> 8) & 0b111111] << 20;
+
+        this.zobrist ^=
+          this.#zobristKeys[
+            ((move >>> 8) & 0b111111) * 12 +
+              ((this.board[(move >>> 8) & 0b111111] >>> 1) - 1) // remove captured piece
+          ] ^
+          this.#zobristKeys[
+            ((move >>> 8) & 0b111111) * 12 + (((move & 0b1111) >>> 1) - 1) // add moved piece
+          ] ^
+          this.#zobristKeys[
+            ((move >>> 14) & 0b111111) * 12 + (((move & 0b1111) >>> 1) - 1) // remove moved piece
+          ];
+
         this.board[(move >>> 14) & 0b111111] = 0;
         this.board[(move >>> 8) & 0b111111] = move & 0b1111;
         break;
-      case moveTypes.CASTLE_KINGSIDE:
+      case moveTypes.CASTLE_KINGSIDE: // todo: add zobrist
         this.board[(move >>> 14) & 0b111111] = 0;
         this.board[((move >>> 14) & 0b111111) + 2] = move & 0b1111;
         this.board[((move >>> 14) & 0b111111) + 1] =
           this.board[((move >>> 14) & 0b111111) + 3];
         this.board[((move >>> 14) & 0b111111) + 3] = 0;
         break;
-      case moveTypes.CASTLE_QUEENSIDE:
+      case moveTypes.CASTLE_QUEENSIDE: // todo: add zobrist
         this.board[(move >>> 14) & 0b111111] = 0;
         this.board[((move >>> 14) & 0b111111) - 2] = move & 0b1111;
         this.board[((move >>> 14) & 0b111111) - 1] =
@@ -154,42 +275,180 @@ export class ChessterGame {
         break;
       case moveTypes.EN_PASSANT_WHITE:
         history |= this.board[((move >>> 8) & 0b111111) + 8] << 20;
+
+        this.zobrist ^=
+          this.#zobristKeys[
+            (((move >>> 8) & 0b111111) + 8) * 12 +
+              ((this.board[((move >>> 8) & 0b111111) + 8] >>> 1) - 1) // remove captured piece
+          ] ^
+          this.#zobristKeys[
+            ((move >>> 8) & 0b111111) * 12 + (((move & 0b1111) >>> 1) - 1) // add moved piece
+          ] ^
+          this.#zobristKeys[
+            ((move >>> 14) & 0b111111) * 12 + (((move & 0b1111) >>> 1) - 1) // remove moved piece
+          ];
+
         this.board[(move >>> 14) & 0b111111] = 0;
         this.board[(move >>> 8) & 0b111111] = move & 0b1111;
         this.board[((move >>> 8) & 0b111111) + 8] = 0;
         break;
       case moveTypes.EN_PASSANT_BLACK:
         history |= this.board[((move >>> 8) & 0b111111) - 8] << 20;
+
+        this.zobrist ^=
+          this.#zobristKeys[
+            (((move >>> 8) & 0b111111) - 8) * 12 +
+              ((this.board[((move >>> 8) & 0b111111) - 8] >>> 1) - 1) // remove captured piece
+          ] ^
+          this.#zobristKeys[
+            ((move >>> 8) & 0b111111) * 12 + (((move & 0b1111) >>> 1) - 1) // add moved piece
+          ] ^
+          this.#zobristKeys[
+            ((move >>> 14) & 0b111111) * 12 + (((move & 0b1111) >>> 1) - 1) // remove moved piece
+          ];
+
         this.board[(move >>> 14) & 0b111111] = 0;
         this.board[(move >>> 8) & 0b111111] = move & 0b1111;
-        this.board[((move >>> 8) & 0b111111) - 8] = 0;
+        this.board[((move >>> 8) & 0b111111) - 8] = 0; // captured space
         break;
       case moveTypes.PROMOTION_QUEEN_CAPTURE:
+        history |= this.board[(move >>> 8) & 0b111111] << 20;
+
+        // this.zobrist ^=
+        //   this.#zobristKeys[
+        //     ((move >>> 8) & 0b111111) * 12 +
+        //       (this.board[(move >>> 8) & 0b111111] - 1) // remove captured piece
+        //   ] ^
+        //   this.#zobristKeys[
+        //     ((move >>> 8) & 0b111111) * 12 + (((move & 0b0001) | 0b1010) - 1) // add moved piece
+        //   ] ^
+        //   this.#zobristKeys[
+        //     ((move >>> 14) & 0b111111) * 12 + ((move & 0b1111) - 1) // remove moved piece
+        //   ];
+
+        this.board[(move >>> 14) & 0b111111] = 0;
+        this.board[(move >>> 8) & 0b111111] = (move & 0b0001) | 0b1010;
+        break;
       case moveTypes.PROMOTION_QUEEN:
         history |= this.board[(move >>> 8) & 0b111111] << 20;
+
+        // this.zobrist ^=
+        //   this.#zobristKeys[
+        //     ((move >>> 8) & 0b111111) * 12 + (((move & 0b0001) | 0b1010) - 1) // add moved piece
+        //   ] ^
+        //   this.#zobristKeys[
+        //     ((move >>> 14) & 0b111111) * 12 + ((move & 0b1111) - 1) // remove moved piece
+        //   ];
+
         this.board[(move >>> 14) & 0b111111] = 0;
         this.board[(move >>> 8) & 0b111111] = (move & 0b0001) | 0b1010;
         break;
       case moveTypes.PROMOTION_ROOK_CAPTURE:
+        history |= this.board[(move >>> 8) & 0b111111] << 20;
+
+        // this.zobrist ^=
+        //   this.#zobristKeys[
+        //     ((move >>> 8) & 0b111111) * 12 +
+        //       (this.board[(move >>> 8) & 0b111111] - 1) // remove captured piece
+        //   ] ^
+        //   this.#zobristKeys[
+        //     ((move >>> 8) & 0b111111) * 12 + (((move & 0b0001) | 0b1000) - 1) // add moved piece
+        //   ] ^
+        //   this.#zobristKeys[
+        //     ((move >>> 14) & 0b111111) * 12 + ((move & 0b1111) - 1) // remove moved piece
+        //   ];
+
+        this.board[(move >>> 14) & 0b111111] = 0;
+        this.board[(move >>> 8) & 0b111111] = (move & 0b0001) | 0b1000;
+        break;
       case moveTypes.PROMOTION_ROOK:
         history |= this.board[(move >>> 8) & 0b111111] << 20;
+
+        // this.zobrist ^=
+        //   this.#zobristKeys[
+        //     ((move >>> 8) & 0b111111) * 12 + (((move & 0b0001) | 0b1000) - 1) // add moved piece
+        //   ] ^
+        //   this.#zobristKeys[
+        //     ((move >>> 14) & 0b111111) * 12 + ((move & 0b1111) - 1) // remove moved piece
+        //   ];
+
         this.board[(move >>> 14) & 0b111111] = 0;
         this.board[(move >>> 8) & 0b111111] = (move & 0b0001) | 0b1000;
         break;
       case moveTypes.PROMOTION_BISHOP_CAPTURE:
+        history |= this.board[(move >>> 8) & 0b111111] << 20;
+
+        // this.zobrist ^=
+        //   this.#zobristKeys[
+        //     ((move >>> 8) & 0b111111) * 12 +
+        //       (this.board[(move >>> 8) & 0b111111] - 1) // remove captured piece
+        //   ] ^
+        //   this.#zobristKeys[
+        //     ((move >>> 8) & 0b111111) * 12 + (((move & 0b0001) | 0b0110) - 1) // add moved piece
+        //   ] ^
+        //   this.#zobristKeys[
+        //     ((move >>> 14) & 0b111111) * 12 + ((move & 0b1111) - 1) // remove moved piece
+        //   ];
+
+        this.board[(move >>> 14) & 0b111111] = 0;
+        this.board[(move >>> 8) & 0b111111] = (move & 0b0001) | 0b0110;
+        break;
       case moveTypes.PROMOTION_BISHOP:
         history |= this.board[(move >>> 8) & 0b111111] << 20;
+
+        // this.zobrist ^=
+        //   this.#zobristKeys[
+        //     ((move >>> 8) & 0b111111) * 12 + (((move & 0b0001) | 0b0110) - 1) // add moved piece
+        //   ] ^
+        //   this.#zobristKeys[
+        //     ((move >>> 14) & 0b111111) * 12 + ((move & 0b1111) - 1) // remove moved piece
+        //   ];
+
         this.board[(move >>> 14) & 0b111111] = 0;
         this.board[(move >>> 8) & 0b111111] = (move & 0b0001) | 0b0110;
         break;
       case moveTypes.PROMOTION_KNIGHT_CAPTURE:
+        history |= this.board[(move >>> 8) & 0b111111] << 20;
+
+        // this.zobrist ^=
+        //   this.#zobristKeys[
+        //     ((move >>> 8) & 0b111111) * 12 +
+        //       (this.board[(move >>> 8) & 0b111111] - 1) // remove captured piece
+        //   ] ^
+        //   this.#zobristKeys[
+        //     ((move >>> 8) & 0b111111) * 12 + (((move & 0b0001) | 0b0100) - 1) // add moved piece
+        //   ] ^
+        //   this.#zobristKeys[
+        //     ((move >>> 14) & 0b111111) * 12 + ((move & 0b1111) - 1) // remove moved piece
+        //   ];
+
+        this.board[(move >>> 14) & 0b111111] = 0;
+        this.board[(move >>> 8) & 0b111111] = (move & 0b0001) | 0b0100;
+        break;
       case moveTypes.PROMOTION_KNIGHT:
         history |= this.board[(move >>> 8) & 0b111111] << 20;
+
+        // this.zobrist ^=
+        //   this.#zobristKeys[
+        //     ((move >>> 8) & 0b111111) * 12 + (((move & 0b0001) | 0b0100) - 1) // add moved piece
+        //   ] ^
+        //   this.#zobristKeys[
+        //     ((move >>> 14) & 0b111111) * 12 + ((move & 0b1111) - 1) // remove moved piece
+        //   ];
+
         this.board[(move >>> 14) & 0b111111] = 0;
         this.board[(move >>> 8) & 0b111111] = (move & 0b0001) | 0b0100;
         break;
       case moveTypes.DOUBLE_PAWN_PUSH:
       case moveTypes.MOVE:
+        this.zobrist ^=
+          this.#zobristKeys[
+            ((move >>> 14) & 0b111111) * 12 + (((move & 0b1111) >>> 1) - 1)
+          ] ^
+          this.#zobristKeys[
+            ((move >>> 8) & 0b111111) * 12 + (((move & 0b1111) >>> 1) - 1) // re-move
+          ];
+
         this.board[(move >>> 14) & 0b111111] = 0;
         this.board[(move >>> 8) & 0b111111] = move & 0b1111;
         break;
@@ -198,10 +457,19 @@ export class ChessterGame {
     }
 
     this.history.push(history | (move & 0b11111111111111111111)); // order independent
-
     this.turn ^= 1;
-
     this.update();
+
+    ////////////////////////////
+    //     update zobrist     //
+    ////////////////////////////
+
+    this.zobrist ^= this.#zobristKeys[768]; // flip turn
+
+    // if (this.wckc) this.zobrist ^= this.#zobristKeys[769];
+    // if (this.wcqc) this.zobrist ^= this.#zobristKeys[770];
+    // if (this.bckc) this.zobrist ^= this.#zobristKeys[771];
+    // if (this.bcqc) this.zobrist ^= this.#zobristKeys[772];
   }
 
   /**
