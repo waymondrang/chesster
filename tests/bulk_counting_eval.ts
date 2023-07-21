@@ -72,7 +72,7 @@ function countBulkPositions(
       (game.history[game.history.length - 1] >>> 20) & 0b1111 ? 1 : 0,
       game.wc || game.bc ? 1 : 0,
       game.wcm || game.bcm ? 1 : 0,
-      game.sm ? 1 : 0,
+      game.stalemate ? 1 : 0,
     ];
 
   let count = 0;

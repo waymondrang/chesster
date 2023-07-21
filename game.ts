@@ -3,18 +3,13 @@ import {
   ChessterGameState,
   ChessterHistory,
   ChessterMove,
-  ChessterTeam,
   RecursivePartial,
   WHITE,
   boardSize,
   defaultBoard,
   moveTypes,
 } from "./types";
-import {
-  binaryToString,
-  numberToLetterString,
-  numberToPieceString,
-} from "./util";
+import { binaryToString, numberToLetterString } from "./util";
 
 export class ChessterGame {
   board: number[]; // board is 64 bytes
@@ -26,12 +21,15 @@ export class ChessterGame {
   bckc: boolean; // black can castle kingside
   wcqc: boolean; // white can castle queenside
   bcqc: boolean; // black can castle queenside
-  sm: boolean; // stalemate
+  stalemate: boolean; // stalemate
+  draw: boolean; // draw
   simulation: boolean;
   turn: 1 | 0; // false is white, true is black
   history: ChessterHistory;
-  #zobristKeys: bigint[];
   zobrist: bigint;
+  zHistory: bigint[]; // zobrist history
+
+  #zobristKeys: bigint[];
 
   /**
    * Creates a new Chesster game instance
@@ -56,15 +54,15 @@ export class ChessterGame {
     this.bckc = state?.bckc ?? true; // black can castle kingside
     this.bcqc = state?.bcqc ?? true; // black can castle queenside
 
-    this.sm = state?.sm ?? false; // stalemate
+    this.stalemate = state?.stalemate ?? false; // stalemate
 
     ///////////////////////////////////
     //     generate zobrist keys     //
     ///////////////////////////////////
 
-    this.#zobristKeys = [8746989176631517180n];
+    this.#zobristKeys = [8746989176631517180n]; // initial zobrist key
 
-    for (let i = 1; i < 780; i++) {
+    for (let i = 1; i < 781; i++) {
       this.#zobristKeys.push(
         this.#LinearCongruentialGenerator(this.#zobristKeys[i - 1])
       );
@@ -82,20 +80,18 @@ export class ChessterGame {
 
     if (this.turn === BLACK) this.zobrist ^= this.#zobristKeys[768];
 
-    // if (this.wckc) this.zobrist ^= this.#zobristKeys[769];
-    // if (this.wcqc) this.zobrist ^= this.#zobristKeys[770];
-    // if (this.bckc) this.zobrist ^= this.#zobristKeys[771];
-    // if (this.bcqc) this.zobrist ^= this.#zobristKeys[772];
+    if (this.wckc) this.zobrist ^= this.#zobristKeys[769];
+    if (this.wcqc) this.zobrist ^= this.#zobristKeys[770];
+    if (this.bckc) this.zobrist ^= this.#zobristKeys[771];
+    if (this.bcqc) this.zobrist ^= this.#zobristKeys[772];
 
-    // todo: add en passant
-
-    console.log(this.zobrist);
+    this.zHistory = [this.zobrist];
 
     ////////////////////////////
     //     update on init     //
     ////////////////////////////
 
-    this.update();
+    this.#update();
   }
 
   /**
@@ -111,11 +107,29 @@ export class ChessterGame {
    * Takes back the last move
    */
   undo() {
+    if (!this.simulation) this.zHistory.pop();
+
     if (this.history.length > 0) {
       const move = this.history.pop();
       if (move) {
+        ////////////////////////////
+        //     update zobrist     //
+        ////////////////////////////
+
+        this.zobrist ^= this.#zobristKeys[768]; // flip turn
+
+        if ((((move >>> 28) & 0b1) === 1) !== this.wckc)
+          this.zobrist ^= this.#zobristKeys[769];
+        if ((((move >>> 30) & 0b1) === 1) !== this.wcqc)
+          this.zobrist ^= this.#zobristKeys[770];
+        if ((((move >>> 29) & 0b1) === 1) !== this.bckc)
+          this.zobrist ^= this.#zobristKeys[771];
+        if ((((move >>> 31) & 0b1) === 1) !== this.bcqc)
+          this.zobrist ^= this.#zobristKeys[772];
+
         this.turn ^= 1;
-        this.sm = false; // update stalemate
+        this.stalemate = false; // update stalemate
+        this.draw = false; // update draw
         this.bcqc = ((move >>> 31) & 0b1) === 1;
         this.wcqc = ((move >>> 30) & 0b1) === 1;
         this.bckc = ((move >>> 29) & 0b1) === 1;
@@ -126,10 +140,72 @@ export class ChessterGame {
         this.wc = ((move >>> 24) & 0b1) === 1;
 
         switch ((move >>> 4) & 0b1111) {
-          case moveTypes.PROMOTION_BISHOP_CAPTURE:
-          case moveTypes.PROMOTION_ROOK_CAPTURE:
-          case moveTypes.PROMOTION_KNIGHT_CAPTURE:
           case moveTypes.PROMOTION_QUEEN_CAPTURE:
+            this.zobrist ^=
+              this.#zobristKeys[
+                ((move >>> 8) & 0b111111) * 12 +
+                  ((((move >>> 20) & 0b1111) >>> 1) - 1) // add captured piece
+              ] ^
+              this.#zobristKeys[
+                ((move >>> 8) & 0b111111) * 12 + (0b101 - 1) // remove moved piece
+              ] ^
+              this.#zobristKeys[
+                ((move >>> 14) & 0b111111) * 12 + (0b001 - 1) // add moved piece
+              ];
+
+            this.board[(move >>> 8) & 0b111111] = (move >>> 20) & 0b1111;
+            this.board[(move >>> 14) & 0b111111] = move & 0b1111;
+
+            break;
+          case moveTypes.PROMOTION_BISHOP_CAPTURE:
+            this.zobrist ^=
+              this.#zobristKeys[
+                ((move >>> 8) & 0b111111) * 12 + (((move >>> 21) & 0b111) - 1) // add captured piece
+              ] ^
+              this.#zobristKeys[
+                ((move >>> 8) & 0b111111) * 12 + (0b011 - 1) // remove moved piece
+              ] ^
+              this.#zobristKeys[
+                ((move >>> 14) & 0b111111) * 12 + (0b001 - 1) // add moved piece
+              ];
+
+            this.board[(move >>> 8) & 0b111111] = (move >>> 20) & 0b1111;
+            this.board[(move >>> 14) & 0b111111] = move & 0b1111;
+
+            break;
+          case moveTypes.PROMOTION_ROOK_CAPTURE:
+            this.zobrist ^=
+              this.#zobristKeys[
+                ((move >>> 8) & 0b111111) * 12 + (((move >>> 21) & 0b111) - 1) // add captured piece
+              ] ^
+              this.#zobristKeys[
+                ((move >>> 8) & 0b111111) * 12 + (0b100 - 1) // remove moved piece
+              ] ^
+              this.#zobristKeys[
+                ((move >>> 14) & 0b111111) * 12 + (0b001 - 1) // add moved piece
+              ];
+
+            this.board[(move >>> 8) & 0b111111] = (move >>> 20) & 0b1111;
+            this.board[(move >>> 14) & 0b111111] = move & 0b1111;
+
+            break;
+          case moveTypes.PROMOTION_KNIGHT_CAPTURE:
+            this.zobrist ^=
+              this.#zobristKeys[
+                ((move >>> 8) & 0b111111) * 12 +
+                  ((((move >>> 20) & 0b1111) >>> 1) - 1) // add captured piece
+              ] ^
+              this.#zobristKeys[
+                ((move >>> 8) & 0b111111) * 12 + (0b010 - 1) // remove moved piece
+              ] ^
+              this.#zobristKeys[
+                ((move >>> 14) & 0b111111) * 12 + (0b001 - 1) // add moved piece
+              ];
+
+            this.board[(move >>> 8) & 0b111111] = (move >>> 20) & 0b1111;
+            this.board[(move >>> 14) & 0b111111] = move & 0b1111;
+
+            break;
           case moveTypes.CAPTURE:
             this.zobrist ^=
               this.#zobristKeys[
@@ -199,7 +275,45 @@ export class ChessterGame {
             this.board[(move >>> 8) & 0b111111] = 0;
 
             break;
-          default:
+          case moveTypes.PROMOTION_KNIGHT:
+            this.zobrist ^=
+              this.#zobristKeys[((move >>> 14) & 0b111111) * 12 + (0b001 - 1)] ^
+              this.#zobristKeys[((move >>> 8) & 0b111111) * 12 + (0b010 - 1)];
+
+            this.board[(move >>> 14) & 0b111111] = move & 0b1111;
+            this.board[(move >>> 8) & 0b111111] = 0;
+
+            break;
+          case moveTypes.PROMOTION_BISHOP:
+            this.zobrist ^=
+              this.#zobristKeys[((move >>> 14) & 0b111111) * 12 + (0b001 - 1)] ^
+              this.#zobristKeys[((move >>> 8) & 0b111111) * 12 + (0b011 - 1)];
+
+            this.board[(move >>> 14) & 0b111111] = move & 0b1111;
+            this.board[(move >>> 8) & 0b111111] = 0;
+
+            break;
+          case moveTypes.PROMOTION_ROOK:
+            this.zobrist ^=
+              this.#zobristKeys[((move >>> 14) & 0b111111) * 12 + (0b001 - 1)] ^
+              this.#zobristKeys[((move >>> 8) & 0b111111) * 12 + (0b100 - 1)];
+
+            this.board[(move >>> 14) & 0b111111] = move & 0b1111;
+            this.board[(move >>> 8) & 0b111111] = 0;
+
+            break;
+          case moveTypes.PROMOTION_QUEEN:
+            this.zobrist ^=
+              this.#zobristKeys[((move >>> 14) & 0b111111) * 12 + (0b001 - 1)] ^
+              this.#zobristKeys[((move >>> 8) & 0b111111) * 12 + (0b101 - 1)];
+
+            this.board[(move >>> 14) & 0b111111] = move & 0b1111;
+            this.board[(move >>> 8) & 0b111111] = 0;
+
+            break;
+          case moveTypes.DOUBLE_PAWN_PUSH:
+            this.zobrist ^= this.#zobristKeys[((move >>> 8) & 0b111) + 773];
+          case moveTypes.MOVE:
             this.zobrist ^=
               this.#zobristKeys[
                 ((move >>> 14) & 0b111111) * 12 + (((move & 0b1111) >>> 1) - 1)
@@ -212,22 +326,28 @@ export class ChessterGame {
             this.board[(move >>> 8) & 0b111111] = 0;
 
             break;
+          default:
+            throw new Error("invalid move type");
         }
 
-        ////////////////////////////
-        //     update zobrist     //
-        ////////////////////////////
-
-        this.zobrist ^= this.#zobristKeys[768]; // flip turn
-
-        // if (this.wckc) this.zobrist ^= this.#zobristKeys[769];
-        // if (this.wcqc) this.zobrist ^= this.#zobristKeys[770];
-        // if (this.bckc) this.zobrist ^= this.#zobristKeys[771];
-        // if (this.bcqc) this.zobrist ^= this.#zobristKeys[772];
+        if (
+          this.history[this.history.length - 1] &&
+          ((this.history[this.history.length - 1] >>> 4) & 0b1111) ===
+            moveTypes.DOUBLE_PAWN_PUSH
+        )
+          // return (this.history[this.history.length - 1] >>> 8) & 0b111;
+          this.zobrist ^=
+            this.#zobristKeys[
+              ((this.history[this.history.length - 1] >>> 8) & 0b111) + 773
+            ];
       }
     }
   }
 
+  /**
+   * Performs a move
+   * @param move The move to perform
+   */
   move(move: ChessterMove) {
     // 32 bit number
     let history =
@@ -282,10 +402,10 @@ export class ChessterGame {
               ((this.board[((move >>> 8) & 0b111111) + 8] >>> 1) - 1) // remove captured piece
           ] ^
           this.#zobristKeys[
-            ((move >>> 8) & 0b111111) * 12 + (((move & 0b1111) >>> 1) - 1) // add moved piece
+            ((move >>> 8) & 0b111111) * 12 + (0b001 - 1) // add moved piece
           ] ^
           this.#zobristKeys[
-            ((move >>> 14) & 0b111111) * 12 + (((move & 0b1111) >>> 1) - 1) // remove moved piece
+            ((move >>> 14) & 0b111111) * 12 + (0b001 - 1) // remove moved piece
           ];
 
         this.board[(move >>> 14) & 0b111111] = 0;
@@ -301,10 +421,10 @@ export class ChessterGame {
               ((this.board[((move >>> 8) & 0b111111) - 8] >>> 1) - 1) // remove captured piece
           ] ^
           this.#zobristKeys[
-            ((move >>> 8) & 0b111111) * 12 + (((move & 0b1111) >>> 1) - 1) // add moved piece
+            ((move >>> 8) & 0b111111) * 12 + (0b001 - 1) // add moved piece
           ] ^
           this.#zobristKeys[
-            ((move >>> 14) & 0b111111) * 12 + (((move & 0b1111) >>> 1) - 1) // remove moved piece
+            ((move >>> 14) & 0b111111) * 12 + (0b001 - 1) // remove moved piece
           ];
 
         this.board[(move >>> 14) & 0b111111] = 0;
@@ -314,17 +434,17 @@ export class ChessterGame {
       case moveTypes.PROMOTION_QUEEN_CAPTURE:
         history |= this.board[(move >>> 8) & 0b111111] << 20;
 
-        // this.zobrist ^=
-        //   this.#zobristKeys[
-        //     ((move >>> 8) & 0b111111) * 12 +
-        //       (this.board[(move >>> 8) & 0b111111] - 1) // remove captured piece
-        //   ] ^
-        //   this.#zobristKeys[
-        //     ((move >>> 8) & 0b111111) * 12 + (((move & 0b0001) | 0b1010) - 1) // add moved piece
-        //   ] ^
-        //   this.#zobristKeys[
-        //     ((move >>> 14) & 0b111111) * 12 + ((move & 0b1111) - 1) // remove moved piece
-        //   ];
+        this.zobrist ^=
+          this.#zobristKeys[
+            ((move >>> 8) & 0b111111) * 12 +
+              ((this.board[(move >>> 8) & 0b111111] >>> 1) - 1) // remove captured piece
+          ] ^
+          this.#zobristKeys[
+            ((move >>> 8) & 0b111111) * 12 + (0b101 - 1) // add moved piece
+          ] ^
+          this.#zobristKeys[
+            ((move >>> 14) & 0b111111) * 12 + (0b001 - 1) // remove moved piece
+          ];
 
         this.board[(move >>> 14) & 0b111111] = 0;
         this.board[(move >>> 8) & 0b111111] = (move & 0b0001) | 0b1010;
@@ -332,13 +452,13 @@ export class ChessterGame {
       case moveTypes.PROMOTION_QUEEN:
         history |= this.board[(move >>> 8) & 0b111111] << 20;
 
-        // this.zobrist ^=
-        //   this.#zobristKeys[
-        //     ((move >>> 8) & 0b111111) * 12 + (((move & 0b0001) | 0b1010) - 1) // add moved piece
-        //   ] ^
-        //   this.#zobristKeys[
-        //     ((move >>> 14) & 0b111111) * 12 + ((move & 0b1111) - 1) // remove moved piece
-        //   ];
+        this.zobrist ^=
+          this.#zobristKeys[
+            ((move >>> 8) & 0b111111) * 12 + (0b101 - 1) // add moved piece
+          ] ^
+          this.#zobristKeys[
+            ((move >>> 14) & 0b111111) * 12 + (0b001 - 1) // remove moved piece
+          ];
 
         this.board[(move >>> 14) & 0b111111] = 0;
         this.board[(move >>> 8) & 0b111111] = (move & 0b0001) | 0b1010;
@@ -346,17 +466,17 @@ export class ChessterGame {
       case moveTypes.PROMOTION_ROOK_CAPTURE:
         history |= this.board[(move >>> 8) & 0b111111] << 20;
 
-        // this.zobrist ^=
-        //   this.#zobristKeys[
-        //     ((move >>> 8) & 0b111111) * 12 +
-        //       (this.board[(move >>> 8) & 0b111111] - 1) // remove captured piece
-        //   ] ^
-        //   this.#zobristKeys[
-        //     ((move >>> 8) & 0b111111) * 12 + (((move & 0b0001) | 0b1000) - 1) // add moved piece
-        //   ] ^
-        //   this.#zobristKeys[
-        //     ((move >>> 14) & 0b111111) * 12 + ((move & 0b1111) - 1) // remove moved piece
-        //   ];
+        this.zobrist ^=
+          this.#zobristKeys[
+            ((move >>> 8) & 0b111111) * 12 +
+              ((this.board[(move >>> 8) & 0b111111] >>> 1) - 1) // remove captured piece
+          ] ^
+          this.#zobristKeys[
+            ((move >>> 8) & 0b111111) * 12 + (0b100 - 1) // add moved piece (change)
+          ] ^
+          this.#zobristKeys[
+            ((move >>> 14) & 0b111111) * 12 + (0b001 - 1) // remove moved piece
+          ];
 
         this.board[(move >>> 14) & 0b111111] = 0;
         this.board[(move >>> 8) & 0b111111] = (move & 0b0001) | 0b1000;
@@ -364,13 +484,13 @@ export class ChessterGame {
       case moveTypes.PROMOTION_ROOK:
         history |= this.board[(move >>> 8) & 0b111111] << 20;
 
-        // this.zobrist ^=
-        //   this.#zobristKeys[
-        //     ((move >>> 8) & 0b111111) * 12 + (((move & 0b0001) | 0b1000) - 1) // add moved piece
-        //   ] ^
-        //   this.#zobristKeys[
-        //     ((move >>> 14) & 0b111111) * 12 + ((move & 0b1111) - 1) // remove moved piece
-        //   ];
+        this.zobrist ^=
+          this.#zobristKeys[
+            ((move >>> 8) & 0b111111) * 12 + (0b100 - 1) // add moved piece (change)
+          ] ^
+          this.#zobristKeys[
+            ((move >>> 14) & 0b111111) * 12 + (0b001 - 1) // remove moved piece
+          ];
 
         this.board[(move >>> 14) & 0b111111] = 0;
         this.board[(move >>> 8) & 0b111111] = (move & 0b0001) | 0b1000;
@@ -378,17 +498,17 @@ export class ChessterGame {
       case moveTypes.PROMOTION_BISHOP_CAPTURE:
         history |= this.board[(move >>> 8) & 0b111111] << 20;
 
-        // this.zobrist ^=
-        //   this.#zobristKeys[
-        //     ((move >>> 8) & 0b111111) * 12 +
-        //       (this.board[(move >>> 8) & 0b111111] - 1) // remove captured piece
-        //   ] ^
-        //   this.#zobristKeys[
-        //     ((move >>> 8) & 0b111111) * 12 + (((move & 0b0001) | 0b0110) - 1) // add moved piece
-        //   ] ^
-        //   this.#zobristKeys[
-        //     ((move >>> 14) & 0b111111) * 12 + ((move & 0b1111) - 1) // remove moved piece
-        //   ];
+        this.zobrist ^=
+          this.#zobristKeys[
+            ((move >>> 8) & 0b111111) * 12 +
+              ((this.board[(move >>> 8) & 0b111111] >>> 1) - 1) // remove captured piece
+          ] ^
+          this.#zobristKeys[
+            ((move >>> 8) & 0b111111) * 12 + (0b011 - 1) // add moved piece (change)
+          ] ^
+          this.#zobristKeys[
+            ((move >>> 14) & 0b111111) * 12 + (0b001 - 1) // remove moved piece
+          ];
 
         this.board[(move >>> 14) & 0b111111] = 0;
         this.board[(move >>> 8) & 0b111111] = (move & 0b0001) | 0b0110;
@@ -396,13 +516,13 @@ export class ChessterGame {
       case moveTypes.PROMOTION_BISHOP:
         history |= this.board[(move >>> 8) & 0b111111] << 20;
 
-        // this.zobrist ^=
-        //   this.#zobristKeys[
-        //     ((move >>> 8) & 0b111111) * 12 + (((move & 0b0001) | 0b0110) - 1) // add moved piece
-        //   ] ^
-        //   this.#zobristKeys[
-        //     ((move >>> 14) & 0b111111) * 12 + ((move & 0b1111) - 1) // remove moved piece
-        //   ];
+        this.zobrist ^=
+          this.#zobristKeys[
+            ((move >>> 8) & 0b111111) * 12 + (0b011 - 1) // add moved piece (change)
+          ] ^
+          this.#zobristKeys[
+            ((move >>> 14) & 0b111111) * 12 + (0b001 - 1) // remove moved piece
+          ];
 
         this.board[(move >>> 14) & 0b111111] = 0;
         this.board[(move >>> 8) & 0b111111] = (move & 0b0001) | 0b0110;
@@ -410,17 +530,17 @@ export class ChessterGame {
       case moveTypes.PROMOTION_KNIGHT_CAPTURE:
         history |= this.board[(move >>> 8) & 0b111111] << 20;
 
-        // this.zobrist ^=
-        //   this.#zobristKeys[
-        //     ((move >>> 8) & 0b111111) * 12 +
-        //       (this.board[(move >>> 8) & 0b111111] - 1) // remove captured piece
-        //   ] ^
-        //   this.#zobristKeys[
-        //     ((move >>> 8) & 0b111111) * 12 + (((move & 0b0001) | 0b0100) - 1) // add moved piece
-        //   ] ^
-        //   this.#zobristKeys[
-        //     ((move >>> 14) & 0b111111) * 12 + ((move & 0b1111) - 1) // remove moved piece
-        //   ];
+        this.zobrist ^=
+          this.#zobristKeys[
+            ((move >>> 8) & 0b111111) * 12 +
+              ((this.board[(move >>> 8) & 0b111111] >>> 1) - 1) // remove captured piece
+          ] ^
+          this.#zobristKeys[
+            ((move >>> 8) & 0b111111) * 12 + (0b010 - 1) // add moved piece (change)
+          ] ^
+          this.#zobristKeys[
+            ((move >>> 14) & 0b111111) * 12 + (0b001 - 1) // remove moved piece
+          ];
 
         this.board[(move >>> 14) & 0b111111] = 0;
         this.board[(move >>> 8) & 0b111111] = (move & 0b0001) | 0b0100;
@@ -428,18 +548,19 @@ export class ChessterGame {
       case moveTypes.PROMOTION_KNIGHT:
         history |= this.board[(move >>> 8) & 0b111111] << 20;
 
-        // this.zobrist ^=
-        //   this.#zobristKeys[
-        //     ((move >>> 8) & 0b111111) * 12 + (((move & 0b0001) | 0b0100) - 1) // add moved piece
-        //   ] ^
-        //   this.#zobristKeys[
-        //     ((move >>> 14) & 0b111111) * 12 + ((move & 0b1111) - 1) // remove moved piece
-        //   ];
+        this.zobrist ^=
+          this.#zobristKeys[
+            ((move >>> 8) & 0b111111) * 12 + (0b010 - 1) // add moved piece (change)
+          ] ^
+          this.#zobristKeys[
+            ((move >>> 14) & 0b111111) * 12 + (0b001 - 1) // remove moved piece
+          ];
 
         this.board[(move >>> 14) & 0b111111] = 0;
         this.board[(move >>> 8) & 0b111111] = (move & 0b0001) | 0b0100;
         break;
       case moveTypes.DOUBLE_PAWN_PUSH:
+        this.zobrist ^= this.#zobristKeys[((move >>> 8) & 0b111) + 773];
       case moveTypes.MOVE:
         this.zobrist ^=
           this.#zobristKeys[
@@ -456,9 +577,21 @@ export class ChessterGame {
         throw new Error("invalid move type: " + binaryToString(move));
     }
 
+    // update zobrist hash if last move was double pawn push
+    if (
+      this.history[this.history.length - 1] &&
+      ((this.history[this.history.length - 1] >>> 4) & 0b1111) ===
+        moveTypes.DOUBLE_PAWN_PUSH
+    )
+      // return (this.history[this.history.length - 1] >>> 8) & 0b111;
+      this.zobrist ^=
+        this.#zobristKeys[
+          ((this.history[this.history.length - 1] >>> 8) & 0b111) + 773
+        ];
+
     this.history.push(history | (move & 0b11111111111111111111)); // order independent
     this.turn ^= 1;
-    this.update();
+    this.#update();
 
     ////////////////////////////
     //     update zobrist     //
@@ -466,76 +599,64 @@ export class ChessterGame {
 
     this.zobrist ^= this.#zobristKeys[768]; // flip turn
 
-    // if (this.wckc) this.zobrist ^= this.#zobristKeys[769];
-    // if (this.wcqc) this.zobrist ^= this.#zobristKeys[770];
-    // if (this.bckc) this.zobrist ^= this.#zobristKeys[771];
-    // if (this.bcqc) this.zobrist ^= this.#zobristKeys[772];
+    if (!this.simulation) {
+      let positionSeenCount = 0;
+      for (let i = this.zHistory.length - 1; i >= 0; i--) {
+        if (this.zHistory[i] === this.zobrist) positionSeenCount++;
+
+        if (positionSeenCount === 3) {
+          this.draw = true;
+          break;
+        }
+      }
+      this.zHistory.push(this.zobrist);
+    }
   }
 
   /**
-   * Checks that the given move is valid and moves the piece if it is
-   * @param vm The move data to validate and move
-   * @returns Whether the move was valid and the piece was moved
+   * Move validator used for debugging
+   * @param moveToValidate The move to validate
+   * @returns The associated move as a number
    */
-  validateAndMove(vm: ChessterMove): void {
-    const vp = this.board[(vm >>> 14) & 0b111111];
-
-    // REMOVE (skipping validation)
-    this.move(vm);
-    return;
-
-    if (!vp)
-      throw new Error(
-        "no piece at from location:" + binaryToString((vm >>> 14) & 0b111111)
-      );
-
-    const move = this.getAvailableMoves((vm >>> 14) & 0b111111).find(
-      (m) => m === vm
-    );
-
-    if (!move) throw new Error("invalid move: " + binaryToString(vm));
-
-    this.move(vm);
-  }
-
-  validateAndMoveObject(vm: {
+  validateAndMoveObject(moveToValidate: {
     from: string;
     to: string;
     promotion?: string;
   }): number {
-    const moves = this.getAvailableMoves(
-      (8 - Number.parseInt(vm.from[1])) * 8 + (vm.from.charCodeAt(0) - 97)
-    );
+    let promotion: number;
 
-    let pd: number;
-
-    switch (vm.promotion) {
+    switch (moveToValidate.promotion) {
       case "q":
-        pd = 0b00;
+        promotion = 0b00;
         break;
       case "r":
-        pd = 0b11;
+        promotion = 0b11;
         break;
       case "b":
-        pd = 0b10;
+        promotion = 0b10;
         break;
       case "n":
-        pd = 0b01;
+        promotion = 0b01;
         break;
     }
 
-    const move = moves.find(
+    const move = this.getAvailableMoves(
+      (8 - Number.parseInt(moveToValidate.from[1])) * 8 +
+        (moveToValidate.from.charCodeAt(0) - 97)
+    ).find(
       (m) =>
         ((m >>> 8) & 0b111111) ===
-          (8 - Number.parseInt(vm.to[1])) * 8 + (vm.to.charCodeAt(0) - 97) &&
-        (vm.promotion
+          (8 - Number.parseInt(moveToValidate.to[1])) * 8 +
+            (moveToValidate.to.charCodeAt(0) - 97) &&
+        (moveToValidate.promotion
           ? ((m >>> 6) & 0b11) === 0b10 || ((m >>> 6) & 0b11) === 0b11
-            ? ((m >>> 4) & 0b11) === pd
+            ? ((m >>> 4) & 0b11) === promotion
             : false
           : true)
     );
 
-    if (!move) throw new Error("invalid move: " + JSON.stringify(vm));
+    if (!move)
+      throw new Error("invalid move: " + JSON.stringify(moveToValidate));
 
     this.move(move);
 
@@ -568,7 +689,15 @@ export class ChessterGame {
     return s;
   }
 
-  update() {
+  /**
+   * Updates game state variables
+   * @returns The game state
+   */
+  #update() {
+    //////////////////////////
+    //     update check     //
+    //////////////////////////
+
     let checked = 0b00; // left bit is currentChecked, right bit is pastChecked
 
     // check if past team is still in check
@@ -615,32 +744,38 @@ export class ChessterGame {
     this.bc =
       (this.turn === WHITE ? checked & 0b01 : (checked & 0b10) >>> 1) === 1;
 
-    // modified from updateCastle()
-    this.wckc = this.wckc
-      ? this.board[60] === 0b1100 && this.board[63] === 0b1000
-      : false;
+    /////////////////////////////
+    //     update castling     //
+    /////////////////////////////
 
-    this.wcqc = this.wcqc
-      ? this.board[60] === 0b1100 && this.board[56] === 0b1000
-      : false;
+    if (this.wckc && (this.board[60] !== 0b1100 || this.board[63] !== 0b1000)) {
+      this.wckc = false;
+      this.zobrist ^= this.#zobristKeys[769];
+    }
 
-    this.bckc = this.bckc
-      ? this.board[4] === 0b1101 && this.board[7] === 0b1001
-      : false;
+    if (this.wcqc && (this.board[60] !== 0b1100 || this.board[56] !== 0b1000)) {
+      this.wcqc = false;
+      this.zobrist ^= this.#zobristKeys[770];
+    }
 
-    this.bcqc = this.bcqc
-      ? this.board[4] === 0b1101 && this.board[0] === 0b1001
-      : false;
+    if (this.bckc && (this.board[4] !== 0b1101 || this.board[7] !== 0b1001)) {
+      this.bckc = false;
+      this.zobrist ^= this.#zobristKeys[771];
+    }
+
+    if (this.bcqc && (this.board[4] !== 0b1101 || this.board[0] !== 0b1001)) {
+      this.bcqc = false;
+      this.zobrist ^= this.#zobristKeys[772];
+    }
 
     if (this.simulation) return;
 
     /*
-     * the below code utilizes the fact that both teams cannot be checked at the same time. additionally,
-     * we only need to check if the current team is in checkmate. we do not need to check the previous team
-     * as they could not make any moves that would result in check.
+     * the below code relies on the fact that both teams cannot be checked at
+     * the same time. additionally, we only need to check if the current team is
+     * in checkmate. we do not need to check the previous team as they could not
+     * make any moves that would result in check.
      */
-
-    // modified from isCheckmated()
 
     this.wcm = this.wc;
     this.bcm = this.bc;
@@ -659,11 +794,23 @@ export class ChessterGame {
       }
     }
 
-    this.sm = !this.wcm && !this.bcm && sm;
+    this.stalemate = !this.wcm && !this.bcm && sm;
   }
 
-  moves() {
-    if (this.wcm || this.bcm || this.sm) return [];
+  /**
+   * Checks if the game is over.
+   * @returns Whether or not the game is over
+   */
+  isGameOver(): boolean {
+    return this.wcm || this.bcm || this.stalemate || this.draw;
+  }
+
+  /**
+   * Returns all available moves for the current turn
+   * @returns An array of moves
+   */
+  moves(): number[] {
+    if (this.isGameOver()) return [];
 
     let moves = [];
 
@@ -676,6 +823,10 @@ export class ChessterGame {
     return moves;
   }
 
+  /**
+   * Returns the current game state
+   * @returns The game state
+   */
   getState(): ChessterGameState {
     return {
       board: [...this.board],
@@ -689,16 +840,15 @@ export class ChessterGame {
       wcqc: this.wcqc,
       bckc: this.bckc,
       bcqc: this.bcqc,
-      sm: this.sm,
+      stalemate: this.stalemate,
       simulation: this.simulation,
     };
   }
 
   /**
-   *
-   * @param piece 4-bit integer representing the piece
-   * @param location 6-bit integer representing the location of the piece
-   * @returns
+   * Returns all moves, including potentially illegal moves, for the location
+   * @param location The location of the piece
+   * @returns An array of moves
    */
   getAllMoves(location: number): number[] {
     switch ((this.board[location] >>> 1) & 0b111) {
@@ -726,8 +876,8 @@ export class ChessterGame {
   }
 
   /**
-   * Returns available moves for the given location, accounting for check
-   * @returns
+   * Returns available moves for the given location
+   * @returns An array of moves
    */
   getAvailableMoves(location: number): number[] {
     const moves = this.getAllMoves(location);
@@ -792,12 +942,6 @@ export class ChessterGame {
     return finalMoves;
   }
 
-  /**
-   * as the king is a symmetric piece, the team is not used in the calculations
-   * @param piece
-   * @param location
-   * @returns
-   */
   getKingMoves(piece: number, location: number): number[] {
     const moves: number[] = [];
 
@@ -1850,23 +1994,4 @@ export class ChessterGame {
 
     return moves;
   }
-
-  // countPiecesInBoundary(
-  //   boundary1: ChessterLocation,
-  //   boundary2: ChessterLocation,
-  //   options?: { team?: ChessterTeam }
-  // ) {
-  //   let count = 0;
-  //   for (let i = boundary1[0]; i <= boundary2[0]; i++) {
-  //     for (let j = boundary1[1]; j <= boundary2[1]; j++) {
-  //       if (
-  //         this.board[i][j] &&
-  //         (options === undefined || this.board[i][j]!.team === options.team)
-  //       ) {
-  //         count++;
-  //       }
-  //     }
-  //   }
-  //   return count;
-  // }
 }

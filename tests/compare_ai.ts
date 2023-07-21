@@ -1,60 +1,90 @@
 import { ChessterAI } from "../ai";
-import { ChessterAI as OldChessterAI } from "../ai.old";
 import { ChessterGame } from "../game";
 
 const game = new ChessterGame();
 
-const ai2 = new ChessterAI(game);
-const ai1 = new OldChessterAI(game);
+const ai1 = new ChessterAI(game, {
+  depth: 2,
+  pseudoLegalEvaluation: false,
+  searchAlgorithm: "negaScout",
+});
 
-const games = 1;
+const ai2 = new ChessterAI(game, {
+  depth: 4,
+  pseudoLegalEvaluation: false,
+  searchAlgorithm: "negaScout",
+});
 
-var times = {
-  ai1: 0,
-  ai2: 0,
+const games = 4;
+
+////////////////////////
+//     end config     //
+////////////////////////
+
+var data = {
+  ai1: {
+    averageMoveTime: 0,
+    wins: 0,
+  },
+  ai2: {
+    averageMoveTime: 0,
+    wins: 0,
+  },
 };
 
 for (let i = 0; i < games; i++) {
   game.init();
 
   let counter = 0;
+  let ai1Time = 0;
+  let ai2Time = 0;
 
-  while (!game.bcm && !game.wcm && !game.sm) {
+  while (!game.isGameOver()) {
     console.log("move " + counter);
 
     const ai1StartTime = performance.now();
 
-    ai1.makeMove();
+    ai1.makeMove(); // ai1 is white
 
-    times["ai1"] += performance.now() - ai1StartTime;
+    ai1Time += performance.now() - ai1StartTime;
 
-    if (game.bcm || game.wcm || game.sm) break;
+    console.log(game.ascii());
+
+    if (game.isGameOver()) break;
 
     const ai2StartTime = performance.now();
 
-    ai2.makeMove();
+    ai2.makeMove(); // ai2 is black
 
-    times["ai2"] += performance.now() - ai2StartTime;
+    ai2Time += performance.now() - ai2StartTime;
 
     counter++;
+
+    console.log(game.ascii());
   }
 
   console.log(
     `game ${i + 1}: ${
       game.wcm
-        ? "black (ai2) won by checkmate"
+        ? "black (ai2) won"
         : game.bcm
-        ? "white (ai1) won by checkmate"
-        : "stalemate"
+        ? "white (ai1) won"
+        : game.stalemate
+        ? "stalemate"
+        : "draw"
     }`
   );
 
-  console.log(
-    "average think times: ai1: " +
-      times["ai1"] / (counter + 1) +
-      "ms, ai2: " +
-      times["ai2"] / (counter + 1) +
-      "ms"
-  );
+  if (game.wcm) data.ai2.wins++;
+  else if (game.bcm) data.ai1.wins++;
+
+  data.ai1.averageMoveTime += ai1Time / counter;
+  data.ai2.averageMoveTime += ai2Time / counter;
+
   console.log(game.ascii());
 }
+
+data.ai1.averageMoveTime /= games;
+data.ai2.averageMoveTime /= games;
+
+console.log(data);

@@ -1,6 +1,6 @@
 import { ChessterAI } from "../ai";
 import { ChessterGame } from "../game";
-import { BLACK, WHITE, messageTypes } from "../types";
+import { messageTypes } from "../types";
 
 const game = new ChessterGame();
 const ai = new ChessterAI(game);
@@ -11,6 +11,7 @@ postMessage({
     depth: ai.depth,
     pseudoLegalEvaluation: ai.pseudoLegalEvaluation,
     searchAlgorithm: ai.searchAlgorithm,
+    visualizeSearch: ai.visualizeSearch,
   },
 });
 
@@ -25,6 +26,7 @@ onmessage = function (event: MessageEvent) {
       ai.depth = event.data.settings.depth;
       ai.pseudoLegalEvaluation = event.data.settings.pseudoLegalEvaluation;
       ai.searchAlgorithm = event.data.settings.searchAlgorithm;
+      ai.visualizeSearch = event.data.settings.visualizeSearch;
       break;
   }
 };

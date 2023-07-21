@@ -1,7 +1,3 @@
-/**
- * Chesster web interface entry point
- */
-
 /////////////////////
 //     imports     //
 /////////////////////
@@ -17,13 +13,7 @@ import {
   moveTypes,
   messageTypes,
 } from "../types";
-import {
-  binaryToString,
-  fenStringToGameState,
-  getKeyByValue,
-  numberToFileName,
-  rCompare,
-} from "../util";
+import { binaryToString, getKeyByValue, numberToFileName } from "../util";
 
 ////////////////////////////////
 //     constant variables     //
@@ -42,18 +32,18 @@ const promotion_options = document.querySelector(
 ) as HTMLDivElement;
 const undo = document.querySelector("#undo") as HTMLButtonElement;
 const settings = document.querySelector("#settings") as HTMLDivElement;
-const settingboard = document.querySelector("#settingboard") as HTMLDivElement;
-const save_settings = document.querySelector("#save") as HTMLButtonElement;
+const settings_container = document.querySelector(
+  "#settings_container"
+) as HTMLDivElement;
+const empty_settings = document.querySelectorAll(
+  ".setting.empty"
+) as NodeListOf<HTMLDivElement>;
 
 const game = new ChessterGame();
 const aiWorker = new Worker("worker.js");
-const enableAI = false;
+const enableAI = true;
 
-// game.init(
-//   fenStringToGameState(
-//     "r6r/1ppk1ppp/p1nbpn2/3b4/8/3BBN2/1PN2PPP/2R1R1K1 w - - 4 15"
-//   )
-// );
+// game.init(fenStringToGameState("5p2/6P1/8/8/8/8/8/8 w - - 0 0"));
 
 ///////////////////
 //     types     //
@@ -111,6 +101,24 @@ function updateLastMove(gameHistory: ChessterHistory) {
     elementBoard[from].classList.add("moved_from");
     elementBoard[to].classList.add("moved_to");
   }
+}
+
+function clearVisualizations() {
+  for (let i = 0; i < boardSize; i++) {
+    for (let modifier of ["visualize_from", "visualize_to"]) {
+      elementBoard[i].classList.remove(modifier);
+    }
+  }
+}
+
+function visualizeMove(move: ChessterMove) {
+  clearVisualizations();
+
+  let from = (move >>> 14) & 0b111111;
+  let to = (move >>> 8) & 0b111111;
+
+  elementBoard[from].classList.add("visualize_from");
+  elementBoard[to].classList.add("visualize_to");
 }
 
 function updateMove(move: ChessterMove) {
@@ -204,16 +212,13 @@ function updateBoard(gameBoard: ChessterBoard, previousBoard?: ChessterBoard) {
     }
   }
 
-  // if (game.turn === BLACK) chessboard.classList.add("disabled");
-  // else chessboard.classList.remove("disabled");
+  if ((enableAI && game.turn === BLACK) || game.isGameOver())
+    chessboard.classList.add("disabled");
+  else chessboard.classList.remove("disabled");
 
   undo.disabled =
     game.history.length === 0 ||
-    (game.sm || game.wcm || game.bcm
-      ? false
-      : enableAI
-      ? game.turn === BLACK
-      : false);
+    (game.isGameOver() ? false : enableAI ? game.turn === BLACK : false);
 }
 
 function updateStatus(gameTurn: ChessterTeam) {
@@ -221,7 +226,7 @@ function updateStatus(gameTurn: ChessterTeam) {
   turn_span.classList.remove("BLACK");
   turn_span.classList.add(gameTurn === 0 ? "WHITE" : "BLACK");
 
-  if (game.wcm || game.bcm || game.sm) {
+  if (game.isGameOver()) {
     end_span.classList.remove("hidden");
     turn_span.classList.add("game-over");
   } else {
@@ -238,19 +243,20 @@ promotion_close.addEventListener("click", () => {
 
 function clientMove(move: ChessterMove) {
   makeMove(move);
-  if (enableAI && !game.wcm && !game.bcm && !game.sm)
+  if (enableAI && !game.isGameOver())
     aiWorker.postMessage({ type: messageTypes.MOVE, state: game.getState() }); // disable to enable two player
 }
 
 function makeMove(move: ChessterMove) {
   let previousBoard = [...game.board];
 
-  console.log(game.zobrist);
+  console.log("before move", game.zobrist);
 
   game.move(move);
 
-  console.log(game.zobrist);
+  console.log("after move", game.zobrist);
 
+  clearVisualizations();
   updateBoard(game.board, previousBoard);
   updateStatus(game.turn);
   updateLastMove(game.history);
@@ -265,9 +271,10 @@ function clientUndo() {
   let previousBoard = [...game.board];
 
   game.undo();
-  // if (game.turn === BLACK) game.undo();
-  console.log(game.zobrist);
+  if (enableAI && game.turn === BLACK) game.undo();
+  console.log("after undo", game.zobrist);
 
+  clearVisualizations();
   updateBoard(game.board, previousBoard);
   updateStatus(game.turn);
   updateLastMove(game.history);
@@ -299,6 +306,12 @@ aiWorker.onmessage = function (event) {
       ).value = event.data.settings.pseudoLegalEvaluation.toString();
       (document.querySelector("#searchAlgorithm") as HTMLInputElement).value =
         event.data.settings.searchAlgorithm;
+      (document.querySelector("#visualizeSearch") as HTMLInputElement).value =
+        event.data.settings.visualizeSearch.toString();
+      break;
+    case messageTypes.VISUALIZE_MOVE:
+      console.log("visualizing move", event.data.move);
+      visualizeMove(event.data.move);
       break;
   }
 };
@@ -415,17 +428,20 @@ for (let i = 0; i < boardSize; i++) {
   })();
 }
 
-// initialize board
+//////////////////////////////
+//     initialize board     //
+//////////////////////////////
+
 updateBoard(game.board);
 updateStatus(game.turn);
 updateLastMove(game.history);
 
 turnMoves = game.moves();
 
-// set onclick event for new game button
 restart.addEventListener("click", async () => {
   game.init();
 
+  clearVisualizations();
   updateBoard(game.board);
   updateStatus(game.turn);
   updateLastMove(game.history);
@@ -436,23 +452,21 @@ restart.addEventListener("click", async () => {
   turnMoves = game.moves();
 });
 
-function animateSettings() {
+function toggleSettings() {
   settings.classList.toggle("enabled");
-  settingboard.classList.toggle("hidden");
-  const children = settingboard.children;
+  settings_container.classList.toggle("hidden");
 
-  for (let i = 0; i < children.length; i++) {
-    setTimeout(() => {
-      children[i].classList.toggle("hidden");
-    }, i * 50);
-  }
+  ///////////////////////////////////
+  //     animate children here     //
+  ///////////////////////////////////
 }
 
-settings.addEventListener("click", animateSettings);
+settings.addEventListener("click", toggleSettings);
+empty_settings.forEach((element) => {
+  element.addEventListener("click", toggleSettings);
+});
 
-save_settings.addEventListener("click", () => {
-  animateSettings();
-
+function saveSettings() {
   aiWorker.postMessage({
     type: messageTypes.SETTINGS,
     settings: {
@@ -465,8 +479,15 @@ save_settings.addEventListener("click", () => {
       searchAlgorithm: (
         document.querySelector("#searchAlgorithm") as HTMLInputElement
       ).value,
+      visualizeSearch:
+        (document.querySelector("#visualizeSearch") as HTMLInputElement)
+          .value === "true",
     },
   });
+}
+
+settings_container.querySelectorAll("select").forEach((element) => {
+  element.addEventListener("change", saveSettings);
 });
 
 /////////////////////////

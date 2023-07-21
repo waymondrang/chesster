@@ -40,6 +40,7 @@ export const boardSize = 64,
   messageTypes = {
     MOVE: 0b00000001,
     SETTINGS: 0b00000010,
+    VISUALIZE_MOVE: 0b00000011,
   };
 
 export type ChessterPieceString =
@@ -84,7 +85,7 @@ export type ChessterGameState = {
   wcqc: boolean; // can white castle queenside
   bckc: boolean; // can black castle kingside
   bcqc: boolean; // can black castle queenside
-  sm: boolean; // stalemate
+  stalemate: boolean; // stalemate
   simulation: boolean;
   turn: 0 | 1;
   history: ChessterHistory;
