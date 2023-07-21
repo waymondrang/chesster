@@ -579,7 +579,7 @@ nav {
         --primary-font-size: 2rem;
         --icon-font-size: 1.5rem;
         --settings-font-size: 1.5rem;
-        --settings-secondary-font-size: 0.9rem;
+        --settings-secondary-font-size: 0.85rem;
         --settings-inner-padding: 0.8rem;
     }
 }
@@ -589,8 +589,8 @@ nav {
     :root {
         --primary-font-size: 2.5rem;
         --icon-font-size: 1.75rem;
-        --settings-font-size: 2rem;
-        --settings-secondary-font-size: 1rem;
+        --settings-font-size: 1.8rem;
+        --settings-secondary-font-size: 0.9rem;
         --settings-inner-padding: 1rem;
     }
 
