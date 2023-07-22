@@ -213,8 +213,8 @@ export class ChessterAI {
     for (let i = 0; i < boardSize; i++) {
       if (this.game.board[i]) {
         const moves = this.pseudoLegalEvaluation
-          ? this.game.getAvailableMoves(i)
-          : this.game.getAllMoves(i);
+          ? this.game.getAllMoves(i)
+          : this.game.getAvailableMoves(i);
         score +=
           ((this.game.board[i] & 0b1) === this.game.turn ? 1 : -1) *
             pieceValues[(this.game.board[i] >>> 1) & 0b111] +
@@ -297,11 +297,11 @@ export class ChessterAI {
          * NOTE: postMessage will only work in a web worker
          */
 
-        if (this.visualizeSearch)
-          postMessage({
-            type: messageTypes.VISUALIZE_MOVE,
-            move: bestMove,
-          });
+        // if (this.visualizeSearch)
+        //   postMessage({
+        //     type: messageTypes.VISUALIZE_MOVE,
+        //     move: bestMove,
+        //   });
       }
 
       alpha = Math.max(alpha, score);
