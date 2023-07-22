@@ -23,12 +23,10 @@ export class ChessterGame {
   bcqc: boolean; // black can castle queenside
   stalemate: boolean; // stalemate
   draw: boolean; // draw
-  simulation: boolean;
   turn: 1 | 0; // false is white, true is black
   history: ChessterHistory;
   zobrist: bigint;
-  zHistory: bigint[]; // zobrist history
-
+  zistory: bigint[]; // zobrist history
   #zobristKeys: bigint[];
 
   /**
@@ -42,7 +40,6 @@ export class ChessterGame {
     this.board = state?.board ?? [...defaultBoard];
     this.turn = state?.turn ?? WHITE;
     this.history = state?.history ?? [];
-    this.simulation = state?.simulation ?? false;
 
     this.wc = state?.wc ?? false; // white check
     this.bc = state?.bc ?? false; // black check
@@ -85,7 +82,7 @@ export class ChessterGame {
     if (this.bckc) this.zobrist ^= this.#zobristKeys[771];
     if (this.bcqc) this.zobrist ^= this.#zobristKeys[772];
 
-    this.zHistory = [this.zobrist];
+    this.zistory = [this.zobrist];
 
     ////////////////////////////
     //     update on init     //
@@ -107,7 +104,7 @@ export class ChessterGame {
    * Takes back the last move
    */
   undo() {
-    if (!this.simulation) this.zHistory.pop();
+    this.zistory.pop();
 
     if (this.history.length > 0) {
       const move = this.history.pop();
@@ -134,8 +131,10 @@ export class ChessterGame {
         this.wcqc = ((move >>> 30) & 0b1) === 1;
         this.bckc = ((move >>> 29) & 0b1) === 1;
         this.wckc = ((move >>> 28) & 0b1) === 1;
-        this.bcm = ((move >>> 27) & 0b1) === 1;
-        this.wcm = ((move >>> 26) & 0b1) === 1;
+        this.bcm = false;
+        this.wcm = false;
+        // this.bcm = ((move >>> 27) & 0b1) === 1;
+        // this.wcm = ((move >>> 26) & 0b1) === 1;
         this.bc = ((move >>> 25) & 0b1) === 1;
         this.wc = ((move >>> 24) & 0b1) === 1;
 
@@ -599,18 +598,143 @@ export class ChessterGame {
 
     this.zobrist ^= this.#zobristKeys[768]; // flip turn
 
-    if (!this.simulation) {
-      let positionSeenCount = 0;
-      for (let i = this.zHistory.length - 1; i >= 0; i--) {
-        if (this.zHistory[i] === this.zobrist) positionSeenCount++;
+    let positionSeenCount = 0;
+    for (let i = this.zistory.length - 1; i >= 0; i--) {
+      if (this.zistory[i] === this.zobrist) positionSeenCount++;
 
-        if (positionSeenCount === 3) {
-          this.draw = true;
-          break;
+      if (positionSeenCount === 3) {
+        this.draw = true;
+        break;
+      }
+    }
+    this.zistory.push(this.zobrist);
+  }
+
+  simulateMove(move: number) {
+    // 32 bit number
+    const currentBoard = this.board.slice(); // compare with [...this.board]
+
+    switch ((move >>> 4) & 0b1111) {
+      case moveTypes.CAPTURE:
+        this.board[(move >>> 14) & 0b111111] = 0;
+        this.board[(move >>> 8) & 0b111111] = move & 0b1111;
+        break;
+      case moveTypes.CASTLE_KINGSIDE: // todo: add zobrist
+        this.board[(move >>> 14) & 0b111111] = 0;
+        this.board[((move >>> 14) & 0b111111) + 2] = move & 0b1111;
+        this.board[((move >>> 14) & 0b111111) + 1] =
+          this.board[((move >>> 14) & 0b111111) + 3];
+        this.board[((move >>> 14) & 0b111111) + 3] = 0;
+        break;
+      case moveTypes.CASTLE_QUEENSIDE: // todo: add zobrist
+        this.board[(move >>> 14) & 0b111111] = 0;
+        this.board[((move >>> 14) & 0b111111) - 2] = move & 0b1111;
+        this.board[((move >>> 14) & 0b111111) - 1] =
+          this.board[((move >>> 14) & 0b111111) - 4];
+        this.board[((move >>> 14) & 0b111111) - 4] = 0;
+        break;
+      case moveTypes.EN_PASSANT_WHITE:
+        this.board[(move >>> 14) & 0b111111] = 0;
+        this.board[(move >>> 8) & 0b111111] = move & 0b1111;
+        this.board[((move >>> 8) & 0b111111) + 8] = 0;
+        break;
+      case moveTypes.EN_PASSANT_BLACK:
+        this.board[(move >>> 14) & 0b111111] = 0;
+        this.board[(move >>> 8) & 0b111111] = move & 0b1111;
+        this.board[((move >>> 8) & 0b111111) - 8] = 0; // captured space
+        break;
+      case moveTypes.PROMOTION_QUEEN_CAPTURE:
+        this.board[(move >>> 14) & 0b111111] = 0;
+        this.board[(move >>> 8) & 0b111111] = (move & 0b0001) | 0b1010;
+        break;
+      case moveTypes.PROMOTION_QUEEN:
+        this.board[(move >>> 14) & 0b111111] = 0;
+        this.board[(move >>> 8) & 0b111111] = (move & 0b0001) | 0b1010;
+        break;
+      case moveTypes.PROMOTION_ROOK_CAPTURE:
+        this.board[(move >>> 14) & 0b111111] = 0;
+        this.board[(move >>> 8) & 0b111111] = (move & 0b0001) | 0b1000;
+        break;
+      case moveTypes.PROMOTION_ROOK:
+        this.board[(move >>> 14) & 0b111111] = 0;
+        this.board[(move >>> 8) & 0b111111] = (move & 0b0001) | 0b1000;
+        break;
+      case moveTypes.PROMOTION_BISHOP_CAPTURE:
+        this.board[(move >>> 14) & 0b111111] = 0;
+        this.board[(move >>> 8) & 0b111111] = (move & 0b0001) | 0b0110;
+        break;
+      case moveTypes.PROMOTION_BISHOP:
+        this.board[(move >>> 14) & 0b111111] = 0;
+        this.board[(move >>> 8) & 0b111111] = (move & 0b0001) | 0b0110;
+        break;
+      case moveTypes.PROMOTION_KNIGHT_CAPTURE:
+        this.board[(move >>> 14) & 0b111111] = 0;
+        this.board[(move >>> 8) & 0b111111] = (move & 0b0001) | 0b0100;
+        break;
+      case moveTypes.PROMOTION_KNIGHT:
+        this.board[(move >>> 14) & 0b111111] = 0;
+        this.board[(move >>> 8) & 0b111111] = (move & 0b0001) | 0b0100;
+        break;
+      case moveTypes.DOUBLE_PAWN_PUSH:
+      case moveTypes.MOVE:
+        this.board[(move >>> 14) & 0b111111] = 0;
+        this.board[(move >>> 8) & 0b111111] = move & 0b1111;
+        break;
+      default:
+        throw new Error("invalid move type: " + binaryToString(move));
+    }
+
+    //////////////////////////
+    //     update check     //
+    //////////////////////////
+
+    let checked = 0b00; // left bit is currentChecked, right bit is pastChecked
+
+    // check if past team is still in check
+    for (let i = 0; i < boardSize; i++) {
+      if (!this.board[i]) continue; // saved ~170ms
+
+      if (!(checked & 0b01) && (this.board[i] & 0b1) !== this.turn) {
+        const moves = this.getAllMoves(i);
+
+        for (let j = 0; j < moves.length; j++) {
+          if (
+            (((moves[j] >>> 4) & 0b1111) === moveTypes.CAPTURE ||
+              ((moves[j] >>> 6) & 0b11) === 0b11) && // if any promotion capture moves
+            this.board[(moves[j] >>> 8) & 0b111111] === (0b1100 | this.turn)
+          ) {
+            // 0b110 is king value
+            checked |= 0b01; // set pastChecked
+            break;
+          }
+        }
+      } else if (!(checked & 0b10) && (this.board[i] & 0b1) === this.turn) {
+        // check if current turn is in check
+        const moves = this.getAllMoves(i);
+
+        for (let j = 0; j < moves.length; j++) {
+          if (
+            (((moves[j] >>> 4) & 0b1111) === moveTypes.CAPTURE ||
+              ((moves[j] >>> 6) & 0b11) === 0b11) && // if any promotion capture moves
+            this.board[(moves[j] >>> 8) & 0b111111] ===
+              (0b1100 | (1 ^ this.turn))
+          ) {
+            // 0b110 is king value
+            checked |= 0b10; // set currentChecked
+            break;
+          }
         }
       }
-      this.zHistory.push(this.zobrist);
+
+      if (checked === 0b11) break;
     }
+
+    this.board = currentBoard;
+
+    return [
+      this.turn === WHITE ? (checked & 0b10) >>> 1 : checked & 0b01,
+      this.turn === WHITE ? checked & 0b01 : (checked & 0b10) >>> 1,
+    ];
   }
 
   /**
@@ -768,8 +892,6 @@ export class ChessterGame {
       this.zobrist ^= this.#zobristKeys[772];
     }
 
-    if (this.simulation) return;
-
     /*
      * the below code relies on the fact that both teams cannot be checked at
      * the same time. additionally, we only need to check if the current team is
@@ -841,7 +963,6 @@ export class ChessterGame {
       bckc: this.bckc,
       bcqc: this.bcqc,
       stalemate: this.stalemate,
-      simulation: this.simulation,
     };
   }
 
@@ -866,12 +987,6 @@ export class ChessterGame {
         return this.getKingMoves(this.board[location], location);
       default:
         return [];
-        throw new Error(
-          "invalid piece while getting available moves: " +
-            this.board[location] +
-            " (decimal)\n" +
-            this.ascii()
-        );
     }
   }
 
@@ -882,62 +997,36 @@ export class ChessterGame {
   getAvailableMoves(location: number): number[] {
     const moves = this.getAllMoves(location);
 
-    if (this.simulation) return moves;
-
     const finalMoves = [];
     // const team = this.board[location] & 0b1;
 
-    this.simulation = true;
-
     for (let i = 0; i < moves.length; i++) {
-      this.move(moves[i]);
+      let [wc, bc] = this.simulateMove(moves[i]);
 
-      if (
-        !((this.turn === WHITE || this.wc) && (this.turn === BLACK || this.bc))
-      ) {
-        this.undo();
-
+      if (!((this.turn === WHITE || wc) && (this.turn === BLACK || bc))) {
         if (((moves[i] >>> 4) & 0b1111) === moveTypes.CASTLE_KINGSIDE) {
-          this.move(
+          let [wc, bc] = this.simulateMove(
             (moves[i] & 0b11111100000000001111) |
               (((moves[i] >>> 14) + 1) << 8) |
               (moveTypes.MOVE << 4)
           );
 
-          if (
-            !(
-              (this.turn === WHITE || this.wc) &&
-              (this.turn === BLACK || this.bc)
-            )
-          )
+          if (!((this.turn === WHITE || wc) && (this.turn === BLACK || bc)))
             finalMoves.push(moves[i]);
-
-          this.undo();
         } else if (((moves[i] >>> 4) & 0b1111) === moveTypes.CASTLE_QUEENSIDE) {
-          this.move(
+          let [wc, bc] = this.simulateMove(
             (moves[i] & 0b11111100000000001111) |
               (((moves[i] >>> 14) - 1) << 8) |
               (moveTypes.MOVE << 4)
           );
 
-          if (
-            !(
-              (this.turn === WHITE || this.wc) &&
-              (this.turn === BLACK || this.bc)
-            )
-          )
+          if (!((this.turn === WHITE || wc) && (this.turn === BLACK || bc)))
             finalMoves.push(moves[i]);
-
-          this.undo();
         } else {
           finalMoves.push(moves[i]);
         }
-      } else {
-        this.undo();
       }
     }
-
-    this.simulation = false;
 
     return finalMoves;
   }

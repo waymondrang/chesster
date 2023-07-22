@@ -86,7 +86,6 @@ export type ChessterGameState = {
   bckc: boolean; // can black castle kingside
   bcqc: boolean; // can black castle queenside
   stalemate: boolean; // stalemate
-  simulation: boolean;
   turn: 0 | 1;
   history: ChessterHistory;
 };
@@ -97,7 +96,6 @@ export type PartialChessterGameState = {
   black?: Partial<ChessterPlayer>;
   history?: ChessterHistory;
   turn?: ChessterTeam;
-  simulation?: boolean;
 };
 
 export type ChessterPiece = number;
