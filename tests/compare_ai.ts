@@ -10,7 +10,7 @@ const ai1 = new ChessterAI(game, {
 });
 
 const ai2 = new ChessterAI(game, {
-  depth: 4,
+  depth: 2,
   pseudoLegalEvaluation: false,
   searchAlgorithm: "negaScout",
 });

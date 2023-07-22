@@ -9,7 +9,7 @@
 :root {
     --primary-font-size: 1.25rem;
     --icon-font-size: 1rem;
-    --settings-font-size: 1rem;
+    --settings-font-size: 0.9rem;
     --settings-secondary-font-size: 0.6rem;
 
     --settings-inner-padding: 0.5rem;
@@ -125,7 +125,7 @@ nav {
     bottom: 0;
     left: 50%;
     transform: translate(-50%, 0);
-    background: rgba(27, 27, 27, 0.8);
+    background: rgba(27, 27, 27, 0.9);
     padding: 0;
     width: 100%;
     height: var(--chessboard-size, 400px);
@@ -149,7 +149,7 @@ nav {
 #settings_container>* {
     transform: translateY(0);
     opacity: 1;
-    transition: opacity 0.25s step-start;
+    /* transition: opacity 0.25s step-start; */
 }
 
 #settings_container>*.hidden {
@@ -160,7 +160,7 @@ nav {
 #settings_container>*.exit {
     /* transform: translateY(2rem); */
     opacity: 0;
-    transition: opacity 0.5s;
+    /* transition: opacity 0.5s; */
 }
 
 .setting.empty {
@@ -211,6 +211,17 @@ nav {
     margin-left: 0;
     color: #b3e6fa;
     max-width: 420px;
+}
+
+.setting.description {
+    background: #1b1b1b;
+    grid-column-start: 1;
+    grid-column-end: 9;
+}
+
+.setting.description p {
+    color: #ffffff;
+    max-width: 100%;
 }
 
 #game {
@@ -369,7 +380,7 @@ nav {
     display: grid;
     grid-template-columns: repeat(8, 1fr);
     grid-template-rows: repeat(8, 1fr);
-    transition: all 0.2s cubic-bezier(0, 0, .01, 1);
+    /* transition: all 0.2s cubic-bezier(0, 0, .01, 1); */
     gap: 0;
     border: none;
     color: #1b1b1b;
@@ -566,9 +577,9 @@ nav {
 @media (min-width: 600px) and (min-height: 600px) {
     :root {
         --primary-font-size: 1.5rem;
-        --icon-font-size: 1.25rem;
-        --settings-font-size: 1.25rem;
-        --settings-secondary-font-size: 0.8rem;
+        --icon-font-size: 1.2rem;
+        --settings-font-size: 1.1rem;
+        --settings-secondary-font-size: 0.7rem;
         --settings-inner-padding: 0.6rem;
     }
 }
@@ -577,10 +588,25 @@ nav {
 @media (min-width: 700px) and (min-height: 700px) {
     :root {
         --primary-font-size: 2rem;
-        --icon-font-size: 1.5rem;
-        --settings-font-size: 1.5rem;
-        --settings-secondary-font-size: 0.875rem;
+        --icon-font-size: 1.3rem;
+        --settings-font-size: 1.2rem;
+        --settings-secondary-font-size: 0.75rem;
         --settings-inner-padding: 0.8rem;
+    }
+
+    .setting p {
+        margin-top: 0.15rem;
+    }
+}
+
+/* For screens larger than 800px x 800px */
+@media (min-width: 800px) and (min-height: 800px) {
+    :root {
+        --primary-font-size: 2.5rem;
+        --icon-font-size: 1.4rem;
+        --settings-font-size: 1.3rem;
+        --settings-secondary-font-size: 0.85rem;
+        --settings-inner-padding: 1rem;
     }
 }
 
@@ -588,9 +614,9 @@ nav {
 @media (min-width: 900px) and (min-height: 900px) {
     :root {
         --primary-font-size: 2.5rem;
-        --icon-font-size: 1.75rem;
-        --settings-font-size: 1.8rem;
-        --settings-secondary-font-size: 0.9rem;
+        --icon-font-size: 1.5rem;
+        --settings-font-size: 1.4rem;
+        --settings-secondary-font-size: 0.875rem;
         --settings-inner-padding: 1rem;
     }
 
@@ -598,6 +624,18 @@ nav {
         margin-top: 0.2rem;
     }
 }
+
+/* For screens larger than 1200px x 1200px */
+@media (min-width: 1200px) and (min-height: 1200px) {
+    :root {
+        --primary-font-size: 2.5rem;
+        --icon-font-size: 1.75rem;
+        --settings-font-size: 1.8rem;
+        --settings-secondary-font-size: 1rem;
+        --settings-inner-padding: 1rem;
+    }
+}
+
 
 #turn.BLACK {
     animation-duration: 1.2s;
