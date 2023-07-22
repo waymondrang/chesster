@@ -250,11 +250,7 @@ function clientMove(move: ChessterMove) {
 function makeMove(move: ChessterMove) {
   let previousBoard = [...game.board];
 
-  console.log("before move", game.zobrist);
-
   game.move(move);
-
-  console.log("after move", game.zobrist);
 
   clearVisualizations();
   updateBoard(game.board, previousBoard);

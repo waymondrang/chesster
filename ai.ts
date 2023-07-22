@@ -21,7 +21,7 @@ const checkmateWeight = 9999;
 //     default ai settings     //
 /////////////////////////////////
 
-const defaultDepth = 4;
+const defaultDepth = 3;
 const defaultPseudoLegalEvaluation = false;
 const defaultSearchAlgorithm = "negaScout";
 const defaultVisualizeSearch = true;
