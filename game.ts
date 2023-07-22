@@ -127,12 +127,13 @@ export class ChessterGame {
         this.turn ^= 1;
         this.stalemate = false; // update stalemate
         this.draw = false; // update draw
+        this.bcm = false;
+        this.wcm = false;
+
         this.bcqc = ((move >>> 31) & 0b1) === 1;
         this.wcqc = ((move >>> 30) & 0b1) === 1;
         this.bckc = ((move >>> 29) & 0b1) === 1;
         this.wckc = ((move >>> 28) & 0b1) === 1;
-        this.bcm = false;
-        this.wcm = false;
         // this.bcm = ((move >>> 27) & 0b1) === 1;
         // this.wcm = ((move >>> 26) & 0b1) === 1;
         this.bc = ((move >>> 25) & 0b1) === 1;
@@ -354,8 +355,8 @@ export class ChessterGame {
       ((this.wcqc ? 1 : 0) << 30) |
       ((this.bckc ? 1 : 0) << 29) |
       ((this.wckc ? 1 : 0) << 28) |
-      ((this.bcm ? 1 : 0) << 27) |
-      ((this.wcm ? 1 : 0) << 26) |
+      // ((this.bcm ? 1 : 0) << 27) |
+      // ((this.wcm ? 1 : 0) << 26) |
       ((this.bc ? 1 : 0) << 25) |
       ((this.wc ? 1 : 0) << 24);
 
@@ -607,12 +608,13 @@ export class ChessterGame {
         break;
       }
     }
+
     this.zistory.push(this.zobrist);
   }
 
-  simulateMove(move: number) {
+  simulateMove(move: number): [number, number] {
     // 32 bit number
-    const currentBoard = this.board.slice(); // compare with [...this.board]
+    const currentBoard = [...this.board];
 
     switch ((move >>> 4) & 0b1111) {
       case moveTypes.CAPTURE:

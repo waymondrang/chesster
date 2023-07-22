@@ -429,7 +429,7 @@ nav {
     border: none;
     cursor: pointer;
     transition: all 0.1s cubic-bezier(0, 0, .01, 1);
-    padding: 1rem;
+    padding: var(--border-size, 0.25rem);
 }
 
 #promotion button img {
