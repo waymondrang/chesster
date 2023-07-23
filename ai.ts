@@ -54,6 +54,8 @@ const pieceValues: number[] = [0, 100, 310, 340, 550, 1000, 0, 0];
 export class ChessterAI {
   game: ChessterGame;
   team: number;
+  relativeTable: Map<bigint, number> = new Map();
+  absoluteTable: Map<bigint, number> = new Map();
 
   //////////////////////
   //     settings     //
@@ -173,6 +175,10 @@ export class ChessterAI {
       return this.game.turn === this.team ? -checkmateWeight : checkmateWeight;
     if (this.game.stalemate || this.game.draw) return 0;
 
+    // check transposition table
+    if (this.absoluteTable.has(this.game.zobrist))
+      return this.absoluteTable.get(this.game.zobrist);
+
     let score = 0;
 
     for (let i = 0; i < boardSize; i++) {
@@ -194,6 +200,8 @@ export class ChessterAI {
         ? (this.game.wckc ? 1 : 0) + (this.game.wcqc ? 1 : 0)
         : (this.game.bckc ? 1 : 0) + (this.game.bcqc ? 1 : 0));
 
+    this.absoluteTable.set(this.game.zobrist, score);
+
     return score;
   }
 
@@ -207,6 +215,10 @@ export class ChessterAI {
     if (this.game.bcm)
       return this.game.turn === BLACK ? -checkmateWeight : checkmateWeight;
     if (this.game.stalemate || this.game.draw) return 0;
+
+    // check transposition table
+    if (this.relativeTable.has(this.game.zobrist))
+      return this.relativeTable.get(this.game.zobrist);
 
     let score = 0;
 
@@ -229,6 +241,8 @@ export class ChessterAI {
       (this.game.turn === WHITE
         ? (this.game.wckc ? 1 : 0) + (this.game.wcqc ? 1 : 0)
         : (this.game.bckc ? 1 : 0) + (this.game.bcqc ? 1 : 0));
+
+    this.relativeTable.set(this.game.zobrist, score);
 
     return score;
   }

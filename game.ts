@@ -30,8 +30,6 @@ export class ChessterGame {
   draw: boolean; // draw
   turn: 1 | 0; // false is white, true is black
   history: ChessterHistory;
-  /** en passant */
-  ep: number | undefined;
   zobrist: bigint;
   zistory: bigint[]; // zobrist history
   #zobristKeys: bigint[];
@@ -59,8 +57,6 @@ export class ChessterGame {
     this.bcqc = state?.bcqc ?? true; // black can castle queenside
 
     this.stalemate = state?.stalemate ?? false; // stalemate
-
-    this.ep = state?.ep; // en passant
 
     ///////////////////////////////////
     //     generate zobrist keys     //
@@ -938,7 +934,6 @@ export class ChessterGame {
       bckc: this.bckc,
       bcqc: this.bcqc,
       stalemate: this.stalemate,
-      ep: this.ep,
     };
   }
 
