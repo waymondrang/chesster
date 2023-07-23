@@ -51,6 +51,18 @@ const MVV_LVA: number[][] = [
 
 const pieceValues: number[] = [0, 100, 310, 340, 550, 1000, 0, 0];
 
+const pawnPhase = 0;
+const knightPhase = 1;
+const bishopPhase = 1;
+const rookPhase = 2;
+const queenPhase = 4;
+const totalPhase =
+  pawnPhase * 16 +
+  knightPhase * 4 +
+  bishopPhase * 4 +
+  rookPhase * 4 +
+  queenPhase * 2;
+
 export class ChessterAI {
   game: ChessterGame;
   team: number;
@@ -221,6 +233,11 @@ export class ChessterAI {
       return this.relativeTable.get(this.game.zobrist);
 
     let score = 0;
+    let phase = 0; // the lower the phase, the closer to endgame
+
+    /**
+     * THIS CAN ALL BE DONE IN THE GAME ENGINE, OR AT LEAST IN THE GET MOVES FUNCTION
+     */
 
     for (let i = 0; i < boardSize; i++) {
       if (this.game.board[i]) {
@@ -233,6 +250,24 @@ export class ChessterAI {
           mobilityWeight *
             ((this.game.board[i] & 0b1) === this.game.turn ? 1 : -1) *
             moves.length; // if white multiply by -1
+
+        switch ((this.game.board[i] >>> 1) & 0b111) {
+          case 0b001:
+            phase += pawnPhase;
+            break;
+          case 0b010:
+            phase += knightPhase;
+            break;
+          case 0b011:
+            phase += bishopPhase;
+            break;
+          case 0b100:
+            phase += rookPhase;
+            break;
+          case 0b101:
+            phase += queenPhase;
+            break;
+        }
       }
     }
 
