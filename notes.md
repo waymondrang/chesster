@@ -54,21 +54,20 @@
 
 ### history representation
 
-| data           | # of bits | start |
-| -------------- | --------- | ----- |
-| bcqc           | 1         | 31    |
-| wcqc           | 1         | 30    |
-| bckc           | 1         | 29    |
-| wckc           | 1         | 28    |
-| bcm            | 1         | 27    |
-| wcm            | 1         | 26    |
-| bc             | 1         | 25    |
-| wc             | 1         | 24    |
-| captured piece | 4         | 20    |
-| move from      | 6         | 14    |
-| move to        | 6         | 8     |
-| move type      | 4         | 4     |
-| original piece | 4         | 0     |
+| data            | # of bits | start |
+| --------------- | --------- | ----- |
+| bcqc            | 1         | 31    |
+| wcqc            | 1         | 30    |
+| bckc            | 1         | 29    |
+| wckc            | 1         | 28    |
+| en passant file | 2         | 26    |
+| bc              | 1         | 25    |
+| wc              | 1         | 24    |
+| captured piece  | 4         | 20    |
+| move from       | 6         | 14    |
+| move to         | 6         | 8     |
+| move type       | 4         | 4     |
+| original piece  | 4         | 0     |
 
 \*_32 bits total_
 

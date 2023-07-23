@@ -88,6 +88,7 @@ export type ChessterGameState = {
   stalemate: boolean; // stalemate
   turn: 0 | 1;
   history: ChessterHistory;
+  ep: number | undefined; // en passant
 };
 
 export type PartialChessterGameState = {
