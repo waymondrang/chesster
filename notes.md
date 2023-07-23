@@ -56,11 +56,12 @@
 
 | data            | # of bits | start |
 | --------------- | --------- | ----- |
-| bcqc            | 1         | 31    |
-| wcqc            | 1         | 30    |
-| bckc            | 1         | 29    |
-| wckc            | 1         | 28    |
-| en passant file | 2         | 26    |
+| file            | 3         | 31    |
+| can en passant? | 1         | 30    |
+| bcqc            | 1         | 29    |
+| wcqc            | 1         | 28    |
+| bckc            | 1         | 27    |
+| wckc            | 1         | 26    |
 | bc              | 1         | 25    |
 | wc              | 1         | 24    |
 | captured piece  | 4         | 20    |
@@ -114,6 +115,16 @@
 | 771       | black king side castle   |
 | 772       | black queen side castle  |
 | 773 - 780 | en passant file (1-8)    |
+
+| index       | significance             |
+| ----------- | ------------------------ |
+| 0 - 1023    | 12 pieces for each space |
+| 1024        | black to move            |
+| 1025        | white king side castle   |
+| 1026        | white queen side castle  |
+| 1027        | black king side castle   |
+| 1028        | black queen side castle  |
+| 1029 - 1036 | en passant file (1-8)    |
 
 ### fen strings
 
