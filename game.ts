@@ -1,5 +1,6 @@
 import {
   BLACK,
+  ChessterBoard,
   ChessterGameState,
   ChessterHistory,
   ChessterMove,
@@ -9,7 +10,11 @@ import {
   defaultBoard,
   moveTypes,
 } from "./types";
-import { binaryToString, numberToLetterString } from "./util";
+import {
+  binaryToString,
+  numberToLetterString,
+  numberToPieceString,
+} from "./util";
 
 export class ChessterGame {
   board: number[]; // board is 64 bytes
@@ -105,242 +110,240 @@ export class ChessterGame {
    */
   undo() {
     this.zistory.pop();
+    const move = this.history.pop();
 
-    if (this.history.length > 0) {
-      const move = this.history.pop();
-      if (move) {
-        ////////////////////////////
-        //     update zobrist     //
-        ////////////////////////////
+    if (move) {
+      ////////////////////////////
+      //     update zobrist     //
+      ////////////////////////////
 
-        this.zobrist ^= this.#zobristKeys[768]; // flip turn
+      this.zobrist ^= this.#zobristKeys[768]; // flip turn
 
-        if ((((move >>> 28) & 0b1) === 1) !== this.wckc)
-          this.zobrist ^= this.#zobristKeys[769];
-        if ((((move >>> 30) & 0b1) === 1) !== this.wcqc)
-          this.zobrist ^= this.#zobristKeys[770];
-        if ((((move >>> 29) & 0b1) === 1) !== this.bckc)
-          this.zobrist ^= this.#zobristKeys[771];
-        if ((((move >>> 31) & 0b1) === 1) !== this.bcqc)
-          this.zobrist ^= this.#zobristKeys[772];
+      if ((((move >>> 28) & 0b1) === 1) !== this.wckc)
+        this.zobrist ^= this.#zobristKeys[769];
+      if ((((move >>> 30) & 0b1) === 1) !== this.wcqc)
+        this.zobrist ^= this.#zobristKeys[770];
+      if ((((move >>> 29) & 0b1) === 1) !== this.bckc)
+        this.zobrist ^= this.#zobristKeys[771];
+      if ((((move >>> 31) & 0b1) === 1) !== this.bcqc)
+        this.zobrist ^= this.#zobristKeys[772];
 
-        this.turn ^= 1;
-        this.stalemate = false; // update stalemate
-        this.draw = false; // update draw
-        this.bcm = false;
-        this.wcm = false;
+      this.turn ^= 1;
+      this.stalemate = false; // update stalemate
+      this.draw = false; // update draw
+      this.bcm = false;
+      this.wcm = false;
 
-        this.bcqc = ((move >>> 31) & 0b1) === 1;
-        this.wcqc = ((move >>> 30) & 0b1) === 1;
-        this.bckc = ((move >>> 29) & 0b1) === 1;
-        this.wckc = ((move >>> 28) & 0b1) === 1;
-        // this.bcm = ((move >>> 27) & 0b1) === 1;
-        // this.wcm = ((move >>> 26) & 0b1) === 1;
-        this.bc = ((move >>> 25) & 0b1) === 1;
-        this.wc = ((move >>> 24) & 0b1) === 1;
+      this.bcqc = ((move >>> 31) & 0b1) === 1;
+      this.wcqc = ((move >>> 30) & 0b1) === 1;
+      this.bckc = ((move >>> 29) & 0b1) === 1;
+      this.wckc = ((move >>> 28) & 0b1) === 1;
+      // this.bcm = ((move >>> 27) & 0b1) === 1;
+      // this.wcm = ((move >>> 26) & 0b1) === 1;
+      this.bc = ((move >>> 25) & 0b1) === 1;
+      this.wc = ((move >>> 24) & 0b1) === 1;
 
-        switch ((move >>> 4) & 0b1111) {
-          case moveTypes.PROMOTION_QUEEN_CAPTURE:
-            this.zobrist ^=
-              this.#zobristKeys[
-                ((move >>> 8) & 0b111111) * 12 +
-                  ((((move >>> 20) & 0b1111) >>> 1) - 1) // add captured piece
-              ] ^
-              this.#zobristKeys[
-                ((move >>> 8) & 0b111111) * 12 + (0b101 - 1) // remove moved piece
-              ] ^
-              this.#zobristKeys[
-                ((move >>> 14) & 0b111111) * 12 + (0b001 - 1) // add moved piece
-              ];
-
-            this.board[(move >>> 8) & 0b111111] = (move >>> 20) & 0b1111;
-            this.board[(move >>> 14) & 0b111111] = move & 0b1111;
-
-            break;
-          case moveTypes.PROMOTION_BISHOP_CAPTURE:
-            this.zobrist ^=
-              this.#zobristKeys[
-                ((move >>> 8) & 0b111111) * 12 + (((move >>> 21) & 0b111) - 1) // add captured piece
-              ] ^
-              this.#zobristKeys[
-                ((move >>> 8) & 0b111111) * 12 + (0b011 - 1) // remove moved piece
-              ] ^
-              this.#zobristKeys[
-                ((move >>> 14) & 0b111111) * 12 + (0b001 - 1) // add moved piece
-              ];
-
-            this.board[(move >>> 8) & 0b111111] = (move >>> 20) & 0b1111;
-            this.board[(move >>> 14) & 0b111111] = move & 0b1111;
-
-            break;
-          case moveTypes.PROMOTION_ROOK_CAPTURE:
-            this.zobrist ^=
-              this.#zobristKeys[
-                ((move >>> 8) & 0b111111) * 12 + (((move >>> 21) & 0b111) - 1) // add captured piece
-              ] ^
-              this.#zobristKeys[
-                ((move >>> 8) & 0b111111) * 12 + (0b100 - 1) // remove moved piece
-              ] ^
-              this.#zobristKeys[
-                ((move >>> 14) & 0b111111) * 12 + (0b001 - 1) // add moved piece
-              ];
-
-            this.board[(move >>> 8) & 0b111111] = (move >>> 20) & 0b1111;
-            this.board[(move >>> 14) & 0b111111] = move & 0b1111;
-
-            break;
-          case moveTypes.PROMOTION_KNIGHT_CAPTURE:
-            this.zobrist ^=
-              this.#zobristKeys[
-                ((move >>> 8) & 0b111111) * 12 +
-                  ((((move >>> 20) & 0b1111) >>> 1) - 1) // add captured piece
-              ] ^
-              this.#zobristKeys[
-                ((move >>> 8) & 0b111111) * 12 + (0b010 - 1) // remove moved piece
-              ] ^
-              this.#zobristKeys[
-                ((move >>> 14) & 0b111111) * 12 + (0b001 - 1) // add moved piece
-              ];
-
-            this.board[(move >>> 8) & 0b111111] = (move >>> 20) & 0b1111;
-            this.board[(move >>> 14) & 0b111111] = move & 0b1111;
-
-            break;
-          case moveTypes.CAPTURE:
-            this.zobrist ^=
-              this.#zobristKeys[
-                ((move >>> 8) & 0b111111) * 12 +
-                  ((((move >>> 20) & 0b1111) >>> 1) - 1) // add captured piece
-              ] ^
-              this.#zobristKeys[
-                ((move >>> 8) & 0b111111) * 12 + (((move & 0b1111) >>> 1) - 1) // remove moved piece
-              ] ^
-              this.#zobristKeys[
-                ((move >>> 14) & 0b111111) * 12 + (((move & 0b1111) >>> 1) - 1) // add moved piece
-              ];
-
-            this.board[(move >>> 8) & 0b111111] = (move >>> 20) & 0b1111;
-            this.board[(move >>> 14) & 0b111111] = move & 0b1111;
-
-            break;
-          case moveTypes.CASTLE_KINGSIDE:
-            this.board[(move >>> 14) & 0b111111] = move & 0b1111;
-            this.board[((move >>> 14) & 0b111111) + 2] = 0;
-            this.board[((move >>> 14) & 0b111111) + 3] =
-              this.board[((move >>> 14) & 0b111111) + 1];
-            this.board[((move >>> 14) & 0b111111) + 1] = 0;
-
-            break;
-          case moveTypes.CASTLE_QUEENSIDE:
-            this.board[(move >>> 14) & 0b111111] = move & 0b1111;
-            this.board[((move >>> 14) & 0b111111) - 2] = 0;
-            this.board[((move >>> 14) & 0b111111) - 4] =
-              this.board[((move >>> 14) & 0b111111) - 1];
-            this.board[((move >>> 14) & 0b111111) - 1] = 0;
-
-            break;
-          case moveTypes.EN_PASSANT_WHITE:
-            this.zobrist ^=
-              this.#zobristKeys[
-                (((move >>> 8) & 0b111111) + 8) * 12 +
-                  ((((move >>> 20) & 0b1111) >>> 1) - 1) // remove captured piece
-              ] ^
-              this.#zobristKeys[
-                ((move >>> 8) & 0b111111) * 12 + (((move & 0b1111) >>> 1) - 1) // add moved piece
-              ] ^
-              this.#zobristKeys[
-                ((move >>> 14) & 0b111111) * 12 + (((move & 0b1111) >>> 1) - 1) // remove moved piece
-              ];
-
-            this.board[(move >>> 14) & 0b111111] = move & 0b1111;
-            this.board[((move >>> 8) & 0b111111) + 8] = (move >>> 20) & 0b1111;
-            this.board[(move >>> 8) & 0b111111] = 0;
-
-            break;
-          case moveTypes.EN_PASSANT_BLACK:
-            this.zobrist ^=
-              this.#zobristKeys[
-                (((move >>> 8) & 0b111111) - 8) * 12 +
-                  (((move >>> 20) & 0b1111) - 1) // remove captured piece
-              ] ^
-              this.#zobristKeys[
-                ((move >>> 8) & 0b111111) * 12 + (((move & 0b1111) >>> 1) - 1) // add moved piece
-              ] ^
-              this.#zobristKeys[
-                ((move >>> 14) & 0b111111) * 12 + (((move & 0b1111) >>> 1) - 1) // remove moved piece
-              ];
-
-            this.board[(move >>> 14) & 0b111111] = move & 0b1111;
-            this.board[((move >>> 8) & 0b111111) - 8] = (move >>> 20) & 0b1111;
-            this.board[(move >>> 8) & 0b111111] = 0;
-
-            break;
-          case moveTypes.PROMOTION_KNIGHT:
-            this.zobrist ^=
-              this.#zobristKeys[((move >>> 14) & 0b111111) * 12 + (0b001 - 1)] ^
-              this.#zobristKeys[((move >>> 8) & 0b111111) * 12 + (0b010 - 1)];
-
-            this.board[(move >>> 14) & 0b111111] = move & 0b1111;
-            this.board[(move >>> 8) & 0b111111] = 0;
-
-            break;
-          case moveTypes.PROMOTION_BISHOP:
-            this.zobrist ^=
-              this.#zobristKeys[((move >>> 14) & 0b111111) * 12 + (0b001 - 1)] ^
-              this.#zobristKeys[((move >>> 8) & 0b111111) * 12 + (0b011 - 1)];
-
-            this.board[(move >>> 14) & 0b111111] = move & 0b1111;
-            this.board[(move >>> 8) & 0b111111] = 0;
-
-            break;
-          case moveTypes.PROMOTION_ROOK:
-            this.zobrist ^=
-              this.#zobristKeys[((move >>> 14) & 0b111111) * 12 + (0b001 - 1)] ^
-              this.#zobristKeys[((move >>> 8) & 0b111111) * 12 + (0b100 - 1)];
-
-            this.board[(move >>> 14) & 0b111111] = move & 0b1111;
-            this.board[(move >>> 8) & 0b111111] = 0;
-
-            break;
-          case moveTypes.PROMOTION_QUEEN:
-            this.zobrist ^=
-              this.#zobristKeys[((move >>> 14) & 0b111111) * 12 + (0b001 - 1)] ^
-              this.#zobristKeys[((move >>> 8) & 0b111111) * 12 + (0b101 - 1)];
-
-            this.board[(move >>> 14) & 0b111111] = move & 0b1111;
-            this.board[(move >>> 8) & 0b111111] = 0;
-
-            break;
-          case moveTypes.DOUBLE_PAWN_PUSH:
-            this.zobrist ^= this.#zobristKeys[((move >>> 8) & 0b111) + 773];
-          case moveTypes.MOVE:
-            this.zobrist ^=
-              this.#zobristKeys[
-                ((move >>> 14) & 0b111111) * 12 + (((move & 0b1111) >>> 1) - 1)
-              ] ^
-              this.#zobristKeys[
-                ((move >>> 8) & 0b111111) * 12 + (((move & 0b1111) >>> 1) - 1) // re-move
-              ];
-
-            this.board[(move >>> 14) & 0b111111] = move & 0b1111;
-            this.board[(move >>> 8) & 0b111111] = 0;
-
-            break;
-          default:
-            throw new Error("invalid move type");
-        }
-
-        if (
-          this.history[this.history.length - 1] &&
-          ((this.history[this.history.length - 1] >>> 4) & 0b1111) ===
-            moveTypes.DOUBLE_PAWN_PUSH
-        )
-          // return (this.history[this.history.length - 1] >>> 8) & 0b111;
+      switch ((move >>> 4) & 0b1111) {
+        case moveTypes.PROMOTION_QUEEN_CAPTURE:
           this.zobrist ^=
             this.#zobristKeys[
-              ((this.history[this.history.length - 1] >>> 8) & 0b111) + 773
+              ((move >>> 8) & 0b111111) * 12 +
+                ((((move >>> 20) & 0b1111) >>> 1) - 1) // add captured piece
+            ] ^
+            this.#zobristKeys[
+              ((move >>> 8) & 0b111111) * 12 + (0b101 - 1) // remove moved piece
+            ] ^
+            this.#zobristKeys[
+              ((move >>> 14) & 0b111111) * 12 + (0b001 - 1) // add moved piece
             ];
+
+          this.board[(move >>> 8) & 0b111111] = (move >>> 20) & 0b1111;
+          this.board[(move >>> 14) & 0b111111] = move & 0b1111;
+
+          break;
+        case moveTypes.PROMOTION_BISHOP_CAPTURE:
+          this.zobrist ^=
+            this.#zobristKeys[
+              ((move >>> 8) & 0b111111) * 12 + (((move >>> 21) & 0b111) - 1) // add captured piece
+            ] ^
+            this.#zobristKeys[
+              ((move >>> 8) & 0b111111) * 12 + (0b011 - 1) // remove moved piece
+            ] ^
+            this.#zobristKeys[
+              ((move >>> 14) & 0b111111) * 12 + (0b001 - 1) // add moved piece
+            ];
+
+          this.board[(move >>> 8) & 0b111111] = (move >>> 20) & 0b1111;
+          this.board[(move >>> 14) & 0b111111] = move & 0b1111;
+
+          break;
+        case moveTypes.PROMOTION_ROOK_CAPTURE:
+          this.zobrist ^=
+            this.#zobristKeys[
+              ((move >>> 8) & 0b111111) * 12 + (((move >>> 21) & 0b111) - 1) // add captured piece
+            ] ^
+            this.#zobristKeys[
+              ((move >>> 8) & 0b111111) * 12 + (0b100 - 1) // remove moved piece
+            ] ^
+            this.#zobristKeys[
+              ((move >>> 14) & 0b111111) * 12 + (0b001 - 1) // add moved piece
+            ];
+
+          this.board[(move >>> 8) & 0b111111] = (move >>> 20) & 0b1111;
+          this.board[(move >>> 14) & 0b111111] = move & 0b1111;
+
+          break;
+        case moveTypes.PROMOTION_KNIGHT_CAPTURE:
+          this.zobrist ^=
+            this.#zobristKeys[
+              ((move >>> 8) & 0b111111) * 12 +
+                ((((move >>> 20) & 0b1111) >>> 1) - 1) // add captured piece
+            ] ^
+            this.#zobristKeys[
+              ((move >>> 8) & 0b111111) * 12 + (0b010 - 1) // remove moved piece
+            ] ^
+            this.#zobristKeys[
+              ((move >>> 14) & 0b111111) * 12 + (0b001 - 1) // add moved piece
+            ];
+
+          this.board[(move >>> 8) & 0b111111] = (move >>> 20) & 0b1111;
+          this.board[(move >>> 14) & 0b111111] = move & 0b1111;
+
+          break;
+        case moveTypes.CAPTURE:
+          this.zobrist ^=
+            this.#zobristKeys[
+              ((move >>> 8) & 0b111111) * 12 +
+                ((((move >>> 20) & 0b1111) >>> 1) - 1) // add captured piece
+            ] ^
+            this.#zobristKeys[
+              ((move >>> 8) & 0b111111) * 12 + (((move & 0b1111) >>> 1) - 1) // remove moved piece
+            ] ^
+            this.#zobristKeys[
+              ((move >>> 14) & 0b111111) * 12 + (((move & 0b1111) >>> 1) - 1) // add moved piece
+            ];
+
+          this.board[(move >>> 8) & 0b111111] = (move >>> 20) & 0b1111;
+          this.board[(move >>> 14) & 0b111111] = move & 0b1111;
+
+          break;
+        case moveTypes.CASTLE_KINGSIDE:
+          this.board[(move >>> 14) & 0b111111] = move & 0b1111;
+          this.board[((move >>> 14) & 0b111111) + 2] = 0;
+          this.board[((move >>> 14) & 0b111111) + 3] =
+            this.board[((move >>> 14) & 0b111111) + 1];
+          this.board[((move >>> 14) & 0b111111) + 1] = 0;
+
+          break;
+        case moveTypes.CASTLE_QUEENSIDE:
+          this.board[(move >>> 14) & 0b111111] = move & 0b1111;
+          this.board[((move >>> 14) & 0b111111) - 2] = 0;
+          this.board[((move >>> 14) & 0b111111) - 4] =
+            this.board[((move >>> 14) & 0b111111) - 1];
+          this.board[((move >>> 14) & 0b111111) - 1] = 0;
+
+          break;
+        case moveTypes.EN_PASSANT_WHITE:
+          this.zobrist ^=
+            this.#zobristKeys[
+              (((move >>> 8) & 0b111111) + 8) * 12 +
+                ((((move >>> 20) & 0b1111) >>> 1) - 1) // remove captured piece
+            ] ^
+            this.#zobristKeys[
+              ((move >>> 8) & 0b111111) * 12 + (((move & 0b1111) >>> 1) - 1) // add moved piece
+            ] ^
+            this.#zobristKeys[
+              ((move >>> 14) & 0b111111) * 12 + (((move & 0b1111) >>> 1) - 1) // remove moved piece
+            ];
+
+          this.board[(move >>> 14) & 0b111111] = move & 0b1111;
+          this.board[((move >>> 8) & 0b111111) + 8] = (move >>> 20) & 0b1111;
+          this.board[(move >>> 8) & 0b111111] = 0;
+
+          break;
+        case moveTypes.EN_PASSANT_BLACK:
+          this.zobrist ^=
+            this.#zobristKeys[
+              (((move >>> 8) & 0b111111) - 8) * 12 +
+                (((move >>> 20) & 0b1111) - 1) // remove captured piece
+            ] ^
+            this.#zobristKeys[
+              ((move >>> 8) & 0b111111) * 12 + (((move & 0b1111) >>> 1) - 1) // add moved piece
+            ] ^
+            this.#zobristKeys[
+              ((move >>> 14) & 0b111111) * 12 + (((move & 0b1111) >>> 1) - 1) // remove moved piece
+            ];
+
+          this.board[(move >>> 14) & 0b111111] = move & 0b1111;
+          this.board[((move >>> 8) & 0b111111) - 8] = (move >>> 20) & 0b1111;
+          this.board[(move >>> 8) & 0b111111] = 0;
+
+          break;
+        case moveTypes.PROMOTION_KNIGHT:
+          this.zobrist ^=
+            this.#zobristKeys[((move >>> 14) & 0b111111) * 12 + (0b001 - 1)] ^
+            this.#zobristKeys[((move >>> 8) & 0b111111) * 12 + (0b010 - 1)];
+
+          this.board[(move >>> 14) & 0b111111] = move & 0b1111;
+          this.board[(move >>> 8) & 0b111111] = 0;
+
+          break;
+        case moveTypes.PROMOTION_BISHOP:
+          this.zobrist ^=
+            this.#zobristKeys[((move >>> 14) & 0b111111) * 12 + (0b001 - 1)] ^
+            this.#zobristKeys[((move >>> 8) & 0b111111) * 12 + (0b011 - 1)];
+
+          this.board[(move >>> 14) & 0b111111] = move & 0b1111;
+          this.board[(move >>> 8) & 0b111111] = 0;
+
+          break;
+        case moveTypes.PROMOTION_ROOK:
+          this.zobrist ^=
+            this.#zobristKeys[((move >>> 14) & 0b111111) * 12 + (0b001 - 1)] ^
+            this.#zobristKeys[((move >>> 8) & 0b111111) * 12 + (0b100 - 1)];
+
+          this.board[(move >>> 14) & 0b111111] = move & 0b1111;
+          this.board[(move >>> 8) & 0b111111] = 0;
+
+          break;
+        case moveTypes.PROMOTION_QUEEN:
+          this.zobrist ^=
+            this.#zobristKeys[((move >>> 14) & 0b111111) * 12 + (0b001 - 1)] ^
+            this.#zobristKeys[((move >>> 8) & 0b111111) * 12 + (0b101 - 1)];
+
+          this.board[(move >>> 14) & 0b111111] = move & 0b1111;
+          this.board[(move >>> 8) & 0b111111] = 0;
+
+          break;
+        case moveTypes.DOUBLE_PAWN_PUSH:
+          this.zobrist ^= this.#zobristKeys[((move >>> 8) & 0b111) + 773];
+        case moveTypes.MOVE:
+          this.zobrist ^=
+            this.#zobristKeys[
+              ((move >>> 14) & 0b111111) * 12 + (((move & 0b1111) >>> 1) - 1)
+            ] ^
+            this.#zobristKeys[
+              ((move >>> 8) & 0b111111) * 12 + (((move & 0b1111) >>> 1) - 1) // re-move
+            ];
+
+          this.board[(move >>> 14) & 0b111111] = move & 0b1111;
+          this.board[(move >>> 8) & 0b111111] = 0;
+
+          break;
+        default:
+          throw new Error("invalid move type");
       }
+
+      if (
+        this.history[this.history.length - 1] &&
+        ((this.history[this.history.length - 1] >>> 4) & 0b1111) ===
+          moveTypes.DOUBLE_PAWN_PUSH
+      )
+        // return (this.history[this.history.length - 1] >>> 8) & 0b111;
+        this.zobrist ^=
+          this.#zobristKeys[
+            ((this.history[this.history.length - 1] >>> 8) & 0b111) + 773
+          ];
     }
   }
 
@@ -591,7 +594,7 @@ export class ChessterGame {
 
     this.history.push(history | (move & 0b11111111111111111111)); // order independent
     this.turn ^= 1;
-    this.#update();
+    this.#update(); // turn must be updated before calling update
 
     ////////////////////////////
     //     update zobrist     //
@@ -599,7 +602,7 @@ export class ChessterGame {
 
     this.zobrist ^= this.#zobristKeys[768]; // flip turn
 
-    let positionSeenCount = 0;
+    let positionSeenCount = 1; // current position has, obviously, been seen once
     for (let i = this.zistory.length - 1; i >= 0; i--) {
       if (this.zistory[i] === this.zobrist) positionSeenCount++;
 
@@ -614,73 +617,73 @@ export class ChessterGame {
 
   simulateMove(move: number): [number, number] {
     // 32 bit number
-    const currentBoard = [...this.board];
+    let board = [...this.board];
 
     switch ((move >>> 4) & 0b1111) {
       case moveTypes.CAPTURE:
-        this.board[(move >>> 14) & 0b111111] = 0;
-        this.board[(move >>> 8) & 0b111111] = move & 0b1111;
+        board[(move >>> 14) & 0b111111] = 0;
+        board[(move >>> 8) & 0b111111] = move & 0b1111;
         break;
       case moveTypes.CASTLE_KINGSIDE: // todo: add zobrist
-        this.board[(move >>> 14) & 0b111111] = 0;
-        this.board[((move >>> 14) & 0b111111) + 2] = move & 0b1111;
-        this.board[((move >>> 14) & 0b111111) + 1] =
-          this.board[((move >>> 14) & 0b111111) + 3];
-        this.board[((move >>> 14) & 0b111111) + 3] = 0;
+        board[(move >>> 14) & 0b111111] = 0;
+        board[((move >>> 14) & 0b111111) + 2] = move & 0b1111;
+        board[((move >>> 14) & 0b111111) + 1] =
+          board[((move >>> 14) & 0b111111) + 3];
+        board[((move >>> 14) & 0b111111) + 3] = 0;
         break;
       case moveTypes.CASTLE_QUEENSIDE: // todo: add zobrist
-        this.board[(move >>> 14) & 0b111111] = 0;
-        this.board[((move >>> 14) & 0b111111) - 2] = move & 0b1111;
-        this.board[((move >>> 14) & 0b111111) - 1] =
-          this.board[((move >>> 14) & 0b111111) - 4];
-        this.board[((move >>> 14) & 0b111111) - 4] = 0;
+        board[(move >>> 14) & 0b111111] = 0;
+        board[((move >>> 14) & 0b111111) - 2] = move & 0b1111;
+        board[((move >>> 14) & 0b111111) - 1] =
+          board[((move >>> 14) & 0b111111) - 4];
+        board[((move >>> 14) & 0b111111) - 4] = 0;
         break;
       case moveTypes.EN_PASSANT_WHITE:
-        this.board[(move >>> 14) & 0b111111] = 0;
-        this.board[(move >>> 8) & 0b111111] = move & 0b1111;
-        this.board[((move >>> 8) & 0b111111) + 8] = 0;
+        board[(move >>> 14) & 0b111111] = 0;
+        board[(move >>> 8) & 0b111111] = move & 0b1111;
+        board[((move >>> 8) & 0b111111) + 8] = 0;
         break;
       case moveTypes.EN_PASSANT_BLACK:
-        this.board[(move >>> 14) & 0b111111] = 0;
-        this.board[(move >>> 8) & 0b111111] = move & 0b1111;
-        this.board[((move >>> 8) & 0b111111) - 8] = 0; // captured space
+        board[(move >>> 14) & 0b111111] = 0;
+        board[(move >>> 8) & 0b111111] = move & 0b1111;
+        board[((move >>> 8) & 0b111111) - 8] = 0; // captured space
         break;
       case moveTypes.PROMOTION_QUEEN_CAPTURE:
-        this.board[(move >>> 14) & 0b111111] = 0;
-        this.board[(move >>> 8) & 0b111111] = (move & 0b0001) | 0b1010;
+        board[(move >>> 14) & 0b111111] = 0;
+        board[(move >>> 8) & 0b111111] = (move & 0b0001) | 0b1010;
         break;
       case moveTypes.PROMOTION_QUEEN:
-        this.board[(move >>> 14) & 0b111111] = 0;
-        this.board[(move >>> 8) & 0b111111] = (move & 0b0001) | 0b1010;
+        board[(move >>> 14) & 0b111111] = 0;
+        board[(move >>> 8) & 0b111111] = (move & 0b0001) | 0b1010;
         break;
       case moveTypes.PROMOTION_ROOK_CAPTURE:
-        this.board[(move >>> 14) & 0b111111] = 0;
-        this.board[(move >>> 8) & 0b111111] = (move & 0b0001) | 0b1000;
+        board[(move >>> 14) & 0b111111] = 0;
+        board[(move >>> 8) & 0b111111] = (move & 0b0001) | 0b1000;
         break;
       case moveTypes.PROMOTION_ROOK:
-        this.board[(move >>> 14) & 0b111111] = 0;
-        this.board[(move >>> 8) & 0b111111] = (move & 0b0001) | 0b1000;
+        board[(move >>> 14) & 0b111111] = 0;
+        board[(move >>> 8) & 0b111111] = (move & 0b0001) | 0b1000;
         break;
       case moveTypes.PROMOTION_BISHOP_CAPTURE:
-        this.board[(move >>> 14) & 0b111111] = 0;
-        this.board[(move >>> 8) & 0b111111] = (move & 0b0001) | 0b0110;
+        board[(move >>> 14) & 0b111111] = 0;
+        board[(move >>> 8) & 0b111111] = (move & 0b0001) | 0b0110;
         break;
       case moveTypes.PROMOTION_BISHOP:
-        this.board[(move >>> 14) & 0b111111] = 0;
-        this.board[(move >>> 8) & 0b111111] = (move & 0b0001) | 0b0110;
+        board[(move >>> 14) & 0b111111] = 0;
+        board[(move >>> 8) & 0b111111] = (move & 0b0001) | 0b0110;
         break;
       case moveTypes.PROMOTION_KNIGHT_CAPTURE:
-        this.board[(move >>> 14) & 0b111111] = 0;
-        this.board[(move >>> 8) & 0b111111] = (move & 0b0001) | 0b0100;
+        board[(move >>> 14) & 0b111111] = 0;
+        board[(move >>> 8) & 0b111111] = (move & 0b0001) | 0b0100;
         break;
       case moveTypes.PROMOTION_KNIGHT:
-        this.board[(move >>> 14) & 0b111111] = 0;
-        this.board[(move >>> 8) & 0b111111] = (move & 0b0001) | 0b0100;
+        board[(move >>> 14) & 0b111111] = 0;
+        board[(move >>> 8) & 0b111111] = (move & 0b0001) | 0b0100;
         break;
       case moveTypes.DOUBLE_PAWN_PUSH:
       case moveTypes.MOVE:
-        this.board[(move >>> 14) & 0b111111] = 0;
-        this.board[(move >>> 8) & 0b111111] = move & 0b1111;
+        board[(move >>> 14) & 0b111111] = 0;
+        board[(move >>> 8) & 0b111111] = move & 0b1111;
         break;
       default:
         throw new Error("invalid move type: " + binaryToString(move));
@@ -694,44 +697,25 @@ export class ChessterGame {
 
     // check if past team is still in check
     for (let i = 0; i < boardSize; i++) {
-      if (!this.board[i]) continue; // saved ~170ms
+      if (!board[i]) continue; // saved ~170ms
 
-      if (!(checked & 0b01) && (this.board[i] & 0b1) !== this.turn) {
-        const moves = this.getAllMoves(i);
-
-        for (let j = 0; j < moves.length; j++) {
-          if (
-            (((moves[j] >>> 4) & 0b1111) === moveTypes.CAPTURE ||
-              ((moves[j] >>> 6) & 0b11) === 0b11) && // if any promotion capture moves
-            this.board[(moves[j] >>> 8) & 0b111111] === (0b1100 | this.turn)
-          ) {
-            // 0b110 is king value
-            checked |= 0b01; // set pastChecked
-            break;
-          }
-        }
-      } else if (!(checked & 0b10) && (this.board[i] & 0b1) === this.turn) {
+      if (
+        !(checked & 0b01) &&
+        (board[i] & 0b1) !== this.turn &&
+        this.canCapturePiece(i, board, 0b1100 | this.turn)
+      ) {
+        checked |= 0b01; // set pastChecked
+      } else if (
+        !(checked & 0b10) &&
+        (board[i] & 0b1) === this.turn &&
+        this.canCapturePiece(i, board, 0b1100 | (1 ^ this.turn))
+      ) {
         // check if current turn is in check
-        const moves = this.getAllMoves(i);
-
-        for (let j = 0; j < moves.length; j++) {
-          if (
-            (((moves[j] >>> 4) & 0b1111) === moveTypes.CAPTURE ||
-              ((moves[j] >>> 6) & 0b11) === 0b11) && // if any promotion capture moves
-            this.board[(moves[j] >>> 8) & 0b111111] ===
-              (0b1100 | (1 ^ this.turn))
-          ) {
-            // 0b110 is king value
-            checked |= 0b10; // set currentChecked
-            break;
-          }
-        }
+        checked |= 0b10; // set currentChecked
       }
 
       if (checked === 0b11) break;
     }
-
-    this.board = currentBoard;
 
     return [
       this.turn === WHITE ? (checked & 0b10) >>> 1 : checked & 0b01,
@@ -830,36 +814,21 @@ export class ChessterGame {
     for (let i = 0; i < boardSize; i++) {
       if (!this.board[i]) continue; // saved ~170ms
 
-      if (!(checked & 0b01) && (this.board[i] & 0b1) === this.turn) {
-        const moves = this.getAllMoves(i);
-
-        for (let j = 0; j < moves.length; j++) {
-          if (
-            (((moves[j] >>> 4) & 0b1111) === moveTypes.CAPTURE ||
-              ((moves[j] >>> 6) & 0b11) === 0b11) && // if any promotion capture moves
-            this.board[(moves[j] >>> 8) & 0b111111] ===
-              (0b1100 | (1 ^ this.turn))
-          ) {
-            // 0b110 is king value
-            checked |= 0b01; // set pastChecked
-            break;
-          }
-        }
-      } else if (!(checked & 0b10) && (this.board[i] & 0b1) !== this.turn) {
+      if (
+        !(checked & 0b01) &&
+        (this.board[i] & 0b1) === this.turn &&
+        this.canCapturePiece(i, this.board, 0b1100 | (1 ^ this.turn))
+      ) {
+        // 0b110 is king value
+        checked |= 0b01; // set pastChecked
+      } else if (
+        !(checked & 0b10) &&
+        (this.board[i] & 0b1) !== this.turn &&
+        this.canCapturePiece(i, this.board, 0b1100 | this.turn)
+      ) {
         // check if current turn is in check
-        const moves = this.getAllMoves(i);
-
-        for (let j = 0; j < moves.length; j++) {
-          if (
-            (((moves[j] >>> 4) & 0b1111) === moveTypes.CAPTURE ||
-              ((moves[j] >>> 6) & 0b11) === 0b11) && // if any promotion capture moves
-            this.board[(moves[j] >>> 8) & 0b111111] === (0b1100 | this.turn)
-          ) {
-            // 0b110 is king value
-            checked |= 0b10; // set currentChecked
-            break;
-          }
-        }
+        // 0b110 is king value
+        checked |= 0b10; // set currentChecked
       }
 
       if (checked === 0b11) break;
@@ -969,7 +938,7 @@ export class ChessterGame {
   }
 
   /**
-   * Returns all moves, including potentially illegal moves, for the location
+   * Returns all potential moves for the location
    * @param location The location of the piece
    * @returns An array of moves
    */
@@ -989,6 +958,38 @@ export class ChessterGame {
         return this.getKingMoves(this.board[location], location);
       default:
         return [];
+    }
+  }
+
+  /**
+   * Returns whether location can capture specified piece
+   * @param location The location of the piece
+   * @param board The board to check
+   * @param target The piece to capture (4 bit number)
+   * @returns An array of captures
+   */
+  canCapturePiece(
+    location: number,
+    board: ChessterBoard,
+    target: number
+  ): boolean {
+    switch ((board[location] >>> 1) & 0b111) {
+      case 0b001:
+        return this.canPawnCapture(location, board, target);
+      case 0b010:
+        return this.canKnightCapture(location, board, target);
+      case 0b011:
+        return this.canBishopCapture(location, board, target);
+      case 0b100:
+        return this.canRookCapture(location, board, target);
+      case 0b101:
+        return this.canQueenCapture(location, board, target);
+      case 0b110:
+        return this.canKingCapture(location, board, target);
+      default:
+        throw new Error(
+          "invalid piece: " + numberToPieceString(board[location])
+        );
     }
   }
 
@@ -1255,6 +1256,66 @@ export class ChessterGame {
     return moves;
   }
 
+  canKingCapture(
+    location: number,
+    board: ChessterBoard,
+    target: number
+  ): boolean {
+    // bottom row (if not bottom row)
+    if ((location & 0b111000) !== 0b111000 && board[location + 8] === target) {
+      return true;
+    }
+    // else location contains friendly piece, do not push any move
+
+    // top row
+    if (location & 0b111000 && board[location - 8] === target) {
+      return true;
+    }
+    // else location contains friendly piece, do not push any move
+
+    // right-most column
+    if ((location & 0b111) !== 0b111) {
+      if (board[location + 1] === target) {
+        return true;
+      }
+
+      // bottom row
+      if (
+        (location & 0b111000) !== 0b111000 &&
+        board[location + 9] === target
+      ) {
+        return true;
+      }
+
+      // top row
+      if (location & 0b111000 && board[location - 7] === target) {
+        return true;
+      }
+    }
+
+    if (location & 0b111) {
+      // left-most column
+      if (board[location - 1] === target) {
+        return true;
+      }
+
+      // top row
+      if (location & 0b111000 && board[location - 9] === target) {
+        return true;
+      }
+
+      // bottom row
+      if (
+        (location & 0b111000) !== 0b111000 &&
+        board[location + 7] === target
+      ) {
+        return true;
+      }
+    }
+
+    return false;
+  }
+
   getKnightMoves(piece: number, location: number): number[] {
     const moves: number[] = [];
 
@@ -1410,6 +1471,54 @@ export class ChessterGame {
     return moves;
   }
 
+  canKnightCapture(
+    location: number,
+    board: ChessterBoard,
+    target: number
+  ): boolean {
+    if (location < 48) {
+      if ((location & 0b111) !== 0b111 && board[location + 17] === target) {
+        return true;
+      }
+
+      if (location & 0b111 && board[location + 15] === target) {
+        return true;
+      }
+    }
+
+    if (location > 15) {
+      if ((location & 0b111) !== 0b111 && board[location - 15] === target) {
+        return true;
+      }
+
+      if (location & 0b111 && board[location - 17] === target) {
+        return true;
+      }
+    }
+
+    if ((location & 0b111) > 1) {
+      if (location < 56 && board[location + 6] === target) {
+        return true;
+      }
+
+      if (location > 7 && board[location - 10] === target) {
+        return true;
+      }
+    }
+
+    if ((location & 0b111) < 6) {
+      if (location < 56 && board[location + 10] === target) {
+        return true;
+      }
+
+      if (location > 7 && board[location - 6] === target) {
+        return true;
+      }
+    }
+
+    return false;
+  }
+
   getBishopMoves(piece: number, location: number): number[] {
     const moves: number[] = [];
 
@@ -1517,6 +1626,71 @@ export class ChessterGame {
     return moves;
   }
 
+  canBishopCapture(
+    location: number,
+    board: ChessterBoard,
+    target: number
+  ): boolean {
+    // down right
+    for (
+      let i = 1;
+      ((location + 9 * i) & 0b111) > 0 && location + 9 * i < 64;
+      i++
+    ) {
+      if (!board[location + 9 * i]) continue;
+
+      if (board[location + 9 * i] === target) {
+        return true;
+      } else {
+        break;
+      }
+    }
+
+    // up right
+    for (let i = 1; (location - 7 * i) & 0b111 && location - 7 * i > 0; i++) {
+      if (!board[location - 7 * i]) continue;
+
+      if (board[location - 7 * i] === target) {
+        return true;
+      } else {
+        break;
+      }
+    }
+
+    // down left
+    for (
+      let i = 1;
+      ((location + 7 * i) & 0b111) < 7 && location + 7 * i < 64;
+      i++
+    ) {
+      if (!board[location + 7 * i]) continue;
+
+      if (board[location + 7 * i] === target) {
+        return true;
+      } else {
+        // friendly piece
+        break;
+      }
+    }
+
+    // up left
+    for (
+      let i = 1;
+      ((location - 9 * i) & 0b111) < 7 && location - 9 * i >= 0;
+      i++
+    ) {
+      if (!board[location - 9 * i]) continue;
+
+      if (board[location - 9 * i] === target) {
+        return true;
+      } else {
+        break;
+      }
+    }
+
+    return false;
+  }
+
   getRookMoves(piece: number, location: number): number[] {
     const moves: number[] = [];
 
@@ -1609,6 +1783,58 @@ export class ChessterGame {
     }
 
     return moves;
+  }
+
+  canRookCapture(
+    location: number,
+    board: ChessterBoard,
+    target: number
+  ): boolean {
+    // right
+    for (let i = 1; i < 8 - (location & 0b111); i++) {
+      if (!board[location + i]) continue;
+
+      if (board[location + i] === target) {
+        return true;
+      } else {
+        break;
+      }
+    }
+
+    // left
+    for (let i = 1; i < (location & 0b111) + 1; i++) {
+      if (!board[location - i]) continue;
+
+      if (board[location - i] === target) {
+        return true;
+      } else {
+        break;
+      }
+    }
+
+    // down
+    for (let i = 1; location + 8 * i < 64; i++) {
+      if (!board[location + 8 * i]) continue;
+
+      if (board[location + 8 * i] === target) {
+        return true;
+      } else {
+        break;
+      }
+    }
+
+    // up
+    for (let i = 1; location - 8 * i >= 0; i++) {
+      if (!board[location - 8 * i]) continue;
+
+      if (board[location - 8 * i] === target) {
+        return true;
+      } else {
+        break;
+      }
+    }
+
+    return false;
   }
 
   getQueenMoves(piece: number, location: number): number[] {
@@ -1812,6 +2038,17 @@ export class ChessterGame {
     }
 
     return moves;
+  }
+
+  canQueenCapture(
+    location: number,
+    board: ChessterBoard,
+    target: number
+  ): boolean {
+    return (
+      this.canBishopCapture(location, board, target) ||
+      this.canRookCapture(location, board, target)
+    );
   }
 
   getPawnMoves(piece: number, location: number): number[] {
@@ -2084,5 +2321,39 @@ export class ChessterGame {
     }
 
     return moves;
+  }
+
+  canPawnCapture(location: number, board: ChessterBoard, target): boolean {
+    // white piece
+    if (!(board[location] & 0b1)) {
+      // promotion
+
+      // upper left capture
+      if (location & 0b111 && board[location - 9] === target) {
+        return true;
+      }
+
+      // upper right capture
+      if ((location & 0b111) !== 7 && board[location - 7] === target) {
+        return true;
+      }
+    } else {
+      // black piece
+
+      // upper left capture
+      if (
+        (location & 0b111) !== 7 && // or < 7
+        board[location + 9] === target
+      ) {
+        return true;
+      }
+
+      // upper right capture
+      if (location & 0b111 && board[location + 7] === target) {
+        return true;
+      }
+    }
+
+    return false;
   }
 }

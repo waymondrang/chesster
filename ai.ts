@@ -176,7 +176,7 @@ export class ChessterAI {
     let score = 0;
 
     for (let i = 0; i < boardSize; i++) {
-      if (this.game.board[i] !== 0) {
+      if (this.game.board[i]) {
         score +=
           ((this.game.board[i] & 0b1) === this.team
             ? teamPieceValueWeight
@@ -297,11 +297,11 @@ export class ChessterAI {
          * NOTE: postMessage will only work in a web worker
          */
 
-        // if (this.visualizeSearch)
-        //   postMessage({
-        //     type: messageTypes.VISUALIZE_MOVE,
-        //     move: bestMove,
-        //   });
+        if (this.visualizeSearch)
+          postMessage({
+            type: messageTypes.VISUALIZE_MOVE,
+            move: bestMove,
+          });
       }
 
       alpha = Math.max(alpha, score);

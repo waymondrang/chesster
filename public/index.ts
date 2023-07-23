@@ -13,7 +13,12 @@ import {
   moveTypes,
   messageTypes,
 } from "../types";
-import { binaryToString, getKeyByValue, numberToFileName } from "../util";
+import {
+  binaryToString,
+  fenStringToGameState,
+  getKeyByValue,
+  numberToFileName,
+} from "../util";
 
 ////////////////////////////////
 //     constant variables     //
@@ -43,7 +48,11 @@ const game = new ChessterGame();
 const aiWorker = new Worker("worker.js");
 const enableAI = true;
 
-// game.init(fenStringToGameState("5p2/6P1/8/8/8/8/8/8 w - - 0 0"));
+// game.init(
+//   fenStringToGameState(
+//     "rnb1kbnr/pp1ppppp/8/q1P5/8/8/PPP1PPPP/RNBQKBNR w KQkq - 1 3"
+//   )
+// );
 
 ///////////////////
 //     types     //
