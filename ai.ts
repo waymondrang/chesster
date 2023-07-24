@@ -9,6 +9,7 @@ import {
   messageTypes,
   moveTypes,
 } from "./types";
+import { moveToString } from "./util";
 
 const mobilityWeight = 2;
 const pieceValueWeight = 20; // (was) used in calculateRelative
@@ -66,7 +67,13 @@ const totalPhase =
 export class ChessterAI {
   game: ChessterGame;
   team: number;
-  relativeTable: Map<bigint, number> = new Map();
+
+  //////////////////////////////////
+  //     transposition tables     //
+  //////////////////////////////////
+
+  relativeWhiteTable: Map<bigint, [number, string]> = new Map();
+  relativeBlackTable: Map<bigint, [number, string]> = new Map();
   absoluteTable: Map<bigint, number> = new Map();
 
   //////////////////////
@@ -229,8 +236,8 @@ export class ChessterAI {
     if (this.game.stalemate || this.game.draw) return 0;
 
     // check transposition table
-    if (this.relativeTable.has(this.game.zobrist))
-      return this.relativeTable.get(this.game.zobrist);
+    // if (this.relativeTable.has(this.game.zobrist))
+    //   return this.relativeTable.get(this.game.zobrist);
 
     let score = 0;
     let phase = 0; // the lower the phase, the closer to endgame
@@ -251,23 +258,27 @@ export class ChessterAI {
             ((this.game.board[i] & 0b1) === this.game.turn ? 1 : -1) *
             moves.length; // if white multiply by -1
 
-        switch ((this.game.board[i] >>> 1) & 0b111) {
-          case 0b001:
-            phase += pawnPhase;
-            break;
-          case 0b010:
-            phase += knightPhase;
-            break;
-          case 0b011:
-            phase += bishopPhase;
-            break;
-          case 0b100:
-            phase += rookPhase;
-            break;
-          case 0b101:
-            phase += queenPhase;
-            break;
-        }
+        /**
+         * phase is not completely implemented yet
+         */
+
+        // switch ((this.game.board[i] >>> 1) & 0b111) {
+        //   case 0b001:
+        //     phase += pawnPhase;
+        //     break;
+        //   case 0b010:
+        //     phase += knightPhase;
+        //     break;
+        //   case 0b011:
+        //     phase += bishopPhase;
+        //     break;
+        //   case 0b100:
+        //     phase += rookPhase;
+        //     break;
+        //   case 0b101:
+        //     phase += queenPhase;
+        //     break;
+        // }
       }
     }
 
@@ -277,7 +288,50 @@ export class ChessterAI {
         ? (this.game.wckc ? 1 : 0) + (this.game.wcqc ? 1 : 0)
         : (this.game.bckc ? 1 : 0) + (this.game.bcqc ? 1 : 0));
 
-    this.relativeTable.set(this.game.zobrist, score);
+    /**
+     * checking for transposition table collision
+     */
+    if (
+      (this.game.turn ? this.relativeBlackTable : this.relativeWhiteTable).has(
+        this.game.zobrist
+      )
+    ) {
+      if (
+        (this.game.turn
+          ? this.relativeBlackTable
+          : this.relativeWhiteTable
+        ).get(this.game.zobrist)[0] !== score
+      ) {
+        console.log("collision");
+        console.log([
+          ...(this.game.turn
+            ? this.relativeBlackTable
+            : this.relativeWhiteTable
+          ).get(this.game.zobrist),
+          this.game.zobrist,
+        ]);
+        console.log([
+          score,
+          this.game.history.map((move) => moveToString(move)).join(" ") +
+            "\n" +
+            this.game.ascii(),
+        ]);
+        throw new Error("collision");
+      }
+      return (
+        this.game.turn ? this.relativeBlackTable : this.relativeWhiteTable
+      ).get(this.game.zobrist)[0];
+    }
+
+    (this.game.turn ? this.relativeBlackTable : this.relativeWhiteTable).set(
+      this.game.zobrist,
+      [
+        score,
+        this.game.history.map((move) => moveToString(move)).join(" ") +
+          "\n" +
+          this.game.ascii(),
+      ]
+    );
 
     return score;
   }
@@ -346,11 +400,11 @@ export class ChessterAI {
          * NOTE: postMessage will only work in a web worker
          */
 
-        if (this.visualizeSearch)
-          postMessage({
-            type: messageTypes.VISUALIZE_MOVE,
-            move: bestMove,
-          });
+        // if (this.visualizeSearch)
+        //   postMessage({
+        //     type: messageTypes.VISUALIZE_MOVE,
+        //     move: bestMove,
+        //   });
       }
 
       alpha = Math.max(alpha, score);

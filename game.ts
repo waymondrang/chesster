@@ -93,7 +93,7 @@ export class ChessterGame {
 
     for (let i = 0; i < boardSize; i++)
       if (this.board[i])
-        this.zobrist ^= this.#zeys[i * 12 + (this.board[i] - 1)];
+        this.zobrist ^= this.#zeys[i * 12 + (this.board[i] - 2)];
 
     if (this.turn === BLACK) this.zobrist ^= this.#zeys[768];
 
@@ -235,26 +235,61 @@ export class ChessterGame {
         this.zobrist ^=
           this.#zeys[
             ((move >>> 8) & 0b111111) * 12 +
-              ((this.board[(move >>> 8) & 0b111111] >>> 1) - 1) // remove captured piece
+              (this.board[(move >>> 8) & 0b111111] - 2) // remove captured piece
           ] ^
           this.#zeys[
-            ((move >>> 8) & 0b111111) * 12 + (((move & 0b1111) >>> 1) - 1) // add moved piece
+            ((move >>> 8) & 0b111111) * 12 + ((move & 0b1111) - 2) // add moved piece
           ] ^
           this.#zeys[
-            ((move >>> 14) & 0b111111) * 12 + (((move & 0b1111) >>> 1) - 1) // remove moved piece
+            ((move >>> 14) & 0b111111) * 12 + ((move & 0b1111) - 2) // remove moved piece
           ];
 
         this.board[(move >>> 14) & 0b111111] = 0;
         this.board[(move >>> 8) & 0b111111] = move & 0b1111;
         break;
       case moveTypes.CASTLE_KINGSIDE: // todo: add zobrist
+        this.zobrist ^=
+          this.#zeys[
+            ((move >>> 14) & 0b111111) * 12 + ((move & 0b1111) - 2) // remove king
+          ] ^
+          this.#zeys[
+            (((move >>> 14) & 0b111111) + 2) * 12 + ((move & 0b1111) - 2) // add king
+          ] ^
+          this.#zeys[
+            (((move >>> 14) & 0b111111) + 3) * 12 +
+              (this.board[((move >>> 14) & 0b111111) + 3] - 2) // remove rook
+          ] ^
+          this.#zeys[
+            (((move >>> 14) & 0b111111) + 1) * 12 +
+              (this.board[((move >>> 14) & 0b111111) + 3] - 2) // add rook
+          ];
+
         this.board[(move >>> 14) & 0b111111] = 0;
         this.board[((move >>> 14) & 0b111111) + 2] = move & 0b1111;
         this.board[((move >>> 14) & 0b111111) + 1] =
           this.board[((move >>> 14) & 0b111111) + 3];
         this.board[((move >>> 14) & 0b111111) + 3] = 0;
         break;
-      case moveTypes.CASTLE_QUEENSIDE: // todo: add zobrist
+      case moveTypes.CASTLE_QUEENSIDE:
+        /**
+         * these could be optimized, including the board[...] because the pieces are known
+         */
+        this.zobrist ^=
+          this.#zeys[
+            ((move >>> 14) & 0b111111) * 12 + ((move & 0b1111) - 2) // remove king
+          ] ^
+          this.#zeys[
+            (((move >>> 14) & 0b111111) - 2) * 12 + ((move & 0b1111) - 2) // add king
+          ] ^
+          this.#zeys[
+            (((move >>> 14) & 0b111111) - 4) * 12 +
+              (this.board[((move >>> 14) & 0b111111) - 4] - 2) // remove rook
+          ] ^
+          this.#zeys[
+            (((move >>> 14) & 0b111111) - 1) * 12 +
+              (this.board[((move >>> 14) & 0b111111) - 4] - 2) // add rook
+          ];
+
         this.board[(move >>> 14) & 0b111111] = 0;
         this.board[((move >>> 14) & 0b111111) - 2] = move & 0b1111;
         this.board[((move >>> 14) & 0b111111) - 1] =
@@ -267,13 +302,13 @@ export class ChessterGame {
         this.zobrist ^=
           this.#zeys[
             (((move >>> 8) & 0b111111) + 8) * 12 +
-              ((this.board[((move >>> 8) & 0b111111) + 8] >>> 1) - 1) // remove captured piece
+              (this.board[((move >>> 8) & 0b111111) + 8] - 2) // remove captured piece
           ] ^
           this.#zeys[
-            ((move >>> 8) & 0b111111) * 12 + (0b001 - 1) // add moved piece
+            ((move >>> 8) & 0b111111) * 12 + ((move & 0b1111) - 2) // add moved piece (white pawn)
           ] ^
           this.#zeys[
-            ((move >>> 14) & 0b111111) * 12 + (0b001 - 1) // remove moved piece
+            ((move >>> 14) & 0b111111) * 12 + ((move & 0b1111) - 2) // remove moved piece (white pawn)
           ];
 
         this.board[(move >>> 14) & 0b111111] = 0;
@@ -286,13 +321,13 @@ export class ChessterGame {
         this.zobrist ^=
           this.#zeys[
             (((move >>> 8) & 0b111111) - 8) * 12 +
-              ((this.board[((move >>> 8) & 0b111111) - 8] >>> 1) - 1) // remove captured piece
+              (this.board[((move >>> 8) & 0b111111) - 8] - 2) // remove captured piece
           ] ^
           this.#zeys[
-            ((move >>> 8) & 0b111111) * 12 + (0b001 - 1) // add moved piece
+            ((move >>> 8) & 0b111111) * 12 + ((move & 0b1111) - 2) // add moved piece (black pawn)
           ] ^
           this.#zeys[
-            ((move >>> 14) & 0b111111) * 12 + (0b001 - 1) // remove moved piece
+            ((move >>> 14) & 0b111111) * 12 + ((move & 0b1111) - 2) // remove moved piece (black pawn)
           ];
 
         this.board[(move >>> 14) & 0b111111] = 0;
@@ -305,13 +340,13 @@ export class ChessterGame {
         this.zobrist ^=
           this.#zeys[
             ((move >>> 8) & 0b111111) * 12 +
-              ((this.board[(move >>> 8) & 0b111111] >>> 1) - 1) // remove captured piece
+              (this.board[(move >>> 8) & 0b111111] - 2) // remove captured piece
           ] ^
           this.#zeys[
-            ((move >>> 8) & 0b111111) * 12 + (0b101 - 1) // add moved piece
+            ((move >>> 8) & 0b111111) * 12 + (((move & 0b0001) | 0b1010) - 2) // add moved piece
           ] ^
           this.#zeys[
-            ((move >>> 14) & 0b111111) * 12 + (0b001 - 1) // remove moved piece
+            ((move >>> 14) & 0b111111) * 12 + ((move & 0b1111) - 2) // remove moved piece
           ];
 
         this.board[(move >>> 14) & 0b111111] = 0;
@@ -322,10 +357,10 @@ export class ChessterGame {
 
         this.zobrist ^=
           this.#zeys[
-            ((move >>> 8) & 0b111111) * 12 + (0b101 - 1) // add moved piece
+            ((move >>> 8) & 0b111111) * 12 + (((move & 0b0001) | 0b1010) - 2) // add moved piece
           ] ^
           this.#zeys[
-            ((move >>> 14) & 0b111111) * 12 + (0b001 - 1) // remove moved piece
+            ((move >>> 14) & 0b111111) * 12 + ((move & 0b1111) - 2) // remove moved piece
           ];
 
         this.board[(move >>> 14) & 0b111111] = 0;
@@ -337,13 +372,13 @@ export class ChessterGame {
         this.zobrist ^=
           this.#zeys[
             ((move >>> 8) & 0b111111) * 12 +
-              ((this.board[(move >>> 8) & 0b111111] >>> 1) - 1) // remove captured piece
+              (this.board[(move >>> 8) & 0b111111] - 2) // remove captured piece
           ] ^
           this.#zeys[
-            ((move >>> 8) & 0b111111) * 12 + (0b100 - 1) // add moved piece (change)
+            ((move >>> 8) & 0b111111) * 12 + (((move & 0b0001) | 0b1000) - 2) // add moved piece (change)
           ] ^
           this.#zeys[
-            ((move >>> 14) & 0b111111) * 12 + (0b001 - 1) // remove moved piece
+            ((move >>> 14) & 0b111111) * 12 + ((move & 0b1111) - 2) // remove moved piece
           ];
 
         this.board[(move >>> 14) & 0b111111] = 0;
@@ -354,10 +389,10 @@ export class ChessterGame {
 
         this.zobrist ^=
           this.#zeys[
-            ((move >>> 8) & 0b111111) * 12 + (0b100 - 1) // add moved piece (change)
+            ((move >>> 8) & 0b111111) * 12 + (((move & 0b0001) | 0b1000) - 2) // add moved piece (change)
           ] ^
           this.#zeys[
-            ((move >>> 14) & 0b111111) * 12 + (0b001 - 1) // remove moved piece
+            ((move >>> 14) & 0b111111) * 12 + ((move & 0b1111) - 2) // remove moved piece
           ];
 
         this.board[(move >>> 14) & 0b111111] = 0;
@@ -369,13 +404,13 @@ export class ChessterGame {
         this.zobrist ^=
           this.#zeys[
             ((move >>> 8) & 0b111111) * 12 +
-              ((this.board[(move >>> 8) & 0b111111] >>> 1) - 1) // remove captured piece
+              (this.board[(move >>> 8) & 0b111111] - 2) // remove captured piece
           ] ^
           this.#zeys[
-            ((move >>> 8) & 0b111111) * 12 + (0b011 - 1) // add moved piece (change)
+            ((move >>> 8) & 0b111111) * 12 + (((move & 0b0001) | 0b0110) - 2) // add moved piece (change)
           ] ^
           this.#zeys[
-            ((move >>> 14) & 0b111111) * 12 + (0b001 - 1) // remove moved piece
+            ((move >>> 14) & 0b111111) * 12 + ((move & 0b1111) - 2) // remove moved piece
           ];
 
         this.board[(move >>> 14) & 0b111111] = 0;
@@ -386,10 +421,10 @@ export class ChessterGame {
 
         this.zobrist ^=
           this.#zeys[
-            ((move >>> 8) & 0b111111) * 12 + (0b011 - 1) // add moved piece (change)
+            ((move >>> 8) & 0b111111) * 12 + (((move & 0b0001) | 0b0110) - 2) // add moved piece (change)
           ] ^
           this.#zeys[
-            ((move >>> 14) & 0b111111) * 12 + (0b001 - 1) // remove moved piece
+            ((move >>> 14) & 0b111111) * 12 + ((move & 0b1111) - 2) // remove moved piece
           ];
 
         this.board[(move >>> 14) & 0b111111] = 0;
@@ -401,13 +436,13 @@ export class ChessterGame {
         this.zobrist ^=
           this.#zeys[
             ((move >>> 8) & 0b111111) * 12 +
-              ((this.board[(move >>> 8) & 0b111111] >>> 1) - 1) // remove captured piece
+              (this.board[(move >>> 8) & 0b111111] - 2) // remove captured piece
           ] ^
           this.#zeys[
-            ((move >>> 8) & 0b111111) * 12 + (0b010 - 1) // add moved piece (change)
+            ((move >>> 8) & 0b111111) * 12 + (((move & 0b0001) | 0b0100) - 2) // add moved piece (change)
           ] ^
           this.#zeys[
-            ((move >>> 14) & 0b111111) * 12 + (0b001 - 1) // remove moved piece
+            ((move >>> 14) & 0b111111) * 12 + ((move & 0b1111) - 2) // remove moved piece
           ];
 
         this.board[(move >>> 14) & 0b111111] = 0;
@@ -418,10 +453,10 @@ export class ChessterGame {
 
         this.zobrist ^=
           this.#zeys[
-            ((move >>> 8) & 0b111111) * 12 + (0b010 - 1) // add moved piece (change)
+            ((move >>> 8) & 0b111111) * 12 + (((move & 0b0001) | 0b0100) - 2) // add moved piece (change)
           ] ^
           this.#zeys[
-            ((move >>> 14) & 0b111111) * 12 + (0b001 - 1) // remove moved piece
+            ((move >>> 14) & 0b111111) * 12 + ((move & 0b1111) - 2) // remove moved piece
           ];
 
         this.board[(move >>> 14) & 0b111111] = 0;
@@ -431,11 +466,9 @@ export class ChessterGame {
         this.zobrist ^= this.#zeys[((move >>> 8) & 0b111) + 773];
       case moveTypes.MOVE:
         this.zobrist ^=
+          this.#zeys[((move >>> 14) & 0b111111) * 12 + ((move & 0b1111) - 2)] ^
           this.#zeys[
-            ((move >>> 14) & 0b111111) * 12 + (((move & 0b1111) >>> 1) - 1)
-          ] ^
-          this.#zeys[
-            ((move >>> 8) & 0b111111) * 12 + (((move & 0b1111) >>> 1) - 1) // re-move
+            ((move >>> 8) & 0b111111) * 12 + ((move & 0b1111) - 2) // re-move
           ];
 
         this.board[(move >>> 14) & 0b111111] = 0;
