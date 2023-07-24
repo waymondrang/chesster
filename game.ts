@@ -862,27 +862,22 @@ export class ChessterGame {
     // const team = this.board[location] & 0b1;
 
     for (let i = 0; i < moves.length; i++) {
-      if (!this.simulateMove(moves[i])) continue;
-
-      if (((moves[i] >>> 4) & 0b1111) === moveTypes.CASTLE_KINGSIDE) {
-        if (
+      if (
+        !this.simulateMove(moves[i]) ||
+        (((moves[i] >>> 4) & 0b1111) === moveTypes.CASTLE_KINGSIDE &&
           !this.simulateMove(
             (moves[i] & 0b11111100000000001111) |
               (((moves[i] >>> 14) + 1) << 8) |
               (moveTypes.MOVE << 4)
-          )
-        )
-          continue;
-      } else if (((moves[i] >>> 4) & 0b1111) === moveTypes.CASTLE_QUEENSIDE) {
-        if (
+          )) ||
+        (((moves[i] >>> 4) & 0b1111) === moveTypes.CASTLE_QUEENSIDE &&
           !this.simulateMove(
             (moves[i] & 0b11111100000000001111) |
               (((moves[i] >>> 14) - 1) << 8) |
               (moveTypes.MOVE << 4)
-          )
-        )
-          continue;
-      }
+          ))
+      )
+        continue;
 
       finalMoves.push(moves[i]);
     }

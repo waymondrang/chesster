@@ -4,13 +4,13 @@ import { ChessterGame } from "../game";
 const game = new ChessterGame();
 
 const ai1 = new ChessterAI(game, {
-  depth: 2,
+  depth: 3,
   pseudoLegalEvaluation: false,
   searchAlgorithm: "negaScout",
 });
 
 const ai2 = new ChessterAI(game, {
-  depth: 2,
+  depth: 4,
   pseudoLegalEvaluation: false,
   searchAlgorithm: "negaScout",
 });

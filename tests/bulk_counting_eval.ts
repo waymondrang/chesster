@@ -11,10 +11,10 @@ import {
 const game = new ChessterGame();
 const chess = new Chess();
 
-const n = 5;
-const depth = 5;
+const n = 10;
+const depth = 4;
 const fen: string = "";
-const counter: number = 0; // default is 0
+const counter: number = 1; // default is 0
 
 // counter 2
 function countBulkPositionsCompare(depth: number): number {
@@ -65,7 +65,7 @@ function countBulkPositionsCompare(depth: number): number {
 // counter 1
 function countBulkPositions(
   depth: number
-): [number, number, number, number, number] {
+): [number, number, number, number, number, number] {
   if (depth <= 0)
     return [
       1,
@@ -73,6 +73,7 @@ function countBulkPositions(
       game.wc || game.bc ? 1 : 0,
       game.wcm || game.bcm ? 1 : 0,
       game.stalemate ? 1 : 0,
+      game.draw ? 1 : 0,
     ];
 
   let count = 0;
@@ -80,28 +81,26 @@ function countBulkPositions(
   let checks = 0;
   let checkmates = 0;
   let stalemates = 0;
+  let draws = 0;
 
-  for (let i = 0; i < boardSize; i++) {
-    if (game.board[i] && (game.board[i] & 0b1) === game.turn) {
-      const moves = game.getAvailableMoves(i);
+  const moves = game.moves();
 
-      for (let j = 0; j < moves.length; j++) {
-        game.move(moves[j]);
+  for (let j = 0; j < moves.length; j++) {
+    game.move(moves[j]);
 
-        let positions = countBulkPositions(depth - 1);
+    let positions = countBulkPositions(depth - 1);
 
-        count += positions[0];
-        captures += positions[1];
-        checks += positions[2];
-        checkmates += positions[3];
-        stalemates += positions[4];
+    count += positions[0];
+    captures += positions[1];
+    checks += positions[2];
+    checkmates += positions[3];
+    stalemates += positions[4];
+    draws += positions[5];
 
-        game.undo();
-      }
-    }
+    game.undo();
   }
 
-  return [count, captures, checks, checkmates, stalemates];
+  return [count, captures, checks, checkmates, stalemates, draws];
 }
 
 // counter 0
@@ -128,7 +127,7 @@ function measureCountBulkPositions(depth: number) {
 
   if (fen !== "") {
     game.init(fenStringToGameState(fen));
-    chess.load(fen);
+    if (counter === 2) chess.load(fen);
   }
 
   switch (counter) {
@@ -162,6 +161,8 @@ function measureCountBulkPositions(depth: number) {
           count[3] +
           "\tNumber of stalemates: " +
           count[4] +
+          "\tNumber of draws: " +
+          count[5] +
           "\tTime: " +
           time +
           "ms"
