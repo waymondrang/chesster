@@ -48,10 +48,6 @@ export class ChessterGame {
   zobrist: bigint;
   /** zobrist history */
   zistory: bigint[];
-  /** ai mode */
-  ai: boolean;
-  // /** available moves for current player. movess will only be generated on moves, and undoing a move will clear the array */
-  // movess: number[];
   /** zobrist keys */
   #zeys: bigint[];
 
@@ -79,7 +75,6 @@ export class ChessterGame {
 
     this.stalemate = state?.stalemate ?? false; // stalemate
     this.draw = state?.draw ?? false; // draw
-    this.ai = state?.ai ?? false; // enable ai mode
 
     ///////////////////////////////////
     //     generate zobrist keys     //
@@ -791,7 +786,6 @@ export class ChessterGame {
       bcqc: this.bcqc,
       stalemate: this.stalemate,
       draw: this.draw,
-      ai: this.ai,
     };
   }
 

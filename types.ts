@@ -89,7 +89,6 @@ export type ChessterGameState = {
   draw: boolean; // draw
   turn: 0 | 1;
   history: ChessterHistory;
-  ai: boolean;
 };
 
 export type PartialChessterGameState = {
