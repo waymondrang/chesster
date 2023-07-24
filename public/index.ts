@@ -46,7 +46,7 @@ const empty_settings = document.querySelectorAll(
 
 const game = new ChessterGame();
 const aiWorker = new Worker("worker.js");
-const enableAI = true;
+const enableAI = false;
 
 // game.init(
 //   fenStringToGameState(
@@ -259,7 +259,11 @@ function clientMove(move: ChessterMove) {
 function makeMove(move: ChessterMove) {
   let previousBoard = [...game.board];
 
+  console.log("before move zobrist", game.zobrist, game.zistory);
+
   game.move(move);
+
+  console.log("after move zobrist", game.zobrist, game.zistory);
 
   clearVisualizations();
   updateBoard(game.board, previousBoard);
@@ -445,6 +449,8 @@ turnMoves = game.moves();
 
 restart.addEventListener("click", async () => {
   game.init();
+
+  console.log(game.getState());
 
   clearVisualizations();
   updateBoard(game.board);

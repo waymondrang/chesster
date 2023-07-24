@@ -20,6 +20,15 @@ export function getKeyByValue(object: any, value: any) {
 }
 
 /**
+ * Generates a random 64-bit integer
+ * @param seed The seed to use for the random number generator
+ * @returns A random 64-bit integer
+ */
+export function linearCongruentialGenerator(seed: bigint): bigint {
+  return (2862933555777941757n * seed + 3037000493n) % 18446744073709551616n;
+}
+
+/**
  * Given a valid fen string (currently, the params (w/b, etc) at the end aren't supported)
  * return a ChessterBoardString of the fen string
  */

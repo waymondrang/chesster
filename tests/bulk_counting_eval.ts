@@ -11,8 +11,8 @@ import {
 const game = new ChessterGame();
 const chess = new Chess();
 
-const n = 10;
-const depth = 4;
+const n = 1;
+const depth = 5;
 const fen: string = "";
 const counter: number = 0; // default is 0
 
@@ -108,17 +108,14 @@ function countBulkPositions(
 function countBulkPositionsSimple(depth: number): number {
   if (depth <= 0) return 1;
 
+  const moves = game.moves();
+
   let count = 0;
 
-  for (let i = 0; i < boardSize; i++) {
-    if (game.board[i] && (game.board[i] & 0b1) === game.turn) {
-      const moves = game.getAvailableMoves(i);
-      for (let j = 0; j < moves.length; j++) {
-        game.move(moves[j]);
-        count += countBulkPositionsSimple(depth - 1);
-        game.undo();
-      }
-    }
+  for (let j = 0; j < moves.length; j++) {
+    game.move(moves[j]);
+    count += countBulkPositionsSimple(depth - 1);
+    game.undo();
   }
 
   return count;
