@@ -87,9 +87,8 @@ export class ChessterGame {
 
     this.#zeys = [8746989176631517180n]; // initial zobrist key
 
-    for (let i = 1; i < 781; i++) {
+    for (let i = 1; i < 781; i++)
       this.#zeys.push(linearCongruentialGenerator(this.#zeys[i - 1]));
-    }
 
     //////////////////////////////////////
     //     generate initial zobrist     //
@@ -486,7 +485,12 @@ export class ChessterGame {
     this.zistory.push(this.zobrist);
   }
 
-  simulateMove(move: number): [number, number] {
+  /**
+   * Simulates a move without updating the board or member variables
+   * @param move
+   * @returns Whether the move is valid. A move is invalid when it will put the player in check.
+   */
+  simulateMove(move: number): boolean {
     // 32 bit number
     let board = [...this.board];
 
@@ -564,34 +568,17 @@ export class ChessterGame {
     //     update check     //
     //////////////////////////
 
-    let checked = 0b00; // left bit is currentChecked, right bit is pastChecked
-
     // check if past team is still in check
     for (let i = 0; i < boardSize; i++) {
-      if (!board[i]) continue; // saved ~170ms
+      if (!board[i] || (board[i] & 0b1) === this.turn) continue; // saved ~170ms
 
       if (
-        !(checked & 0b01) &&
-        (board[i] & 0b1) !== this.turn &&
         this.canCapturePiece(i, board, 0b1100 | this.turn) // enemy piece can capture turn's king
-      ) {
-        checked |= 0b01; // set pastChecked
-      } else if (
-        !(checked & 0b10) &&
-        (board[i] & 0b1) === this.turn &&
-        this.canCapturePiece(i, board, 0b1100 | (1 ^ this.turn)) // turn's piece can capture enemy king
-      ) {
-        // check if current turn is in check
-        checked |= 0b10; // set currentChecked
-      }
-
-      if (checked === 0b11) break;
+      )
+        return false;
     }
 
-    return [
-      this.turn === WHITE ? (checked & 0b10) >>> 1 : checked & 0b01,
-      this.turn === WHITE ? checked & 0b01 : (checked & 0b10) >>> 1,
-    ];
+    return true;
   }
 
   /**
@@ -746,11 +733,9 @@ export class ChessterGame {
     let sm = true;
 
     for (let i = 0; i < boardSize; i++) {
-      if (
-        this.board[i] &&
-        (this.board[i] & 0b1) === this.turn &&
-        this.getAvailableMoves(i).length > 0
-      ) {
+      if (!this.board[i] || (this.board[i] & 0b1) !== this.turn) continue;
+
+      if (this.getAvailableMoves(i).length > 0) {
         if (this.turn === WHITE) this.wcm = false;
         if (this.turn === BLACK) this.bcm = false;
         sm = false;
@@ -779,9 +764,9 @@ export class ChessterGame {
     let moves = [];
 
     for (let i = 0; i < boardSize; i++) {
-      if (this.board[i] && (this.board[i] & 0b1) === this.turn) {
-        moves.push(...this.getAvailableMoves(i));
-      }
+      if (!this.board[i] || (this.board[i] & 0b1) !== this.turn) continue;
+
+      moves.push(...this.getAvailableMoves(i));
     }
 
     return moves;
@@ -877,31 +862,29 @@ export class ChessterGame {
     // const team = this.board[location] & 0b1;
 
     for (let i = 0; i < moves.length; i++) {
-      let [wc, bc] = this.simulateMove(moves[i]);
+      if (!this.simulateMove(moves[i])) continue;
 
-      if (!((this.turn === WHITE || wc) && (this.turn === BLACK || bc))) {
-        if (((moves[i] >>> 4) & 0b1111) === moveTypes.CASTLE_KINGSIDE) {
-          let [wc, bc] = this.simulateMove(
+      if (((moves[i] >>> 4) & 0b1111) === moveTypes.CASTLE_KINGSIDE) {
+        if (
+          !this.simulateMove(
             (moves[i] & 0b11111100000000001111) |
               (((moves[i] >>> 14) + 1) << 8) |
               (moveTypes.MOVE << 4)
-          );
-
-          if (!((this.turn === WHITE || wc) && (this.turn === BLACK || bc)))
-            finalMoves.push(moves[i]);
-        } else if (((moves[i] >>> 4) & 0b1111) === moveTypes.CASTLE_QUEENSIDE) {
-          let [wc, bc] = this.simulateMove(
+          )
+        )
+          continue;
+      } else if (((moves[i] >>> 4) & 0b1111) === moveTypes.CASTLE_QUEENSIDE) {
+        if (
+          !this.simulateMove(
             (moves[i] & 0b11111100000000001111) |
               (((moves[i] >>> 14) - 1) << 8) |
               (moveTypes.MOVE << 4)
-          );
-
-          if (!((this.turn === WHITE || wc) && (this.turn === BLACK || bc)))
-            finalMoves.push(moves[i]);
-        } else {
-          finalMoves.push(moves[i]);
-        }
+          )
+        )
+          continue;
       }
+
+      finalMoves.push(moves[i]);
     }
 
     return finalMoves;

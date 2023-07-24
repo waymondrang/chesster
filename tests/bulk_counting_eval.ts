@@ -11,7 +11,7 @@ import {
 const game = new ChessterGame();
 const chess = new Chess();
 
-const n = 1;
+const n = 5;
 const depth = 5;
 const fen: string = "";
 const counter: number = 0; // default is 0
