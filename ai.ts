@@ -72,6 +72,8 @@ export class ChessterAI {
   //     transposition tables     //
   //////////////////////////////////
 
+  relativeTable: Map<bigint, [number, string]> = new Map();
+
   relativeWhiteTable: Map<bigint, [number, string]> = new Map();
   relativeBlackTable: Map<bigint, [number, string]> = new Map();
   absoluteTable: Map<bigint, number> = new Map();
@@ -236,8 +238,8 @@ export class ChessterAI {
     if (this.game.stalemate || this.game.draw) return 0;
 
     // check transposition table
-    // if (this.relativeTable.has(this.game.zobrist))
-    //   return this.relativeTable.get(this.game.zobrist);
+    if (this.relativeTable.has(this.game.zobrist))
+      return this.relativeTable.get(this.game.zobrist)[0];
 
     let score = 0;
     let phase = 0; // the lower the phase, the closer to endgame
@@ -291,47 +293,30 @@ export class ChessterAI {
     /**
      * checking for transposition table collision
      */
-    if (
-      (this.game.turn ? this.relativeBlackTable : this.relativeWhiteTable).has(
-        this.game.zobrist
-      )
-    ) {
-      if (
-        (this.game.turn
-          ? this.relativeBlackTable
-          : this.relativeWhiteTable
-        ).get(this.game.zobrist)[0] !== score
-      ) {
-        console.log("collision");
-        console.log([
-          ...(this.game.turn
-            ? this.relativeBlackTable
-            : this.relativeWhiteTable
-          ).get(this.game.zobrist),
-          this.game.zobrist,
-        ]);
-        console.log([
-          score,
-          this.game.history.map((move) => moveToString(move)).join(" ") +
-            "\n" +
-            this.game.ascii(),
-        ]);
-        throw new Error("collision");
-      }
-      return (
-        this.game.turn ? this.relativeBlackTable : this.relativeWhiteTable
-      ).get(this.game.zobrist)[0];
-    }
+    // if (this.relativeTable.has(this.game.zobrist)) {
+    //   if (this.relativeTable.get(this.game.zobrist)[0] !== score) {
+    //     console.log("collision");
+    //     console.log([
+    //       ...this.relativeTable.get(this.game.zobrist),
+    //       this.game.zobrist,
+    //     ]);
+    //     console.log([
+    //       score,
+    //       this.game.history.map((move) => moveToString(move)).join(" ") +
+    //         "\n" +
+    //         this.game.ascii(),
+    //     ]);
+    //     throw new Error("collision");
+    //   }
+    //   return this.relativeTable.get(this.game.zobrist)[0];
+    // }
 
-    (this.game.turn ? this.relativeBlackTable : this.relativeWhiteTable).set(
-      this.game.zobrist,
-      [
-        score,
-        this.game.history.map((move) => moveToString(move)).join(" ") +
-          "\n" +
-          this.game.ascii(),
-      ]
-    );
+    this.relativeTable.set(this.game.zobrist, [
+      score,
+      this.game.history.map((move) => moveToString(move)).join(" ") +
+        "\n" +
+        this.game.ascii(),
+    ]);
 
     return score;
   }
