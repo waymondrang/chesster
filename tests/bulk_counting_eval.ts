@@ -69,7 +69,7 @@ function countBulkPositions(
   if (depth <= 0)
     return [
       1,
-      (game.history[game.history.length - 1] >>> 20) & 0b1111 ? 1 : 0,
+      Number((game.history[game.history.length - 1] >> 20n) & 0b1111n) ? 1 : 0,
       game.wc || game.bc ? 1 : 0,
       game.wcm || game.bcm ? 1 : 0,
       game.stalemate ? 1 : 0,

@@ -58,21 +58,9 @@ export type ChessterPieceString =
   | "♟︎"
   | "♞";
 
-export type ChessterBoard = Array<number>;
-
+export type ChessterBoard = number[];
 export type ChessterBoardString = (ChessterPieceString | "")[][];
-
-export type ChessterTeam = typeof WHITE | typeof BLACK;
-
-export type ChessterLocation = [number, number];
-
-export type ChessterPlayer = {
-  pieces: ChessterPiece[];
-  taken: ChessterPiece[];
-  checked: boolean;
-  checkmated: boolean;
-};
-
+export type ChessterHistory = bigint[];
 export type ChessterMove = number;
 
 export type ChessterGameState = {
@@ -88,21 +76,10 @@ export type ChessterGameState = {
   stalemate: boolean; // stalemate
   draw: boolean; // draw
   turn: 0 | 1;
-  history: ChessterHistory;
+  history: bigint[];
   zistory: bigint[]; // zobrist history
   zobrist: bigint; // zobrist hash
 };
-
-export type PartialChessterGameState = {
-  board?: (Partial<ChessterPiece> | undefined)[][];
-  white?: Partial<ChessterPlayer>;
-  black?: Partial<ChessterPlayer>;
-  history?: ChessterHistory;
-  turn?: ChessterTeam;
-};
-
-export type ChessterPiece = number;
-export type ChessterHistory = ChessterMove[];
 
 // https://stackoverflow.com/a/51365037
 export type RecursivePartial<T> = {
@@ -111,17 +88,4 @@ export type RecursivePartial<T> = {
     : T[P] extends object | undefined
     ? RecursivePartial<T[P]>
     : T[P];
-};
-
-export type Test = {
-  title: string;
-  initialState: PartialChessterGameState;
-  expectedState: PartialChessterGameState;
-  moves?: ChessterMove[];
-};
-
-export type PGNTest = {
-  title: string;
-  pgn: string;
-  expectedState: PartialChessterGameState;
 };

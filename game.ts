@@ -2,7 +2,6 @@ import {
   BLACK,
   ChessterBoard,
   ChessterGameState,
-  ChessterHistory,
   ChessterMove,
   RecursivePartial,
   WHITE,
@@ -17,7 +16,60 @@ import {
   numberToPieceString,
 } from "./util";
 
-export class ChessterGame {
+const mobilityWeight = 2;
+const pieceValueWeight = 20; // (was) used in calculateRelative
+const teamPieceValueWeight = 20; // used in calculateAbsolute
+const enemyPieceValueWeight = 20; // used in calculateAbsolute
+const castlingRightsWeight = 12; // tested, but still arbitrary
+const checkmateWeight = 9999;
+
+/////////////////////////////////
+//     default ai settings     //
+/////////////////////////////////
+
+const defaultDepth = 3;
+const defaultPseudoLegalEvaluation = false;
+const defaultSearchAlgorithm = "negaScout";
+const defaultVisualizeSearch = true;
+
+//////////////////////////////////
+//     unsupported settings     //
+//////////////////////////////////
+
+const defaultQuiesceDepth = 4;
+const defaultUseQuiesceSearch = false;
+const defaultUseIterativeDeepening = false;
+const defaultSearchTimeout = 3000;
+
+//////////////////////////////////
+//     move ordering tables     //
+//////////////////////////////////
+
+const MVV_LVA: number[][] = [
+  [0, 0, 0, 0, 0, 0, 0], // victim K, attacker K, Q, R, B, N, P, None
+  [10, 11, 12, 13, 14, 15, 0], // victim P, attacker K, Q, R, B, N, P, None
+  [20, 21, 22, 23, 24, 25, 0], // victim N, attacker K, Q, R, B, N, P, None
+  [30, 31, 32, 33, 34, 35, 0], // victim B, attacker K, Q, R, B, N, P, None
+  [40, 41, 42, 43, 44, 45, 0], // victim R, attacker K, Q, R, B, N, P, None
+  [50, 51, 52, 53, 54, 55, 0], // victim Q, attacker K, Q, R, B, N, P, None
+  [0, 0, 0, 0, 0, 0, 0], // victim None, attacker K, Q, R, B, N, P, None
+];
+
+const pieceValues: number[] = [0, 100, 310, 340, 550, 1000, 0, 0];
+
+const pawnPhase = 0;
+const knightPhase = 1;
+const bishopPhase = 1;
+const rookPhase = 2;
+const queenPhase = 4;
+const totalPhase =
+  pawnPhase * 16 +
+  knightPhase * 4 +
+  bishopPhase * 4 +
+  rookPhase * 4 +
+  queenPhase * 2;
+
+export class ChessterGameForAI {
   /** array representation of board */
   board: number[];
   /** white is in check */
@@ -43,13 +95,31 @@ export class ChessterGame {
   /** 0 if white to move, 1 if black to move */
   turn: 0 | 1;
   /** move history */
-  history: number[];
-  /** zobrist hash for current state */
+  history: bigint[];
+  /** zobrist hash of current state */
   zobrist: bigint;
   /** zobrist history */
   zistory: bigint[];
   /** zobrist keys */
   #zeys: bigint[];
+  /** evaluation of current state */
+  evaluation: number;
+
+  //////////////////////////////////
+  //     transposition tables     //
+  //////////////////////////////////
+
+  relativeTable: Map<bigint, number> = new Map();
+  absoluteTable: Map<bigint, number> = new Map();
+
+  /////////////////////////
+  //     ai settings     //
+  /////////////////////////
+
+  depth: number;
+  pseudoLegalEvaluation: boolean;
+  searchAlgorithm: "negaScout" | "miniMax";
+  visualizeSearch: boolean;
 
   /**
    * Creates a new Chesster game instance
@@ -123,11 +193,163 @@ export class ChessterGame {
     }
   }
 
+  //////////////////////////////////
+  //     integrated ai search     //
+  //////////////////////////////////
+
+  /**
+   * Calculates the score of the current state relative to the turn's team
+   * @returns score
+   */
+  calculateRelative(): number {
+    if (this.wcm)
+      return this.turn === WHITE ? -checkmateWeight : checkmateWeight;
+    if (this.bcm)
+      return this.turn === BLACK ? -checkmateWeight : checkmateWeight;
+    if (this.stalemate || this.draw) return 0;
+
+    // check transposition table
+    if (this.relativeTable.has(this.zobrist))
+      return this.relativeTable.get(this.zobrist);
+
+    let score = 0;
+    let phase = 0; // the lower the phase, the closer to endgame
+
+    /**
+     * todo: experiment with offloading computation to game engine
+     */
+
+    for (let i = 0; i < boardSize; i++) {
+      if (this.board[i]) {
+        const moves = this.pseudoLegalEvaluation
+          ? this.getAllMoves(i)
+          : this.getAvailableMoves(i);
+        score +=
+          ((this.board[i] & 0b1) === this.turn ? 1 : -1) *
+            pieceValues[(this.board[i] >>> 1) & 0b111] +
+          mobilityWeight *
+            ((this.board[i] & 0b1) === this.turn ? 1 : -1) *
+            moves.length; // if white multiply by -1
+
+        /**
+         * phase is not completely implemented yet
+         */
+
+        // switch ((this.game.board[i] >>> 1) & 0b111) {
+        //   case 0b001:
+        //     phase += pawnPhase;
+        //     break;
+        //   case 0b010:
+        //     phase += knightPhase;
+        //     break;
+        //   case 0b011:
+        //     phase += bishopPhase;
+        //     break;
+        //   case 0b100:
+        //     phase += rookPhase;
+        //     break;
+        //   case 0b101:
+        //     phase += queenPhase;
+        //     break;
+        // }
+      }
+    }
+
+    score +=
+      castlingRightsWeight *
+      (this.turn === WHITE
+        ? (this.wckc ? 1 : 0) + (this.wcqc ? 1 : 0)
+        : (this.bckc ? 1 : 0) + (this.bcqc ? 1 : 0));
+
+    this.relativeTable.set(this.zobrist, score);
+
+    return score;
+  }
+
+  /**
+   * negaScout algorithm
+   * @param alpha
+   * @param beta
+   * @param depth
+   * @returns score
+   */
+  negaScout(alpha: number, beta: number, depth: number): number {
+    if (depth === 0 || this.isGameOver()) return this.calculateRelative();
+
+    let b = beta;
+    let bestScore = -Infinity;
+
+    const moves = this.getMoves();
+
+    for (let i = 0; i < moves.length; i++) {
+      this.move(moves[i], depth - 1); // if depth 0, also calculate relative score
+
+      let score = -this.negaScout(-b, -alpha, depth - 1);
+
+      if (score > alpha && score < beta && i > 1)
+        score = -this.negaScout(-beta, -score, depth - 1);
+
+      bestScore = Math.max(score, bestScore);
+      alpha = Math.max(alpha, bestScore);
+
+      this.undo();
+
+      if (alpha >= beta) {
+        return alpha;
+      }
+
+      b = alpha + 1;
+    }
+
+    return bestScore;
+  }
+
+  /**
+   * Top level negaScout search
+   * @returns [bestMove, bestScore]
+   */
+  negaScoutSearch(): [ChessterMove | undefined, number] {
+    let bestMove: ChessterMove | undefined;
+    let bestScore = -Infinity;
+
+    let alpha = -Infinity;
+    let beta = Infinity;
+
+    const moves = this.getMoves();
+
+    for (let i = 0; i < moves.length; i++) {
+      this.move(moves[i]);
+
+      let score = -this.negaScout(-beta, -alpha, this.depth - 1);
+
+      if (score > bestScore) {
+        bestScore = score;
+        bestMove = moves[i];
+
+        /**
+         * NOTE: postMessage will only work in a web worker
+         */
+
+        // if (this.visualizeSearch)
+        //   postMessage({
+        //     type: messageTypes.VISUALIZE_MOVE,
+        //     move: bestMove,
+        //   });
+      }
+
+      alpha = Math.max(alpha, score);
+
+      this.undo();
+    }
+
+    return [bestMove, bestScore];
+  }
+
   /**
    * Takes back the last move
    */
   undo() {
-    const move = this.history.pop();
+    const move = Number(this.history.pop());
 
     if (move) {
       ////////////////////////////
@@ -228,7 +450,7 @@ export class ChessterGame {
    * Performs a move
    * @param move The move to perform
    */
-  move(move: ChessterMove) {
+  move(move: number, depth?: number) {
     // 32 bit number
     let history =
       ((this.bcqc ? 1 : 0) << 31) |
@@ -493,18 +715,27 @@ export class ChessterGame {
     // update zobrist hash if last move was double pawn push
     if (
       this.history[this.history.length - 1] &&
-      ((this.history[this.history.length - 1] >>> 4) & 0b1111) ===
+      Number((this.history[this.history.length - 1] >> 4n) & 0b1111n) ===
         moveTypes.DOUBLE_PAWN_PUSH
     )
       // return (this.history[this.history.length - 1] >>> 8) & 0b111;
       this.zobrist ^=
         this.#zeys[
-          ((this.history[this.history.length - 1] >>> 8) & 0b111) + 773
+          Number((this.history[this.history.length - 1] >> 8n) & 0b111n) + 773
         ];
 
-    this.history.push(history | (move & 0b11111111111111111111)); // order independent
+    this.history.push(BigInt(history | (move & 0xfffff))); // order independent
     this.turn ^= 1;
-    this.#update(); // turn must be updated before calling update
+
+    /////////////////////////////////
+    //     update board status     //
+    /////////////////////////////////
+
+    /**
+     * note: turn must be updated before calling #update
+     */
+
+    this.#update(depth);
 
     ////////////////////////////
     //     update zobrist     //
@@ -701,7 +932,7 @@ export class ChessterGame {
    * Updates game state variables
    * @returns The game state
    */
-  #update() {
+  #update(depth?: number) {
     //////////////////////////
     //     update check     //
     //////////////////////////
@@ -772,14 +1003,40 @@ export class ChessterGame {
     this.bcm = this.bc;
     let sm = true;
 
-    for (let i = 0; i < boardSize; i++) {
-      if (!this.board[i] || (this.board[i] & 0b1) !== this.turn) continue;
+    /**
+     * if the depth is 0, this means that the ai will immediately evaluate the
+     * board. a depth greater than 0 or undefined means that the ai will
+     * continue moving, so we need to generate all moves for the current team.
+     */
 
-      if (this.getAvailableMoves(i).length > 0) {
-        if (this.turn === WHITE) this.wcm = false;
-        if (this.turn === BLACK) this.bcm = false;
-        sm = false;
-        break;
+    if (depth === undefined || depth > 0) {
+      for (let i = 0; i < boardSize; i++) {
+        if (!this.board[i]) continue;
+
+        if ((this.board[i] & 0b1) === this.turn) {
+        } else {
+          if (sm && this.getAvailableMoves(i).length > 0) {
+            if (this.turn === WHITE) this.wcm = false;
+            if (this.turn === BLACK) this.bcm = false;
+            sm = false;
+            // break;
+          }
+        }
+      }
+    } else {
+      // evaluate board
+      for (let i = 0; i < boardSize; i++) {
+        if (!this.board[i]) continue;
+
+        if ((this.board[i] & 0b1) === this.turn) {
+        } else {
+          if (sm && this.getAvailableMoves(i).length > 0) {
+            if (this.turn === WHITE) this.wcm = false;
+            if (this.turn === BLACK) this.bcm = false;
+            sm = false;
+            // break;
+          }
+        }
       }
     }
 
@@ -1931,20 +2188,23 @@ export class ChessterGame {
 
       // en passant
       if (
-        (((location >>> 3) & 0b111) === 0b100 &&
-          this.history[this.history.length - 1] &&
-          (this.history[this.history.length - 1] >>> 4) & 0b1111) ===
+        ((location >>> 3) & 0b111) === 0b100 &&
+        this.history[this.history.length - 1] &&
+        Number((this.history[this.history.length - 1] >> 4n) & 0b1111n) ===
           moveTypes.DOUBLE_PAWN_PUSH &&
-        (((this.history[this.history.length - 1] >>> 8) & 0b111111) -
+        (Number((this.history[this.history.length - 1] >> 8n) & 0b111111n) -
           location ===
           1 ||
-          ((this.history[this.history.length - 1] >>> 8) & 0b111111) -
+          Number((this.history[this.history.length - 1] >> 8n) & 0b111111n) -
             location ===
             -1)
       ) {
         moves.push(
           (location << 14) |
-            ((((this.history[this.history.length - 1] >>> 8) & 0b111111) + 8) <<
+            ((Number(
+              (this.history[this.history.length - 1] >> 8n) & 0b111111n
+            ) +
+              8) <<
               8) |
             (moveTypes.EN_PASSANT_BLACK << 4) |
             this.board[location]
@@ -2061,18 +2321,21 @@ export class ChessterGame {
       if (
         ((location >>> 3) & 0b111) === 0b011 &&
         this.history[this.history.length - 1] &&
-        ((this.history[this.history.length - 1] >>> 4) & 0b1111) ===
+        Number((this.history[this.history.length - 1] >> 4n) & 0b1111n) ===
           moveTypes.DOUBLE_PAWN_PUSH &&
-        (((this.history[this.history.length - 1] >>> 8) & 0b111111) -
+        (Number((this.history[this.history.length - 1] >> 8n) & 0b111111n) -
           location ===
           1 ||
-          ((this.history[this.history.length - 1] >>> 8) & 0b111111) -
+          Number((this.history[this.history.length - 1] >> 8n) & 0b111111n) - // or 0x3F
             location ===
             -1)
       ) {
         moves.push(
           (location << 14) |
-            ((((this.history[this.history.length - 1] >>> 8) & 0b111111) - 8) <<
+            ((Number(
+              (this.history[this.history.length - 1] >> 8n) & 0b111111n
+            ) -
+              8) <<
               8) |
             (moveTypes.EN_PASSANT_WHITE << 4) |
             this.board[location]

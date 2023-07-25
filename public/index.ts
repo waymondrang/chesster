@@ -6,12 +6,11 @@ import { ChessterGame } from "../game";
 import {
   BLACK,
   ChessterBoard,
-  ChessterHistory,
-  ChessterMove,
-  ChessterTeam,
   boardSize,
   moveTypes,
   messageTypes,
+  ChessterHistory,
+  ChessterMove,
 } from "../types";
 import {
   binaryToString,
@@ -65,9 +64,9 @@ type ElementBoard = HTMLElement[];
 ////////////////////////////////
 
 var elementBoard: ElementBoard = []; // contains the board's positions as elements
-var turnMoves: ChessterMove[] = [];
+var turnMoves: number[] = [];
 var selectedPieceElement: HTMLElement = null;
-var selectedPieceMoves: ChessterMove[] = [];
+var selectedPieceMoves: number[] = [];
 
 ///////////////////////////////
 //     utility functions     //
@@ -105,8 +104,8 @@ function updateLastMove(gameHistory: ChessterHistory) {
 
   if (gameHistory.length > 0) {
     let lastMove = gameHistory[gameHistory.length - 1];
-    let from = (lastMove >>> 14) & 0b111111;
-    let to = (lastMove >>> 8) & 0b111111;
+    let from = Number((lastMove >> 14n) & 0b111111n);
+    let to = Number((lastMove >> 8n) & 0b111111n);
     elementBoard[from].classList.add("moved_from");
     elementBoard[to].classList.add("moved_to");
   }
@@ -120,7 +119,7 @@ function clearVisualizations() {
   }
 }
 
-function visualizeMove(move: ChessterMove) {
+function visualizeMove(move: number) {
   clearVisualizations();
 
   let from = (move >>> 14) & 0b111111;
@@ -128,10 +127,6 @@ function visualizeMove(move: ChessterMove) {
 
   elementBoard[from].classList.add("visualize_from");
   elementBoard[to].classList.add("visualize_to");
-}
-
-function updateMove(move: ChessterMove) {
-  // todo: only update spaces that have changed
 }
 
 function updateBoard(gameBoard: ChessterBoard, previousBoard?: ChessterBoard) {
@@ -230,7 +225,7 @@ function updateBoard(gameBoard: ChessterBoard, previousBoard?: ChessterBoard) {
     (game.isGameOver() ? false : enableAI ? game.turn === BLACK : false);
 }
 
-function updateStatus(gameTurn: ChessterTeam) {
+function updateStatus(gameTurn: 0 | 1) {
   turn_span.classList.remove("WHITE");
   turn_span.classList.remove("BLACK");
   turn_span.classList.add(gameTurn === 0 ? "WHITE" : "BLACK");
