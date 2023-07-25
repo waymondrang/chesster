@@ -89,6 +89,8 @@ export type ChessterGameState = {
   draw: boolean; // draw
   turn: 0 | 1;
   history: ChessterHistory;
+  zistory: bigint[]; // zobrist history
+  zobrist: bigint; // zobrist hash
 };
 
 export type PartialChessterGameState = {

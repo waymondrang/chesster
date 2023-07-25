@@ -46,7 +46,7 @@ const empty_settings = document.querySelectorAll(
 
 const game = new ChessterGame();
 const aiWorker = new Worker("worker.js");
-const enableAI = false;
+const enableAI = true;
 
 // game.init(
 //   fenStringToGameState(

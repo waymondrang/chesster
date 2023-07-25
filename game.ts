@@ -89,26 +89,38 @@ export class ChessterGame {
     //     generate initial zobrist     //
     //////////////////////////////////////
 
-    this.zobrist = 0n;
+    if (state?.zobrist) this.zobrist = state.zobrist;
+    else {
+      this.zobrist = 0n;
 
-    for (let i = 0; i < boardSize; i++)
-      if (this.board[i])
-        this.zobrist ^= this.#zeys[i * 12 + (this.board[i] - 2)];
+      for (let i = 0; i < boardSize; i++)
+        if (this.board[i])
+          this.zobrist ^= this.#zeys[i * 12 + (this.board[i] - 2)];
 
-    if (this.turn === BLACK) this.zobrist ^= this.#zeys[768];
+      if (this.turn === BLACK) this.zobrist ^= this.#zeys[768];
 
-    if (this.wckc) this.zobrist ^= this.#zeys[769];
-    if (this.wcqc) this.zobrist ^= this.#zeys[770];
-    if (this.bckc) this.zobrist ^= this.#zeys[771];
-    if (this.bcqc) this.zobrist ^= this.#zeys[772];
+      if (this.wckc) this.zobrist ^= this.#zeys[769];
+      if (this.wcqc) this.zobrist ^= this.#zeys[770];
+      if (this.bckc) this.zobrist ^= this.#zeys[771];
+      if (this.bcqc) this.zobrist ^= this.#zeys[772];
+    }
 
-    this.zistory = [this.zobrist];
+    this.zistory = state?.zistory ?? [this.zobrist];
 
     ////////////////////////////
     //     update on init     //
     ////////////////////////////
 
+    let sanityZobrist = this.zobrist;
+
     this.#update(); // if we properly validate this move, this should not be required
+
+    if (this.zobrist !== sanityZobrist) {
+      console.log("zobrist mismatch");
+      console.log(this.zobrist);
+      console.log(sanityZobrist);
+      throw new Error("zobrist mismatch");
+    }
   }
 
   /**
@@ -819,6 +831,8 @@ export class ChessterGame {
       bcqc: this.bcqc,
       stalemate: this.stalemate,
       draw: this.draw,
+      zistory: [...this.zistory],
+      zobrist: this.zobrist,
     };
   }
 

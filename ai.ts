@@ -72,10 +72,7 @@ export class ChessterAI {
   //     transposition tables     //
   //////////////////////////////////
 
-  relativeTable: Map<bigint, [number, string]> = new Map();
-
-  relativeWhiteTable: Map<bigint, [number, string]> = new Map();
-  relativeBlackTable: Map<bigint, [number, string]> = new Map();
+  relativeTable: Map<bigint, number> = new Map();
   absoluteTable: Map<bigint, number> = new Map();
 
   //////////////////////
@@ -239,13 +236,13 @@ export class ChessterAI {
 
     // check transposition table
     if (this.relativeTable.has(this.game.zobrist))
-      return this.relativeTable.get(this.game.zobrist)[0];
+      return this.relativeTable.get(this.game.zobrist);
 
     let score = 0;
     let phase = 0; // the lower the phase, the closer to endgame
 
     /**
-     * THIS CAN ALL BE DONE IN THE GAME ENGINE, OR AT LEAST IN THE GET MOVES FUNCTION
+     * todo: experiment with offloading computation to game engine
      */
 
     for (let i = 0; i < boardSize; i++) {
@@ -290,33 +287,7 @@ export class ChessterAI {
         ? (this.game.wckc ? 1 : 0) + (this.game.wcqc ? 1 : 0)
         : (this.game.bckc ? 1 : 0) + (this.game.bcqc ? 1 : 0));
 
-    /**
-     * checking for transposition table collision
-     */
-    // if (this.relativeTable.has(this.game.zobrist)) {
-    //   if (this.relativeTable.get(this.game.zobrist)[0] !== score) {
-    //     console.log("collision");
-    //     console.log([
-    //       ...this.relativeTable.get(this.game.zobrist),
-    //       this.game.zobrist,
-    //     ]);
-    //     console.log([
-    //       score,
-    //       this.game.history.map((move) => moveToString(move)).join(" ") +
-    //         "\n" +
-    //         this.game.ascii(),
-    //     ]);
-    //     throw new Error("collision");
-    //   }
-    //   return this.relativeTable.get(this.game.zobrist)[0];
-    // }
-
-    this.relativeTable.set(this.game.zobrist, [
-      score,
-      this.game.history.map((move) => moveToString(move)).join(" ") +
-        "\n" +
-        this.game.ascii(),
-    ]);
+    this.relativeTable.set(this.game.zobrist, score);
 
     return score;
   }
