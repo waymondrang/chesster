@@ -4,3 +4,5 @@ public/bundle.js
 public/worker.js
 *.old.ts
 game.ai.ts
+process_pst.ts
+pawns.ts
