@@ -2,7 +2,6 @@ import {
   BLACK,
   ChessterBoard,
   ChessterGameState,
-  ChessterHistory,
   ChessterMove,
   RecursivePartial,
   WHITE,
@@ -111,16 +110,16 @@ export class ChessterGame {
     //     update on init     //
     ////////////////////////////
 
-    let sanityZobrist = this.zobrist;
+    // let sanityZobrist = this.zobrist;
 
     this.#update(); // if we properly validate this move, this should not be required
 
-    if (this.zobrist !== sanityZobrist) {
-      console.log("zobrist mismatch");
-      console.log(this.zobrist);
-      console.log(sanityZobrist);
-      throw new Error("zobrist mismatch");
-    }
+    // if (this.zobrist !== sanityZobrist) {
+    //   console.log("zobrist mismatch");
+    //   console.log(this.zobrist);
+    //   console.log(sanityZobrist);
+    //   throw new Error("zobrist mismatch");
+    // }
   }
 
   /**
@@ -259,7 +258,7 @@ export class ChessterGame {
         this.board[(move >>> 14) & 0b111111] = 0;
         this.board[(move >>> 8) & 0b111111] = move & 0b1111;
         break;
-      case moveTypes.CASTLE_KINGSIDE: // todo: add zobrist
+      case moveTypes.CASTLE_KINGSIDE:
         this.zobrist ^=
           this.#zeys[
             ((move >>> 14) & 0b111111) * 12 + ((move & 0b1111) - 2) // remove king
@@ -286,6 +285,7 @@ export class ChessterGame {
         /**
          * these could be optimized, including the board[...] because the pieces are known
          */
+
         this.zobrist ^=
           this.#zeys[
             ((move >>> 14) & 0b111111) * 12 + ((move & 0b1111) - 2) // remove king

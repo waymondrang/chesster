@@ -15,6 +15,7 @@ import {
 } from "../types";
 import {
   binaryToString,
+  fenStringToBoard,
   fenStringToGameState,
   getKeyByValue,
   numberToFileName,
@@ -43,16 +44,15 @@ const settings_container = document.querySelector(
 const empty_settings = document.querySelectorAll(
   ".setting.empty"
 ) as NodeListOf<HTMLDivElement>;
+const player_team = document.querySelector("#playerTeam") as HTMLSelectElement;
 
 const game = new ChessterGame();
 const aiWorker = new Worker("worker.js");
 const enableAI = true;
 
-// game.init(
-//   fenStringToGameState(
-//     "rnb1kbnr/pp1ppppp/8/q1P5/8/8/PPP1PPPP/RNBQKBNR w KQkq - 1 3"
-//   )
-// );
+const fen: string = "";
+
+if (fen !== "") game.init(fenStringToGameState(fen));
 
 ///////////////////
 //     types     //
@@ -68,6 +68,7 @@ var elementBoard: ElementBoard = []; // contains the board's positions as elemen
 var turnMoves: ChessterMove[] = [];
 var selectedPieceElement: HTMLElement = null;
 var selectedPieceMoves: ChessterMove[] = [];
+var playerTeam: 0 | 1 = fen !== "" ? ((0b1 ^ game.turn) as 0 | 1) : 0; // default to white
 
 ///////////////////////////////
 //     utility functions     //
@@ -128,10 +129,6 @@ function visualizeMove(move: ChessterMove) {
 
   elementBoard[from].classList.add("visualize_from");
   elementBoard[to].classList.add("visualize_to");
-}
-
-function updateMove(move: ChessterMove) {
-  // todo: only update spaces that have changed
 }
 
 function updateBoard(gameBoard: ChessterBoard, previousBoard?: ChessterBoard) {
@@ -221,13 +218,13 @@ function updateBoard(gameBoard: ChessterBoard, previousBoard?: ChessterBoard) {
     }
   }
 
-  if ((enableAI && game.turn === BLACK) || game.isGameOver())
+  if ((enableAI && game.turn !== playerTeam) || game.isGameOver())
     chessboard.classList.add("disabled");
   else chessboard.classList.remove("disabled");
 
   undo.disabled =
     game.history.length === 0 ||
-    (game.isGameOver() ? false : enableAI ? game.turn === BLACK : false);
+    (game.isGameOver() ? false : enableAI ? game.turn !== playerTeam : false);
 }
 
 function updateStatus(gameTurn: ChessterTeam) {
@@ -259,11 +256,11 @@ function clientMove(move: ChessterMove) {
 function makeMove(move: ChessterMove) {
   let previousBoard = [...game.board];
 
-  console.log("before move zobrist", game.zobrist, game.zistory);
+  // console.log("before move zobrist", game.zobrist, game.zistory);
 
   game.move(move);
 
-  console.log("after move zobrist", game.zobrist, game.zistory);
+  // console.log("after move zobrist", game.zobrist, game.zistory);
 
   clearVisualizations();
   updateBoard(game.board, previousBoard);
@@ -280,8 +277,8 @@ function clientUndo() {
   let previousBoard = [...game.board];
 
   game.undo();
-  if (enableAI && game.turn === BLACK) game.undo();
-  console.log("after undo", game.zobrist);
+  if (enableAI && game.turn !== playerTeam) game.undo();
+  // console.log("after undo", game.zobrist);
 
   clearVisualizations();
   updateBoard(game.board, previousBoard);
@@ -292,6 +289,9 @@ function clientUndo() {
   selectedPieceElement = null;
   selectedPieceMoves = [];
   turnMoves = game.moves();
+
+  if (enableAI && game.turn !== playerTeam && game.history.length === 0)
+    aiWorker.postMessage({ type: messageTypes.MOVE, state: game.getState() });
 }
 
 undo.addEventListener("click", () => {
@@ -445,12 +445,13 @@ updateBoard(game.board);
 updateStatus(game.turn);
 updateLastMove(game.history);
 
-turnMoves = game.moves();
+if (enableAI && fen !== "")
+  // ai will make first move if player is black
+  aiWorker.postMessage({ type: messageTypes.MOVE, state: game.getState() });
+else turnMoves = game.moves();
 
-restart.addEventListener("click", async () => {
+function restartGame() {
   game.init();
-
-  console.log(game.getState());
 
   clearVisualizations();
   updateBoard(game.board);
@@ -458,10 +459,16 @@ restart.addEventListener("click", async () => {
   updateLastMove(game.history);
   clearMove();
 
+  if (enableAI && playerTeam === BLACK)
+    // ai will make first move if player is black
+    aiWorker.postMessage({ type: messageTypes.MOVE, state: game.getState() });
+
   selectedPieceElement = null;
   selectedPieceMoves = [];
   turnMoves = game.moves();
-});
+}
+
+restart.addEventListener("click", restartGame);
 
 function toggleSettings() {
   settings.classList.toggle("enabled");
@@ -497,8 +504,13 @@ function saveSettings() {
   });
 }
 
-settings_container.querySelectorAll("select").forEach((element) => {
+settings_container.querySelectorAll("select.autosave").forEach((element) => {
   element.addEventListener("change", saveSettings);
+});
+
+player_team.addEventListener("change", () => {
+  playerTeam = player_team.value === "WHITE" ? 0 : 1;
+  restartGame();
 });
 
 /////////////////////////

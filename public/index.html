@@ -59,7 +59,7 @@
             </p>
           </div>
         </div>
-        <select name="depth" id="depth">
+        <select class="autosave" name="depth" id="depth">
           <option value="1">1</option>
           <option value="2">2</option>
           <option value="3">3</option>
@@ -76,7 +76,11 @@
             </p>
           </div>
         </div>
-        <select name="pseudoLegalEvaluation" id="pseudoLegalEvaluation">
+        <select
+          class="autosave"
+          name="pseudoLegalEvaluation"
+          id="pseudoLegalEvaluation"
+        >
           <option value="true">True</option>
           <option value="false">False</option>
         </select>
@@ -86,7 +90,7 @@
             <p>Default is negaScout.</p>
           </div>
         </div>
-        <select name="searchAlgorithm" id="searchAlgorithm">
+        <select class="autosave" name="searchAlgorithm" id="searchAlgorithm">
           <option value="negaScout">negaScout</option>
           <option value="miniMax">miniMax</option>
         </select>
@@ -96,11 +100,20 @@
             <p>Only applicable to negaScout. Default is true.</p>
           </div>
         </div>
-        <select name="visualizeSearch" id="visualizeSearch">
+        <select class="autosave" name="visualizeSearch" id="visualizeSearch">
           <option value="true">True</option>
           <option value="false">False</option>
         </select>
-        <div class="setting empty"></div>
+        <div class="setting">
+          <div>
+            <label for="playerTeam">Player Team</label>
+            <p>Default is white.</p>
+          </div>
+        </div>
+        <select name="playerTeam" id="playerTeam">
+          <option value="0">White</option>
+          <option value="1">Black</option>
+        </select>
         <div class="setting empty"></div>
         <div class="setting empty"></div>
         <div class="setting description">

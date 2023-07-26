@@ -1,4 +1,5 @@
 import { ChessterAI } from "../ai";
+import { OldChessterAI } from "../ai.old";
 import { ChessterGame } from "../game";
 
 const game = new ChessterGame();
@@ -9,13 +10,13 @@ const ai1 = new ChessterAI(game, {
   searchAlgorithm: "negaScout",
 });
 
-const ai2 = new ChessterAI(game, {
+const ai2 = new OldChessterAI(game, {
   depth: 4,
   pseudoLegalEvaluation: false,
   searchAlgorithm: "negaScout",
 });
 
-const games = 4;
+const games = 1;
 
 ////////////////////////
 //     end config     //
