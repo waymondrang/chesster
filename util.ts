@@ -9,6 +9,7 @@ import {
   WHITE,
   boardSize,
   moveTypes,
+  pieces,
 } from "./types";
 
 export function generateRandomInteger(min: number, max: number) {
@@ -316,29 +317,29 @@ export function numberToPieceString(pieceNumber: number): string {
 
 export function numberToFileName(pieceNumber: number): string {
   switch (pieceNumber) {
-    case 0b0011:
+    case pieces.BLACK_PAWN:
       return "pawn_black";
-    case 0b0010:
+    case pieces.WHITE_PAWN:
       return "pawn_white";
-    case 0b0101:
+    case pieces.BLACK_KNIGHT:
       return "knight_black";
-    case 0b0100:
+    case pieces.WHITE_KNIGHT:
       return "knight_white";
-    case 0b1001:
+    case pieces.BLACK_ROOK:
       return "rook_black";
-    case 0b1000:
+    case pieces.WHITE_ROOK:
       return "rook_white";
-    case 0b0111:
+    case pieces.BLACK_BISHOP:
       return "bishop_black";
-    case 0b0110:
+    case pieces.WHITE_BISHOP:
       return "bishop_white";
-    case 0b1011:
+    case pieces.BLACK_QUEEN:
       return "queen_black";
-    case 0b1010:
+    case pieces.WHITE_QUEEN:
       return "queen_white";
-    case 0b1101:
+    case pieces.BLACK_KING:
       return "king_black";
-    case 0b1100:
+    case pieces.WHITE_KING:
       return "king_white";
     default:
       return "";

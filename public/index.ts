@@ -69,7 +69,11 @@ if (fen !== "") game.init(fenStringToGameState(fen));
 //     types     //
 ///////////////////
 
-type ElementBoard = HTMLElement[];
+type ElementBoard = {
+  cell: HTMLElement;
+  piece: HTMLElement;
+  move: HTMLElement;
+}[];
 
 ////////////////////////////////
 //     variable variables     //
@@ -89,33 +93,20 @@ var enableAI = true; // default to true
 //     utility functions     //
 ///////////////////////////////
 
-function clearMoveHighlights() {
-  for (let i = 0; i < boardSize; i++) {
-    for (let modifier of [...Object.keys(moveTypes), "selected"]) {
-      elementBoard[i].classList.remove(modifier);
-    }
-  }
-}
-
 function clearMove() {
   for (let i = 0; i < boardSize; i++) {
     for (let modifier of [...Object.keys(moveTypes), "selected"]) {
-      elementBoard[i].classList.remove(modifier);
+      elementBoard[i].cell.classList.remove(modifier);
     }
 
-    for (let j = 0; j < elementBoard[i].children.length; j++) {
-      if (elementBoard[i].children[j].id === "xo") {
-        elementBoard[i].children[j].remove();
-        j--;
-      }
-    }
+    elementBoard[i].move.classList.remove("selected");
   }
 }
 
 function updateLastMove(gameHistory: ChessterHistory) {
   for (let i = 0; i < boardSize; i++) {
     for (let modifier of ["moved_from", "moved_to"]) {
-      elementBoard[i].classList.remove(modifier);
+      elementBoard[i].cell.classList.remove(modifier);
     }
   }
 
@@ -123,15 +114,15 @@ function updateLastMove(gameHistory: ChessterHistory) {
     let lastMove = gameHistory[gameHistory.length - 1];
     let from = (lastMove >>> 14) & 0b111111;
     let to = (lastMove >>> 8) & 0b111111;
-    elementBoard[from].classList.add("moved_from");
-    elementBoard[to].classList.add("moved_to");
+    elementBoard[from].cell.classList.add("moved_from");
+    elementBoard[to].cell.classList.add("moved_to");
   }
 }
 
 function clearVisualizations() {
   for (let i = 0; i < boardSize; i++) {
     for (let modifier of ["visualize_from", "visualize_to"]) {
-      elementBoard[i].classList.remove(modifier);
+      elementBoard[i].cell.classList.remove(modifier);
     }
   }
 }
@@ -142,24 +133,15 @@ function visualizeMove(move: ChessterMove) {
   let from = (move >>> 14) & 0b111111;
   let to = (move >>> 8) & 0b111111;
 
-  elementBoard[from].classList.add("visualize_from");
-  elementBoard[to].classList.add("visualize_to");
+  elementBoard[from].cell.classList.add("visualize_from");
+  elementBoard[to].cell.classList.add("visualize_to");
 }
 
 function initBoard(gameBoard: ChessterBoard) {
   for (let i = 0; i < boardSize; i++) {
     if (gameBoard[i] === 0) continue;
 
-    elementBoard[i].innerHTML = ""; // clear html
-
-    let img = document.createElement("img");
-    img.setAttribute(
-      "src",
-      "pieces/" + numberToFileName(gameBoard[i]) + ".svg"
-    );
-    img.setAttribute("draggable", "false");
-
-    elementBoard[i].appendChild(img);
+    elementBoard[i].piece.classList.add(numberToFileName(gameBoard[i]));
 
     /**
      * note: it is possible to initialize the board in a checked or checkmated
@@ -167,23 +149,29 @@ function initBoard(gameBoard: ChessterBoard) {
      */
 
     if (
-      (game.wcm && gameBoard[i] === 0b1100) ||
-      (game.bcm && gameBoard[i] === 0b1101)
+      (game.wcm && gameBoard[i] === pieces.WHITE_KING) ||
+      (game.bcm && gameBoard[i] === pieces.BLACK_KING)
     ) {
       let img = document.createElement("img");
-      img.setAttribute("src", "pieces/double_circle.svg");
+      img.setAttribute(
+        "src",
+        "data:image/svg+xml;base64,PHN2ZyB2aWV3Qm94PSIwIDAgMjAwIDEwMCINCiAgICB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciPg0KICAgIDxwYXRoIGZpbGw9IiNmZjE1MDciIGQ9Ik0gMCw1MCBhIDUwLDUwIDAgMSwwIDEwMCwwIGEgNTAsNTAgMCAxLDAgLTEwMCwwIiAvPg0KICAgIDxwYXRoIGZpbGw9IiNmZjE1MDciIGQ9Ik0gMTAwLDUwIGEgNTAsNTAgMCAxLDAgMTAwLDAgYSA1MCw1MCAwIDEsMCAtMTAwLDAiIC8+DQo8L3N2Zz4="
+      );
       img.setAttribute("draggable", "false");
       img.setAttribute("id", "checkmated");
-      elementBoard[i].appendChild(img);
+      elementBoard[i].cell.appendChild(img);
     } else if (
-      (game.wc && gameBoard[i] === 0b1100) ||
-      (game.bc && gameBoard[i] === 0b1101)
+      (game.wc && gameBoard[i] === pieces.WHITE_KING) ||
+      (game.bc && gameBoard[i] === pieces.BLACK_KING)
     ) {
       let img = document.createElement("img");
-      img.setAttribute("src", "pieces/circle.svg");
+      img.setAttribute(
+        "src",
+        "data:image/svg+xml;base64,PHN2ZyB2aWV3Qm94PSIwIDAgMTAwIDEwMCINCiAgICB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciPg0KICAgIDxwYXRoIGZpbGw9IiNmZjE1MDciIGQ9Ik0gMCw1MCBhIDUwLDUwIDAgMSwwIDEwMCwwIGEgNTAsNTAgMCAxLDAgLTEwMCwwIiAvPg0KPC9zdmc+"
+      );
       img.setAttribute("draggable", "false");
       img.setAttribute("id", "checked");
-      elementBoard[i].appendChild(img);
+      elementBoard[i].cell.appendChild(img);
     }
   }
 
@@ -200,26 +188,25 @@ function updateBoard(gameBoard: ChessterBoard, previousBoard: ChessterBoard) {
   console.log("updating board", game.turn, gameSelection);
   for (let i = 0; i < boardSize; i++) {
     if (gameBoard[i] !== previousBoard[i]) {
-      elementBoard[i].innerHTML = "";
-
-      if (gameBoard[i] !== 0) {
-        let img = document.createElement("img");
-        img.setAttribute(
-          "src",
-          "pieces/" + numberToFileName(gameBoard[i]) + ".svg"
+      if (previousBoard[i] !== 0)
+        elementBoard[i].piece.classList.remove(
+          numberToFileName(previousBoard[i])
         );
-        img.setAttribute("draggable", "false");
-        elementBoard[i].appendChild(img);
-      }
+
+      if (gameBoard[i] !== 0)
+        elementBoard[i].piece.classList.add(numberToFileName(gameBoard[i]));
     }
 
-    if (elementBoard[i].children.length > 1)
-      for (let j = 0; j < elementBoard[i].children.length; j++) {
+    /**
+     * delete all check and checkmate indicators
+     */
+    if (elementBoard[i].cell.children.length > 1)
+      for (let j = 0; j < elementBoard[i].cell.children.length; j++) {
         if (
-          elementBoard[i].children[j].id === "checked" ||
-          elementBoard[i].children[j].id === "checkmated"
+          elementBoard[i].cell.children[j].id === "checked" ||
+          elementBoard[i].cell.children[j].id === "checkmated"
         ) {
-          elementBoard[i].children[j].remove();
+          elementBoard[i].cell.children[j].remove();
           j--;
         }
       }
@@ -229,19 +216,25 @@ function updateBoard(gameBoard: ChessterBoard, previousBoard: ChessterBoard) {
       (game.bcm && gameBoard[i] === pieces.BLACK_KING)
     ) {
       let img = document.createElement("img");
-      img.setAttribute("src", "pieces/double_circle.svg");
+      img.setAttribute(
+        "src",
+        "data:image/svg+xml;base64,PHN2ZyB2aWV3Qm94PSIwIDAgMjAwIDEwMCINCiAgICB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciPg0KICAgIDxwYXRoIGZpbGw9IiNmZjE1MDciIGQ9Ik0gMCw1MCBhIDUwLDUwIDAgMSwwIDEwMCwwIGEgNTAsNTAgMCAxLDAgLTEwMCwwIiAvPg0KICAgIDxwYXRoIGZpbGw9IiNmZjE1MDciIGQ9Ik0gMTAwLDUwIGEgNTAsNTAgMCAxLDAgMTAwLDAgYSA1MCw1MCAwIDEsMCAtMTAwLDAiIC8+DQo8L3N2Zz4="
+      );
       img.setAttribute("draggable", "false");
       img.setAttribute("id", "checkmated");
-      elementBoard[i].appendChild(img);
+      elementBoard[i].cell.appendChild(img);
     } else if (
       (game.wc && gameBoard[i] === pieces.WHITE_KING) ||
       (game.bc && gameBoard[i] === pieces.BLACK_KING)
     ) {
       let img = document.createElement("img");
-      img.setAttribute("src", "pieces/circle.svg");
+      img.setAttribute(
+        "src",
+        "data:image/svg+xml;base64,PHN2ZyB2aWV3Qm94PSIwIDAgMTAwIDEwMCINCiAgICB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciPg0KICAgIDxwYXRoIGZpbGw9IiNmZjE1MDciIGQ9Ik0gMCw1MCBhIDUwLDUwIDAgMSwwIDEwMCwwIGEgNTAsNTAgMCAxLDAgLTEwMCwwIiAvPg0KPC9zdmc+"
+      );
       img.setAttribute("draggable", "false");
       img.setAttribute("id", "checked");
-      elementBoard[i].appendChild(img);
+      elementBoard[i].cell.appendChild(img);
     }
   }
 
@@ -352,15 +345,26 @@ let pattern = 1;
 
 for (let i = 0; i < boardSize; i++) {
   const cell = document.createElement("div");
+  const piece = document.createElement("div");
+  const move = document.createElement("div");
 
   cell.classList.add("cell");
+  piece.classList.add("piece");
+  move.classList.add("move");
 
   if (i % 8 == 0) pattern ^= 1;
   cell.classList.add(i % 2 === pattern ? "variant1" : "variant2");
 
+  cell.appendChild(piece);
+  cell.appendChild(move);
+
   chessboard.appendChild(cell);
 
-  elementBoard.push(cell);
+  elementBoard.push({
+    cell: cell,
+    piece: piece,
+    move: move,
+  });
 
   (() => {
     function cellHandler(event) {
@@ -394,18 +398,16 @@ for (let i = 0; i < boardSize; i++) {
           for (let move of selectedMoves) {
             let button = document.createElement("button");
 
-            let img = document.createElement("img");
-            img.setAttribute(
-              "src",
-              "pieces/" +
-                numberToFileName(
-                  ((((move >> 4) & 0b11) + 2) << 1) | (move & 0b1)
-                ) +
-                ".svg"
-            );
-            img.setAttribute("draggable", "false");
+            button.classList.add("cell");
 
-            button.appendChild(img);
+            let piece = document.createElement("div");
+            piece.classList.add("piece");
+
+            piece.classList.add(
+              numberToFileName(((((move >> 4) & 0b11) + 2) << 1) | (move & 0b1))
+            );
+
+            button.appendChild(piece);
 
             button.addEventListener("touchstart", (event) => {
               event.preventDefault();
@@ -450,16 +452,11 @@ for (let i = 0; i < boardSize; i++) {
       );
 
       for (let move of moves) {
-        let img = document.createElement("img");
-        img.src = "pieces/xo.svg";
-        img.id = "xo";
-        img.setAttribute("draggable", "false");
-
-        elementBoard[(move >>> 8) & 0b111111].classList.add(
+        elementBoard[(move >>> 8) & 0b111111].cell.classList.add(
           getKeyByValue(moveTypes, (move >>> 4) & 0b1111) as string
         );
 
-        elementBoard[(move >>> 8) & 0b111111].appendChild(img);
+        elementBoard[(move >>> 8) & 0b111111].move.classList.add("selected");
       }
 
       selectedPieceElement = cell;
@@ -570,24 +567,24 @@ about_container.addEventListener("touchstart", (event) => {
   about_container.classList.toggle("hidden");
 });
 
-about_container.addEventListener("touchstart", (event) => {
+about_container.addEventListener("click", (event) => {
   event.preventDefault();
   about_container.classList.toggle("hidden");
 });
 
-promotion_close.addEventListener("touchstart", (event) => {
-  event.preventDefault();
+function closePromotion() {
   promotion.classList.add("hidden");
   promotion_options.replaceChildren();
   chessboard.classList.remove("disabled");
-});
+}
 
-promotion_close.addEventListener("click", (event) => {
+function promotionCloseHandler(event: any) {
   event.preventDefault();
-  promotion.classList.add("hidden");
-  promotion_options.replaceChildren();
-  chessboard.classList.remove("disabled");
-});
+  closePromotion();
+}
+
+promotion_close.addEventListener("touchstart", promotionCloseHandler);
+promotion_close.addEventListener("click", promotionCloseHandler);
 
 function saveSettings() {
   aiWorker.postMessage({
@@ -623,6 +620,7 @@ info_touch_area.addEventListener("touchstart", infoTouchAreaHandler);
 info_touch_area.addEventListener("click", infoTouchAreaHandler);
 
 game_selection.addEventListener("change", () => {
+  closePromotion();
   info.classList.remove("collapsed");
 
   switch (game_selection.value) {
