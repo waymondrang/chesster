@@ -12,6 +12,7 @@ import {
   boardSize,
   moveTypes,
   messageTypes,
+  pieces,
 } from "../types";
 import {
   binaryToString,
@@ -25,6 +26,7 @@ import {
 //     constant variables     //
 ////////////////////////////////
 
+const game_div = document.querySelector("#game") as HTMLDivElement;
 const chessboard = document.querySelector("#chessboard") as HTMLDivElement;
 const turn_span = document.querySelector("#turn") as HTMLSpanElement;
 const end_span = document.querySelector("#end") as HTMLSpanElement;
@@ -44,15 +46,20 @@ const settings_container = document.querySelector(
 const empty_settings = document.querySelectorAll(
   ".setting.empty"
 ) as NodeListOf<HTMLDivElement>;
-const player_team = document.querySelector("#playerTeam") as HTMLSelectElement;
 const chesster = document.querySelector("#chesster") as HTMLHeadingElement;
 const about_container = document.querySelector(
   "#about_container"
 ) as HTMLDivElement;
+const game_selection = document.querySelector(
+  "#gameSelection"
+) as HTMLSelectElement;
+const info = document.querySelector("#info") as HTMLDivElement;
+const info_touch_area = document.querySelector(
+  "#info_touch_area"
+) as HTMLDivElement;
 
 const game = new ChessterGame();
 const aiWorker = new Worker("worker.js");
-const enableAI = true;
 
 const fen: string = "";
 
@@ -72,7 +79,11 @@ var elementBoard: ElementBoard = []; // contains the board's positions as elemen
 var turnMoves: ChessterMove[] = [];
 var selectedPieceElement: HTMLElement = null;
 var selectedPieceMoves: ChessterMove[] = [];
+
+var gameSelection: "whiteAI" | "blackAI" | "pass" | "tabletop" = "whiteAI";
+
 var playerTeam: 0 | 1 = fen !== "" ? ((0b1 ^ game.turn) as 0 | 1) : 0; // default to white
+var enableAI = true; // default to true
 
 ///////////////////////////////
 //     utility functions     //
@@ -186,6 +197,7 @@ function initBoard(gameBoard: ChessterBoard) {
 }
 
 function updateBoard(gameBoard: ChessterBoard, previousBoard: ChessterBoard) {
+  console.log("updating board", game.turn, gameSelection);
   for (let i = 0; i < boardSize; i++) {
     if (gameBoard[i] !== previousBoard[i]) {
       elementBoard[i].innerHTML = "";
@@ -213,8 +225,8 @@ function updateBoard(gameBoard: ChessterBoard, previousBoard: ChessterBoard) {
       }
 
     if (
-      (game.wcm && gameBoard[i] === 0b1100) ||
-      (game.bcm && gameBoard[i] === 0b1101)
+      (game.wcm && gameBoard[i] === pieces.WHITE_KING) ||
+      (game.bcm && gameBoard[i] === pieces.BLACK_KING)
     ) {
       let img = document.createElement("img");
       img.setAttribute("src", "pieces/double_circle.svg");
@@ -222,8 +234,8 @@ function updateBoard(gameBoard: ChessterBoard, previousBoard: ChessterBoard) {
       img.setAttribute("id", "checkmated");
       elementBoard[i].appendChild(img);
     } else if (
-      (game.wc && gameBoard[i] === 0b1100) ||
-      (game.bc && gameBoard[i] === 0b1101)
+      (game.wc && gameBoard[i] === pieces.WHITE_KING) ||
+      (game.bc && gameBoard[i] === pieces.BLACK_KING)
     ) {
       let img = document.createElement("img");
       img.setAttribute("src", "pieces/circle.svg");
@@ -236,6 +248,12 @@ function updateBoard(gameBoard: ChessterBoard, previousBoard: ChessterBoard) {
   if ((enableAI && game.turn !== playerTeam) || game.isGameOver())
     chessboard.classList.add("disabled");
   else chessboard.classList.remove("disabled");
+
+  if (gameSelection === "tabletop" && game.turn === BLACK) {
+    game_div.classList.add("rotated");
+  } else if (gameSelection === "tabletop") {
+    game_div.classList.remove("rotated");
+  }
 
   undo.disabled =
     game.history.length === 0 ||
@@ -255,20 +273,6 @@ function updateStatus(gameTurn: ChessterTeam) {
     turn_span.classList.remove("game-over");
   }
 }
-
-chesster.addEventListener("click", () => {
-  about_container.classList.toggle("hidden");
-});
-
-about_container.addEventListener("click", () => {
-  about_container.classList.toggle("hidden");
-});
-
-promotion_close.addEventListener("click", () => {
-  promotion.classList.add("hidden");
-  promotion_options.replaceChildren();
-  chessboard.classList.remove("disabled");
-});
 
 function clientMove(move: ChessterMove) {
   makeMove(move);
@@ -312,10 +316,6 @@ function clientUndo() {
     aiWorker.postMessage({ type: messageTypes.MOVE, state: game.getState() });
 }
 
-undo.addEventListener("click", () => {
-  clientUndo();
-});
-
 aiWorker.onmessage = function (event) {
   switch (event.data.type) {
     case messageTypes.MOVE:
@@ -335,6 +335,8 @@ aiWorker.onmessage = function (event) {
         event.data.settings.searchAlgorithm;
       (document.querySelector("#visualizeSearch") as HTMLInputElement).value =
         event.data.settings.visualizeSearch.toString();
+
+      game_selection.value = gameSelection;
       break;
     case messageTypes.VISUALIZE_MOVE:
       visualizeMove(event.data.move);
@@ -361,7 +363,7 @@ for (let i = 0; i < boardSize; i++) {
   elementBoard.push(cell);
 
   (() => {
-    cell.addEventListener("click", (event) => {
+    function cellHandler(event) {
       // toggle selected cell
       event.preventDefault();
 
@@ -405,7 +407,19 @@ for (let i = 0; i < boardSize; i++) {
 
             button.appendChild(img);
 
-            button.addEventListener("click", async () => {
+            button.addEventListener("touchstart", (event) => {
+              event.preventDefault();
+
+              promotion.classList.add("hidden");
+              promotion_options.replaceChildren(); // clear buttons
+              chessboard.classList.remove("disabled");
+
+              clientMove(move);
+            });
+
+            button.addEventListener("click", (event) => {
+              event.preventDefault();
+
               promotion.classList.add("hidden");
               promotion_options.replaceChildren(); // clear buttons
               chessboard.classList.remove("disabled");
@@ -450,7 +464,10 @@ for (let i = 0; i < boardSize; i++) {
 
       selectedPieceElement = cell;
       selectedPieceMoves = moves;
-    });
+    }
+
+    cell.addEventListener("touchstart", cellHandler);
+    cell.addEventListener("click", cellHandler);
   })();
 }
 
@@ -487,23 +504,89 @@ function restartGame() {
   turnMoves = game.moves();
 }
 
-restart.addEventListener("click", restartGame);
+restart.addEventListener("touchstart", (event) => {
+  event.preventDefault();
+  restartGame();
+});
+
+restart.addEventListener("click", (event) => {
+  event.preventDefault();
+  restartGame();
+});
 
 function toggleSettings() {
   settings.classList.toggle("enabled");
   settings_container.classList.toggle("hidden");
-
-  ///////////////////////////////////
-  //     animate children here     //
-  ///////////////////////////////////
 }
 
-settings.addEventListener("click", () => {
+settings.addEventListener("touchstart", (event) => {
+  event.preventDefault();
   postMessage({ type: messageTypes.REQUEST_SETTINGS });
   toggleSettings();
 });
+
+settings.addEventListener("click", (event) => {
+  event.preventDefault();
+  postMessage({ type: messageTypes.REQUEST_SETTINGS });
+  toggleSettings();
+});
+
 empty_settings.forEach((element) => {
-  element.addEventListener("click", toggleSettings);
+  element.addEventListener("touchstart", (event) => {
+    event.preventDefault();
+    toggleSettings();
+  });
+});
+
+empty_settings.forEach((element) => {
+  element.addEventListener("click", (event) => {
+    event.preventDefault();
+    toggleSettings();
+  });
+});
+
+undo.addEventListener("touchstart", (event) => {
+  event.preventDefault();
+  clientUndo();
+});
+
+undo.addEventListener("click", (event) => {
+  event.preventDefault();
+  clientUndo();
+});
+
+chesster.addEventListener("touchstart", (event) => {
+  event.preventDefault();
+  about_container.classList.toggle("hidden");
+});
+
+chesster.addEventListener("click", (event) => {
+  event.preventDefault();
+  about_container.classList.toggle("hidden");
+});
+
+about_container.addEventListener("touchstart", (event) => {
+  event.preventDefault();
+  about_container.classList.toggle("hidden");
+});
+
+about_container.addEventListener("touchstart", (event) => {
+  event.preventDefault();
+  about_container.classList.toggle("hidden");
+});
+
+promotion_close.addEventListener("touchstart", (event) => {
+  event.preventDefault();
+  promotion.classList.add("hidden");
+  promotion_options.replaceChildren();
+  chessboard.classList.remove("disabled");
+});
+
+promotion_close.addEventListener("click", (event) => {
+  event.preventDefault();
+  promotion.classList.add("hidden");
+  promotion_options.replaceChildren();
+  chessboard.classList.remove("disabled");
 });
 
 function saveSettings() {
@@ -530,8 +613,46 @@ settings_container.querySelectorAll("select.autosave").forEach((element) => {
   element.addEventListener("change", saveSettings);
 });
 
-player_team.addEventListener("change", () => {
-  playerTeam = player_team.value === "WHITE" ? 0 : 1;
+function infoTouchAreaHandler(event: any) {
+  event.preventDefault();
+  info.classList.toggle("collapsed");
+}
+
+info_touch_area.addEventListener("touchstart", infoTouchAreaHandler);
+
+info_touch_area.addEventListener("click", infoTouchAreaHandler);
+
+game_selection.addEventListener("change", () => {
+  info.classList.remove("collapsed");
+
+  switch (game_selection.value) {
+    case "whiteAI":
+      playerTeam = 0;
+      enableAI = true;
+      break;
+    case "blackAI":
+      playerTeam = 1;
+      enableAI = true;
+      break;
+    case "pass":
+      playerTeam = 0;
+      enableAI = false;
+      break;
+    case "tabletop":
+      playerTeam = 0;
+      enableAI = false;
+      info.classList.toggle("collapsed");
+      break;
+  }
+
+  game_div.classList.remove("rotated");
+
+  gameSelection = game_selection.value as
+    | "whiteAI"
+    | "blackAI"
+    | "pass"
+    | "tabletop";
+
   restartGame();
 });
 

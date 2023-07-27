@@ -9,9 +9,8 @@
 :root {
     --primary-font-size: 1.25rem;
     --icon-font-size: 1rem;
-    --settings-font-size: 0.9rem;
-    --settings-secondary-font-size: 0.6rem;
-
+    --settings-font-size: 0.7rem;
+    --settings-secondary-font-size: 0.5rem;
     --settings-inner-padding: 0.5rem;
 }
 
@@ -29,6 +28,11 @@ h4,
 h5,
 h6 {
     font-family: 'Gasoek One', sans-serif;
+}
+
+#settings,
+#chesster {
+    touch-action: manipulation;
 }
 
 #chesster {
@@ -85,15 +89,18 @@ nav {
     bottom: 0;
     left: 50%;
     transform: translate(-50%, 0);
-    background-color: #d9d9d9;
+    /* background-color: #d9d9d9; */
     padding: 0;
-    width: 100%;
+    width: var(--chessboard-size, 400px);
     height: var(--chessboard-size, 400px);
     box-sizing: border-box;
     z-index: 9999;
     font-size: var(--settings-secondary-font-size);
     border-radius: calc(var(--border-size, 0.25rem) * 2);
-    overflow: hidden;
+    display: grid;
+    grid-template-columns: repeat(8, 1fr);
+    grid-template-rows: repeat(8, 1fr);
+    /* overflow: hidden; */
     cursor: pointer;
     user-select: none;
 }
@@ -102,13 +109,11 @@ nav {
     display: none;
 }
 
-#about_container img {
-    position: absolute;
-    top: 50%;
-    left: 50%;
-    transform: translate(-50%, -50%);
-    width: calc(var(--chessboard-size, 400px) / 2);
-    height: calc(var(--chessboard-size, 400px) / 2);
+#about_container .middle {
+    grid-column-start: 3;
+    grid-column-end: 7;
+    grid-row-start: 4;
+    grid-row-end: 7;
 }
 
 #about_container .circular_text {
@@ -119,19 +124,26 @@ nav {
     text-align: center;
 }
 
-#about_container .circular_text.right {
-    top: 50%;
-    left: 50%;
-    transform: translate(0, -50%);
+#about_container .right {
+    grid-column-start: 5;
+    grid-column-end: 7;
+    grid-row-start: 3;
+    grid-row-end: 7;
+    text-align: center;
+    position: relative;
 }
 
-#about_container .circular_text.left {
-    top: 50%;
-    left: 50%;
-    transform: translate(-100%, -50%);
+#about_container .left {
+    grid-column-start: 3;
+    grid-column-end: 5;
+    grid-row-start: 3;
+    grid-row-end: 7;
+    text-align: center;
+    position: relative;
 }
 
-#about_container .circular_text p {
+#about_container .left p,
+#about_container .right p {
     margin: 0;
     padding: 0;
     position: absolute;
@@ -140,26 +152,12 @@ nav {
     transform: translate(-50%, -50%);
 }
 
-#about_container .circular_text i,
-#about_container .circular_text::before {
-    content: '';
-    float: left;
-    height: 100%;
-    width: 50%;
-    shape-outside: radial-gradient(farthest-side at right, transparent calc(100% - var(--settings-inner-padding)), #fff 0);
-}
-
-#about_container .circular_text i {
-    float: right;
-    shape-outside: radial-gradient(farthest-side at left, transparent calc(100% - var(--settings-inner-padding)), #fff 0);
-}
-
 #about_help {
     position: absolute;
     bottom: 0;
     left: 50%;
     transform: translate(-50%, 0);
-    color: #ff1507;
+    color: #b5b5b5;
 }
 
 #settings {
@@ -322,9 +320,7 @@ nav {
     top: 50%;
     left: 50%;
     transform: translate(-50%, -50%);
-    border-radius: calc(var(--border-size, 0.25rem) * 2);
     box-sizing: border-box;
-    overflow: hidden;
 }
 
 #info {
@@ -337,17 +333,51 @@ nav {
     overflow: hidden;
     box-sizing: border-box;
     border-radius: calc(var(--border-size, 0.25rem) * 2);
-    margin-bottom: 1rem;
+    margin-bottom: calc(var(--chessboard-size, 400px) / 50);
     /* box-shadow: 0 19px 38px rgba(0, 0, 0, 0.30), 0 15px 12px rgba(0, 0, 0, 0.22); */
+    height: calc(var(--chessboard-size, 400px) / 8);
+    transition: height 0.25s cubic-bezier(0, 0, 0, 1);
+    user-select: none;
+    position: relative;
 }
 
-#status {
+#info.collapsed {
+    height: calc(var(--chessboard-size, 400px) / 40);
+    cursor: pointer;
+}
+
+#info .material-symbols-outlined {
+    opacity: 1;
+    transition: opacity 0.25s cubic-bezier(0, 0, 0, 1);
+}
+
+#info.collapsed .material-symbols-outlined {
+    opacity: 0;
+}
+
+#info_touch_area {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    z-index: 0;
+    cursor: pointer;
+}
+
+#info.collapsed #info_touch_area {
+    z-index: 999;
+}
+
+#status,
+#controls {
     display: flex;
+    height: 100%;
 }
 
 #turn {
     transition: all 0.25s cubic-bezier(0, 0, .01, 1);
-    height: calc(var(--chessboard-size, 400px) / 8);
+    height: 100%;
     width: calc(var(--chessboard-size, 400px) / 8);
     margin: 0;
     padding: 0;
@@ -384,7 +414,7 @@ nav {
 }
 
 #end {
-    height: calc(var(--chessboard-size, 400px) / 8);
+    height: 100%;
     width: calc(var(--chessboard-size, 400px) / 8);
     margin: 0;
     padding: 0;
@@ -412,12 +442,8 @@ nav {
     transform: translate(-50%, -50%);
 }
 
-#controls {
-    display: flex;
-}
-
 #undo {
-    height: calc(var(--chessboard-size, 400px) / 8);
+    height: 100%;
     width: calc(var(--chessboard-size, 400px) / 8);
     position: relative;
     background-color: #f21649;
@@ -440,7 +466,7 @@ nav {
 }
 
 #restart {
-    height: calc(var(--chessboard-size, 400px) / 8);
+    height: 100%;
     width: calc(var(--chessboard-size, 400px) / 8);
     position: relative;
     background-color: #F25116;
@@ -478,9 +504,12 @@ nav {
     border: none;
     color: #1b1b1b;
     /* box-shadow: 0 19px 38px rgba(0, 0, 0, 0.30), 0 15px 12px rgba(0, 0, 0, 0.22); */
+    border-radius: calc(var(--border-size, 0.25rem) * 2);
+    box-sizing: border-box;
+    overflow: hidden;
 }
 
-#chessboard>div:nth-child(1) {
+/* #chessboard>div:nth-child(1) {
     border-top-left-radius: calc(var(--border-size, 0.25rem) * 2);
 }
 
@@ -494,7 +523,7 @@ nav {
 
 #chessboard>div:nth-child(64) {
     border-bottom-right-radius: calc(var(--border-size, 0.25rem) * 2);
-}
+} */
 
 #chessboard.disabled {
     pointer-events: none;
@@ -510,7 +539,7 @@ nav {
     overflow: hidden;
     padding: 0;
     border: none;
-    margin-bottom: 1rem;
+    margin-bottom: calc(var(--chessboard-size, 400px) / 50);
     box-sizing: border-box;
     border-radius: calc(var(--border-size, 0.25rem) * 2);
     /* box-shadow: 0 19px 38px rgba(0, 0, 0, 0.30), 0 15px 12px rgba(0, 0, 0, 0.22); */
@@ -542,6 +571,10 @@ nav {
     object-fit: contain;
 }
 
+#game.rotated #promotion button img {
+    transform: rotate(180deg);
+}
+
 #promotion button:hover {
     background-color: #fefefe;
     color: #6e791b;
@@ -567,12 +600,15 @@ nav {
     border-style: inset;
     position: relative;
     padding: var(--border-size, 0.25rem);
+    box-sizing: border-box;
 }
 
 .cell img {
     height: 100%;
     object-fit: contain;
+    /* transition: transform 0.5s cubic-bezier(0, 0, .01, 1); */
 }
+
 
 .cell img#xo {
     opacity: 0.5;
@@ -591,12 +627,30 @@ nav {
     right: calc(var(--border-size, 0.25rem) + var(--border-size, 0.25rem) / 2);
 }
 
+#game.rotated .cell img:not(#xo) {
+    transform: rotate(180deg);
+}
+
+#game.rotated .cell img#checkmated {
+    top: initial;
+    right: initial;
+    bottom: calc(var(--border-size, 0.25rem) + var(--border-size, 0.25rem) / 2);
+    left: calc(var(--border-size, 0.25rem) + var(--border-size, 0.25rem) / 2);
+}
+
 .cell img#checked {
     height: calc(var(--border-size, 0.25rem) * 2);
     position: absolute;
     border-radius: 50%;
     top: calc(var(--border-size, 0.25rem));
     right: calc(var(--border-size, 0.25rem));
+}
+
+#game.rotated .cell img#checked {
+    top: initial;
+    right: initial;
+    bottom: calc(var(--border-size, 0.25rem));
+    left: calc(var(--border-size, 0.25rem));
 }
 
 .cell.variant1 img#checked {
@@ -667,6 +721,17 @@ nav {
 }
 
 /* For screens larger than 600px x 600px */
+@media (min-width: 500px) and (min-height: 500px) {
+    :root {
+        --primary-font-size: 1.25rem;
+        --icon-font-size: 1rem;
+        --settings-font-size: 0.9rem;
+        --settings-secondary-font-size: 0.65rem;
+        --settings-inner-padding: 0.5rem;
+    }
+}
+
+/* For screens larger than 600px x 600px */
 @media (min-width: 600px) and (min-height: 600px) {
     :root {
         --primary-font-size: 1.5rem;
@@ -683,7 +748,7 @@ nav {
         --primary-font-size: 2rem;
         --icon-font-size: 1.3rem;
         --settings-font-size: 1.2rem;
-        --settings-secondary-font-size: 0.75rem;
+        --settings-secondary-font-size: 0.8rem;
         --settings-inner-padding: 0.8rem;
     }
 

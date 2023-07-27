@@ -14,7 +14,7 @@
     />
     <link rel="icon" type="image/png" href="favicon.png" />
     <link rel="icon" href="favicon.svg" type="image/svg+xml" />
-    <title>ChessterJS Demo</title>
+    <title>ChessterJS</title>
   </head>
   <body>
     <nav>
@@ -25,6 +25,7 @@
     </nav>
     <div id="game">
       <div id="info">
+        <div id="info_touch_area"></div>
         <div id="status">
           <span id="turn"
             ><span class="material-symbols-outlined">chess</span></span
@@ -50,18 +51,24 @@
       </div>
       <div id="chessboard"></div>
       <div id="about_container" class="hidden">
-        <img src="pieces/double_circle.svg" alt="Chesster Logo" />
-        <div class="circular_text left">
-          <i></i>
+        <div class="middle">
+          <img src="pieces/double_circle.svg" alt="Chesster Logo" />
+        </div>
+        <!-- <div class="lost_piece_left">
+          <img src="pieces/queen_white.svg" alt="Floating Queen" />
+        </div>
+        <div class="lost_piece_right">
+          <img src="pieces/king_white.svg" alt="Floating Queen" />
+        </div> -->
+        <div class="left">
           <p>
             Chesster is an experimental TypeScript chess engine and interface.
           </p>
         </div>
-        <div class="circular_text right">
-          <i></i>
+        <div class="right">
           <p>Icons from Google Fonts. Chess pieces by Colin M.L. Burnett.</p>
         </div>
-        <p id="about_help">Click anywhere to close</p>
+        <!-- <p id="about_help">Click anywhere to close</p> -->
       </div>
       <div id="settings_container" class="hidden">
         <div class="setting">
@@ -121,13 +128,15 @@
         </select>
         <div class="setting">
           <div>
-            <label for="playerTeam">Player Team</label>
-            <p>Default is white.</p>
+            <label for="gameSelection">Game Selection</label>
+            <p>Default is White vs AI.</p>
           </div>
         </div>
-        <select name="playerTeam" id="playerTeam">
-          <option value="0">White</option>
-          <option value="1">Black</option>
+        <select name="gameSelection" id="gameSelection">
+          <option value="whiteAI">White vs AI</option>
+          <option value="blackAI">Black vs AI</option>
+          <option value="pass">PassPlay</option>
+          <option value="tabletop">Tabletop</option>
         </select>
         <div class="setting empty"></div>
         <div class="setting empty"></div>
