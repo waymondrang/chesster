@@ -7,23 +7,25 @@ import {
   MIN_PLAYER,
   WHITE,
   boardSize,
+  messageTypes,
   moveTypes,
   pieces,
 } from "./types";
+import { moveToString } from "./util";
 
-const mobilityWeight = 1;
+const mobilityWeight = 1; // used in calculateAbsolute
 const pieceValueWeight = 1; // used in calculateRelative
 const teamPieceValueWeight = 20; // used in calculateAbsolute
 const enemyPieceValueWeight = 20; // used in calculateAbsolute
-const castlingRightsWeight = 12; // tested, but still arbitrary
-const checkmateWeight = 9999999;
+const castlingRightsWeight = 300; // arbitrary
+const checkmateWeight = 99999;
 const pieceSquareTableWeight = 3;
 
 /////////////////////////////////
 //     default ai settings     //
 /////////////////////////////////
 
-const defaultDepth = 5;
+const defaultDepth = 3; // default depth is 3
 const defaultPseudoLegalEvaluation = false;
 const defaultSearchAlgorithm = "negaScout";
 const defaultVisualizeSearch = true;
@@ -77,10 +79,8 @@ const totalPhase =
 /////////////////////////////////
 
 /**
- * the below tables are adapted from stockfish
+ * adapted from stockfish
  * https://github.com/official-stockfish/Stockfish/blob/master/src/psqt.cpp
- *
- * values are respective to black (i think...) [middlegame, endgame] S\(([^\)]+)\)
  */
 const blackPST: number[][][][] = [
   [],
@@ -570,6 +570,10 @@ const blackPST: number[][][][] = [
   ],
 ];
 
+/**
+ * adapted from stockfish
+ * https://github.com/official-stockfish/Stockfish/blob/master/src/psqt.cpp
+ */
 const whitePST: number[][][][] = [
   [],
   [
@@ -1067,7 +1071,7 @@ const pieceValues: number[][] = [
 
 const mobilityBonus: number[][][] = [
   [], // empty
-  [], // pawn
+  [],
   [
     // knight
     [-62, -81],
@@ -1146,6 +1150,7 @@ const mobilityBonus: number[][][] = [
     [114, 192],
     [116, 219],
   ],
+  [],
 ];
 
 export class ChessterAI {
@@ -1165,16 +1170,25 @@ export class ChessterAI {
 
   depth: number;
   pseudoLegalEvaluation: boolean;
-  searchAlgorithm: "negaScout" | "miniMax";
+  searchAlgorithm: "negaScout" | "miniMax" | "negaMax";
   visualizeSearch: boolean;
+
+  /////////////////////
+  //     weights     //
+  /////////////////////
+
+  castlingRightsWeight: number;
 
   constructor(
     game: ChessterGame,
     options?: {
       depth?: number;
       pseudoLegalEvaluation?: boolean;
-      searchAlgorithm?: "negaScout" | "miniMax";
+      searchAlgorithm?: "negaScout" | "miniMax" | "negaMax";
       visualizeSearch?: boolean;
+    },
+    weights?: {
+      castlingRightsWeight?: number;
     }
   ) {
     this.game = game;
@@ -1189,6 +1203,13 @@ export class ChessterAI {
       options?.pseudoLegalEvaluation ?? defaultPseudoLegalEvaluation;
     this.searchAlgorithm = options?.searchAlgorithm ?? defaultSearchAlgorithm;
     this.visualizeSearch = options?.visualizeSearch ?? defaultVisualizeSearch;
+
+    ////////////////////////////////
+    //     initialize weights     //
+    ////////////////////////////////
+
+    this.castlingRightsWeight =
+      weights?.castlingRightsWeight ?? castlingRightsWeight;
   }
 
   /**
@@ -1273,11 +1294,15 @@ export class ChessterAI {
    * Calculates the score of the current state relative to the AI's team
    * @returns score
    */
-  calculateAbsolute(): number {
+  calculateAbsolute(depth): number {
     if (this.game.wcm)
-      return this.game.turn === this.team ? -checkmateWeight : checkmateWeight;
+      return (
+        (this.game.turn === this.team ? -1 : 1) * (checkmateWeight + depth)
+      ); // reward sooner checkmates
     if (this.game.bcm)
-      return this.game.turn === this.team ? -checkmateWeight : checkmateWeight;
+      return (
+        (this.game.turn === this.team ? -1 : 1) * (checkmateWeight + depth)
+      ); // reward sooner checkmates
     if (this.game.stalemate || this.game.draw) return 0;
 
     // check transposition table
@@ -1311,166 +1336,72 @@ export class ChessterAI {
   }
 
   /**
-   * Calculates the middle game value of a piece
-   * @param piece
-   * @param phase
-   * @returns
-   */
-  getPieceValueMG(piece: number) {
-    return pieceValues[0][(piece >>> 1) & 0b111];
-  }
-
-  /**
-   * Calculates the end game value of a piece
-   * @param piece
-   * @param phase
-   * @returns
-   */
-  getPieceValueEG(piece: number) {
-    return pieceValues[1][(piece >>> 1) & 0b111];
-  }
-
-  /**
-   * Calculates the middle game value of a piece at a given location
-   * @param piece
-   * @param location
-   * @returns
-   */
-  getPieceSquareValueMG(piece: number, location: number) {
-    return (piece & 0b1 ? blackPST : whitePST)[(piece >>> 1) & 0b111][
-      (location >>> 3) & 0b111
-    ][location & 0b111][0];
-  }
-
-  /**
-   * Calculates the end game value of a piece at a given location
-   * @param piece
-   * @param location
-   * @returns
-   */
-  getPieceSquareValueEG(piece: number, location: number) {
-    return (piece & 0b1 ? blackPST : whitePST)[(piece >>> 1) & 0b111][
-      (location >>> 3) & 0b111
-    ][location & 0b111][1];
-  }
-
-  /**
-   * Calculates the middle game mobility value of a piece at a given location
-   * @param piece
-   * @param location
-   * @returns
-   */
-  getPieceMobilityValueMG(piece: number, location: number): number {
-    if (piece >>> 1 < 2 || piece >>> 1 > 5) return 0; // do not calculate mobility for pawns or kings
-
-    return mobilityBonus[(piece >>> 1) & 0b111][
-      this.game.getAvailableMoves(location).length
-    ][0];
-  }
-
-  /**
-   * Calculates the end game mobility value of a piece at a given location
-   * @param piece
-   * @param location
-   * @returns
-   */
-  getPieceMobilityValueEG(piece: number, location: number): number {
-    if (piece >>> 1 < 2 || piece >>> 1 > 5) return 0; // do not calculate mobility for pawns or kings
-
-    return mobilityBonus[(piece >>> 1) & 0b111][
-      this.game.getAvailableMoves(location).length
-    ][1];
-  }
-
-  /**
    * Calculates the score of the current state relative to the turn's team
    * @returns score
    */
-  calculateRelative(): number {
+  calculateRelative(depth: number): number {
     if (this.game.wcm)
-      return this.game.turn === WHITE ? -checkmateWeight : checkmateWeight;
+      return (this.game.turn === WHITE ? -1 : 1) * (checkmateWeight + depth); // reward sooner checkmates
     if (this.game.bcm)
-      return this.game.turn === BLACK ? -checkmateWeight : checkmateWeight;
+      return (this.game.turn === BLACK ? -1 : 1) * (checkmateWeight + depth); // reward sooner checkmates
     if (this.game.stalemate || this.game.draw) return 0;
 
     // check transposition table
     if (this.relativeTable.has(this.game.zobrist))
       return this.relativeTable.get(this.game.zobrist);
 
+    let phase = totalPhase; // the higher the phase, the closer to endgame
     let scoreMG = 0;
     let scoreEG = 0;
-
-    /////////////////////////////
-    //     calculate phase     //
-    /////////////////////////////
-
-    let phase = totalPhase; // the higher the phase, the closer to endgame
+    let score = 0;
 
     for (let i = 0; i < boardSize; i++) {
       if (!this.game.board[i]) continue;
 
       switch ((this.game.board[i] >>> 1) & 0b111) {
-        case 0b001:
+        case pieces.PAWN:
           phase -= pawnPhase;
           break;
-        case 0b010:
+        case pieces.KNIGHT:
           phase -= knightPhase;
           break;
-        case 0b011:
+        case pieces.BISHOP:
           phase -= bishopPhase;
           break;
-        case 0b100:
+        case pieces.ROOK:
           phase -= rookPhase;
           break;
-        case 0b101:
+        case pieces.QUEEN:
           phase -= queenPhase;
           break;
       }
+
+      let mobilityBonusValue =
+        mobilityBonus[(this.game.board[i] >>> 1) & 0b111][
+          this.game.getAvailableMoves(this.game.board[i]).length
+        ];
+
+      scoreMG +=
+        ((this.game.board[i] & 0b1) === this.game.turn ? 1 : -1) *
+        (pieceValues[0][(this.game.board[i] >>> 1) & 0b111] +
+          (mobilityBonusValue ? mobilityBonusValue[0] : 0) +
+          (this.game.board[i] & 0b1 ? blackPST : whitePST)[
+            (this.game.board[i] >>> 1) & 0b111
+          ][(i >>> 3) & 0b111][i & 0b111][0] +
+          getPawnStructureMG(this.game, i));
+
+      scoreEG +=
+        ((this.game.board[i] & 0b1) === this.game.turn ? 1 : -1) *
+        (pieceValues[1][(this.game.board[i] >>> 1) & 0b111] +
+          (mobilityBonusValue ? mobilityBonusValue[1] : 0) +
+          (this.game.board[i] & 0b1 ? blackPST : whitePST)[
+            (this.game.board[i] >>> 1) & 0b111
+          ][(i >>> 3) & 0b111][i & 0b111][1]);
     }
 
     phase = (phase * 256 + totalPhase / 2) / totalPhase;
-    if (phase < 0) phase = 0;
-
-    let score = 0;
-
-    /**
-     * the for loop calculates the following:
-     * 1. piece value
-     */
-
-    for (let i = 0; i < boardSize; i++) {
-      if (!this.game.board[i]) continue;
-
-      if ((this.game.board[i] & 0b1) === this.game.turn) {
-        scoreMG += this.getPieceValueMG(this.game.board[i]);
-        scoreEG += this.getPieceValueEG(this.game.board[i]);
-        scoreMG += this.getPieceSquareValueMG(this.game.board[i], i);
-        scoreEG += this.getPieceSquareValueEG(this.game.board[i], i);
-        scoreMG += this.getPieceMobilityValueMG(this.game.board[i], i);
-        scoreEG += this.getPieceMobilityValueEG(this.game.board[i], i);
-        // score += getPawnStructureMG(this.game, i);
-      } else {
-        scoreMG -= this.getPieceValueMG(this.game.board[i]);
-        scoreEG -= this.getPieceValueEG(this.game.board[i]);
-        scoreMG -= this.getPieceSquareValueMG(this.game.board[i], i);
-        scoreEG -= this.getPieceSquareValueEG(this.game.board[i], i);
-        scoreMG -= this.getPieceMobilityValueMG(this.game.board[i], i);
-        scoreEG -= this.getPieceMobilityValueEG(this.game.board[i], i);
-        // score -= getPawnStructureMG(this.game, i);
-      }
-    }
-
+    phase = phase < 0 ? 0 : phase;
     score += (scoreMG * (256 - phase) + scoreEG * phase) / 256;
-
-    ////////////////////////////////
-    //     castling heuristic     //
-    ////////////////////////////////
-
-    // score +=
-    //   castlingRightsWeight *
-    //   (this.game.turn === WHITE
-    //     ? (this.game.wckc ? 1 : 0) + (this.game.wcqc ? 1 : 0)
-    //     : (this.game.bckc ? 1 : 0) + (this.game.bcqc ? 1 : 0));
 
     this.relativeTable.set(this.game.zobrist, score);
 
@@ -1485,7 +1416,8 @@ export class ChessterAI {
    * @returns score
    */
   negaScout(alpha: number, beta: number, depth: number): number {
-    if (depth === 0 || this.game.isGameOver()) return this.calculateRelative();
+    if (depth === 0 || this.game.isGameOver())
+      return this.calculateRelative(depth);
 
     let b = beta;
     let bestScore = -Infinity;
@@ -1541,11 +1473,19 @@ export class ChessterAI {
          * NOTE: postMessage will only work in a web worker
          */
 
-        // if (this.visualizeSearch)
-        //   postMessage({
-        //     type: messageTypes.VISUALIZE_MOVE,
-        //     move: bestMove,
-        //   });
+        if (this.visualizeSearch) {
+          console.log(
+            "visualizing move: " +
+              moveToString(bestMove) +
+              " with value " +
+              score
+          );
+
+          postMessage({
+            type: messageTypes.VISUALIZE_MOVE,
+            move: bestMove,
+          });
+        }
       }
 
       alpha = Math.max(alpha, score);
@@ -1557,34 +1497,37 @@ export class ChessterAI {
   }
 
   negaMax(alpha: number, beta: number, depth: number): number {
-    if (depth === 0 || this.game.isGameOver()) return this.calculateRelative();
+    if (depth === 0 || this.game.isGameOver())
+      return this.calculateRelative(depth);
+
+    let bestScore = -Infinity;
 
     const moves = this.getMoves();
-    let best = -Infinity;
 
     for (let i = 0; i < moves.length; i++) {
       this.game.move(moves[i]);
 
       let score = -this.negaMax(-beta, -alpha, depth - 1);
 
-      if (score >= beta) return beta;
-      if (score > best) {
-        best = score;
+      this.game.undo();
+
+      if (score > bestScore) {
+        bestScore = score;
         if (score > alpha) alpha = score;
       }
 
-      this.game.undo();
+      if (score >= beta) break;
     }
 
-    return alpha;
+    return bestScore;
   }
 
   negaMaxSearch(): [ChessterMove | undefined, number] {
-    let bestMove: ChessterMove | undefined;
-    let bestScore: number = -Infinity;
-
     let alpha: number = -Infinity;
     let beta: number = Infinity;
+
+    let bestMove: ChessterMove | undefined;
+    let bestScore: number = -Infinity;
 
     const moves = this.getMoves();
 
@@ -1593,14 +1536,29 @@ export class ChessterAI {
 
       let score = -this.negaMax(-beta, -alpha, this.depth - 1);
 
+      this.game.undo();
+
       if (score > bestScore) {
         bestScore = score;
         bestMove = moves[i];
+        if (score > alpha) alpha = score;
+
+        if (this.visualizeSearch) {
+          console.log(
+            "visualizing move: " +
+              moveToString(bestMove) +
+              " with value " +
+              score
+          );
+
+          postMessage({
+            type: messageTypes.VISUALIZE_MOVE,
+            move: bestMove,
+          });
+        }
       }
 
-      alpha = Math.max(alpha, score);
-
-      this.game.undo();
+      if (score >= beta) break;
     }
 
     return [bestMove, bestScore];
@@ -1621,7 +1579,7 @@ export class ChessterAI {
     playerType: number = MAX_PLAYER
   ): [ChessterMove | undefined, number] {
     if (depth === 0 || this.game.isGameOver())
-      return [undefined, this.calculateAbsolute()];
+      return [undefined, this.calculateAbsolute(depth)];
 
     if (playerType === MAX_PLAYER) {
       let bestValue = -Infinity;
@@ -1686,8 +1644,12 @@ export class ChessterAI {
       switch (this.searchAlgorithm) {
         case "negaScout":
           return this.negaScoutSearch();
+        case "negaMax":
+          return this.negaMaxSearch();
         case "miniMax":
           return this.miniMax();
+        default:
+          throw new Error("invalid search algorithm");
       }
     })();
 

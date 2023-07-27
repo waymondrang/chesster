@@ -11,7 +11,7 @@ const ai1 = new ChessterAI(game, {
 });
 
 const ai2 = new OldChessterAI(game, {
-  depth: 4,
+  depth: 3,
   pseudoLegalEvaluation: false,
   searchAlgorithm: "negaScout",
 });

@@ -45,6 +45,10 @@ const empty_settings = document.querySelectorAll(
   ".setting.empty"
 ) as NodeListOf<HTMLDivElement>;
 const player_team = document.querySelector("#playerTeam") as HTMLSelectElement;
+const chesster = document.querySelector("#chesster") as HTMLHeadingElement;
+const about_container = document.querySelector(
+  "#about_container"
+) as HTMLDivElement;
 
 const game = new ChessterGame();
 const aiWorker = new Worker("worker.js");
@@ -131,90 +135,101 @@ function visualizeMove(move: ChessterMove) {
   elementBoard[to].classList.add("visualize_to");
 }
 
-function updateBoard(gameBoard: ChessterBoard, previousBoard?: ChessterBoard) {
-  if (previousBoard === undefined) {
-    for (let i = 0; i < boardSize; i++) {
+function initBoard(gameBoard: ChessterBoard) {
+  for (let i = 0; i < boardSize; i++) {
+    if (gameBoard[i] === 0) continue;
+
+    elementBoard[i].innerHTML = ""; // clear html
+
+    let img = document.createElement("img");
+    img.setAttribute(
+      "src",
+      "pieces/" + numberToFileName(gameBoard[i]) + ".svg"
+    );
+    img.setAttribute("draggable", "false");
+
+    elementBoard[i].appendChild(img);
+
+    /**
+     * note: it is possible to initialize the board in a checked or checkmated
+     * position
+     */
+
+    if (
+      (game.wcm && gameBoard[i] === 0b1100) ||
+      (game.bcm && gameBoard[i] === 0b1101)
+    ) {
+      let img = document.createElement("img");
+      img.setAttribute("src", "pieces/double_circle.svg");
+      img.setAttribute("draggable", "false");
+      img.setAttribute("id", "checkmated");
+      elementBoard[i].appendChild(img);
+    } else if (
+      (game.wc && gameBoard[i] === 0b1100) ||
+      (game.bc && gameBoard[i] === 0b1101)
+    ) {
+      let img = document.createElement("img");
+      img.setAttribute("src", "pieces/circle.svg");
+      img.setAttribute("draggable", "false");
+      img.setAttribute("id", "checked");
+      elementBoard[i].appendChild(img);
+    }
+  }
+
+  if ((enableAI && game.turn !== playerTeam) || game.isGameOver())
+    chessboard.classList.add("disabled");
+  else chessboard.classList.remove("disabled");
+
+  undo.disabled =
+    game.history.length === 0 ||
+    (game.isGameOver() ? false : enableAI ? game.turn !== playerTeam : false);
+}
+
+function updateBoard(gameBoard: ChessterBoard, previousBoard: ChessterBoard) {
+  for (let i = 0; i < boardSize; i++) {
+    if (gameBoard[i] !== previousBoard[i]) {
       elementBoard[i].innerHTML = "";
+
       if (gameBoard[i] !== 0) {
-        // elementBoard[i].textContent = numberToPieceString(gameBoard[i]);
         let img = document.createElement("img");
         img.setAttribute(
           "src",
           "pieces/" + numberToFileName(gameBoard[i]) + ".svg"
         );
         img.setAttribute("draggable", "false");
-
         elementBoard[i].appendChild(img);
-
-        // is this needed? if the previous board is undefined, the game just started. perhaps we will spawn into a checked position, so i suppose this should be here.
-        if (
-          (game.wcm && gameBoard[i] === 0b1100) ||
-          (game.bcm && gameBoard[i] === 0b1101)
-        ) {
-          let img = document.createElement("img");
-          img.setAttribute("src", "pieces/double_circle.svg");
-          img.setAttribute("draggable", "false");
-          img.setAttribute("id", "checkmated");
-          elementBoard[i].appendChild(img);
-        } else if (
-          (game.wc && gameBoard[i] === 0b1100) ||
-          (game.bc && gameBoard[i] === 0b1101)
-        ) {
-          let img = document.createElement("img");
-          img.setAttribute("src", "pieces/circle.svg");
-          img.setAttribute("draggable", "false");
-          img.setAttribute("id", "checked");
-          elementBoard[i].appendChild(img);
-        }
       }
     }
-  } else {
-    for (let i = 0; i < boardSize; i++) {
-      if (gameBoard[i] !== previousBoard[i]) {
-        elementBoard[i].innerHTML = "";
-        if (gameBoard[i] !== 0) {
-          // elementBoard[i].textContent = numberToPieceString(gameBoard[i]);
-          let img = document.createElement("img");
-          img.setAttribute(
-            "src",
-            "pieces/" + numberToFileName(gameBoard[i]) + ".svg"
-          );
-          img.setAttribute("draggable", "false");
 
-          elementBoard[i].appendChild(img);
+    if (elementBoard[i].children.length > 1)
+      for (let j = 0; j < elementBoard[i].children.length; j++) {
+        if (
+          elementBoard[i].children[j].id === "checked" ||
+          elementBoard[i].children[j].id === "checkmated"
+        ) {
+          elementBoard[i].children[j].remove();
+          j--;
         }
       }
 
-      if (elementBoard[i].children.length > 1)
-        for (let j = 0; j < elementBoard[i].children.length; j++) {
-          if (
-            elementBoard[i].children[j].id === "checked" ||
-            elementBoard[i].children[j].id === "checkmated"
-          ) {
-            elementBoard[i].children[j].remove();
-            j--;
-          }
-        }
-
-      if (
-        (game.wcm && gameBoard[i] === 0b1100) ||
-        (game.bcm && gameBoard[i] === 0b1101)
-      ) {
-        let img = document.createElement("img");
-        img.setAttribute("src", "pieces/double_circle.svg");
-        img.setAttribute("draggable", "false");
-        img.setAttribute("id", "checkmated");
-        elementBoard[i].appendChild(img);
-      } else if (
-        (game.wc && gameBoard[i] === 0b1100) ||
-        (game.bc && gameBoard[i] === 0b1101)
-      ) {
-        let img = document.createElement("img");
-        img.setAttribute("src", "pieces/circle.svg");
-        img.setAttribute("draggable", "false");
-        img.setAttribute("id", "checked");
-        elementBoard[i].appendChild(img);
-      }
+    if (
+      (game.wcm && gameBoard[i] === 0b1100) ||
+      (game.bcm && gameBoard[i] === 0b1101)
+    ) {
+      let img = document.createElement("img");
+      img.setAttribute("src", "pieces/double_circle.svg");
+      img.setAttribute("draggable", "false");
+      img.setAttribute("id", "checkmated");
+      elementBoard[i].appendChild(img);
+    } else if (
+      (game.wc && gameBoard[i] === 0b1100) ||
+      (game.bc && gameBoard[i] === 0b1101)
+    ) {
+      let img = document.createElement("img");
+      img.setAttribute("src", "pieces/circle.svg");
+      img.setAttribute("draggable", "false");
+      img.setAttribute("id", "checked");
+      elementBoard[i].appendChild(img);
     }
   }
 
@@ -241,6 +256,14 @@ function updateStatus(gameTurn: ChessterTeam) {
   }
 }
 
+chesster.addEventListener("click", () => {
+  about_container.classList.toggle("hidden");
+});
+
+about_container.addEventListener("click", () => {
+  about_container.classList.toggle("hidden");
+});
+
 promotion_close.addEventListener("click", () => {
   promotion.classList.add("hidden");
   promotion_options.replaceChildren();
@@ -256,11 +279,7 @@ function clientMove(move: ChessterMove) {
 function makeMove(move: ChessterMove) {
   let previousBoard = [...game.board];
 
-  // console.log("before move zobrist", game.zobrist, game.zistory);
-
   game.move(move);
-
-  // console.log("after move zobrist", game.zobrist, game.zistory);
 
   clearVisualizations();
   updateBoard(game.board, previousBoard);
@@ -278,7 +297,6 @@ function clientUndo() {
 
   game.undo();
   if (enableAI && game.turn !== playerTeam) game.undo();
-  // console.log("after undo", game.zobrist);
 
   clearVisualizations();
   updateBoard(game.board, previousBoard);
@@ -319,7 +337,6 @@ aiWorker.onmessage = function (event) {
         event.data.settings.visualizeSearch.toString();
       break;
     case messageTypes.VISUALIZE_MOVE:
-      console.log("visualizing move", event.data.move);
       visualizeMove(event.data.move);
       break;
   }
@@ -441,7 +458,7 @@ for (let i = 0; i < boardSize; i++) {
 //     initialize board     //
 //////////////////////////////
 
-updateBoard(game.board);
+initBoard(game.board);
 updateStatus(game.turn);
 updateLastMove(game.history);
 
@@ -451,10 +468,12 @@ if (enableAI && fen !== "")
 else turnMoves = game.moves();
 
 function restartGame() {
+  let previousBoard = [...game.board];
+
   game.init();
 
   clearVisualizations();
-  updateBoard(game.board);
+  updateBoard(game.board, previousBoard);
   updateStatus(game.turn);
   updateLastMove(game.history);
   clearMove();
@@ -479,7 +498,10 @@ function toggleSettings() {
   ///////////////////////////////////
 }
 
-settings.addEventListener("click", toggleSettings);
+settings.addEventListener("click", () => {
+  postMessage({ type: messageTypes.REQUEST_SETTINGS });
+  toggleSettings();
+});
 empty_settings.forEach((element) => {
   element.addEventListener("click", toggleSettings);
 });

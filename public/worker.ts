@@ -28,5 +28,16 @@ onmessage = function (event: MessageEvent) {
       ai.searchAlgorithm = event.data.settings.searchAlgorithm;
       ai.visualizeSearch = event.data.settings.visualizeSearch;
       break;
+    case messageTypes.REQUEST_SETTINGS:
+      postMessage({
+        type: messageTypes.SETTINGS,
+        settings: {
+          depth: ai.depth,
+          pseudoLegalEvaluation: ai.pseudoLegalEvaluation,
+          searchAlgorithm: ai.searchAlgorithm,
+          visualizeSearch: ai.visualizeSearch,
+        },
+      });
+      break;
   }
 };

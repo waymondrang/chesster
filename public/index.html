@@ -18,7 +18,7 @@
   </head>
   <body>
     <nav>
-      <h1>CHESSTER</h1>
+      <h1 id="chesster">CHESSTER</h1>
       <button id="settings">
         <span class="material-symbols-outlined"> settings </span>
       </button>
@@ -49,13 +49,27 @@
         </button>
       </div>
       <div id="chessboard"></div>
+      <div id="about_container" class="hidden">
+        <img src="pieces/double_circle.svg" alt="Chesster Logo" />
+        <div class="circular_text left">
+          <i></i>
+          <p>
+            Chesster is an experimental TypeScript chess engine and interface.
+          </p>
+        </div>
+        <div class="circular_text right">
+          <i></i>
+          <p>Icons from Google Fonts. Chess pieces by Colin M.L. Burnett.</p>
+        </div>
+        <p id="about_help">Click anywhere to close</p>
+      </div>
       <div id="settings_container" class="hidden">
         <div class="setting">
           <div>
             <label for="depth">Search Depth</label>
             <p>
-              Larger depths will result in stronger play but will take longer to
-              compute. Default is 3.
+              Larger depths may result in slower but stronger play. Default is
+              3.
             </p>
           </div>
         </div>
@@ -93,11 +107,12 @@
         <select class="autosave" name="searchAlgorithm" id="searchAlgorithm">
           <option value="negaScout">negaScout</option>
           <option value="miniMax">miniMax</option>
+          <option value="negaMax">negaMax</option>
         </select>
         <div class="setting">
           <div>
             <label for="visualizeSearch">Visualize Search</label>
-            <p>Only applicable to negaScout. Default is true.</p>
+            <p>Only applicable to negaScout and negaMax. Default is true.</p>
           </div>
         </div>
         <select class="autosave" name="visualizeSearch" id="visualizeSearch">
@@ -116,11 +131,11 @@
         </select>
         <div class="setting empty"></div>
         <div class="setting empty"></div>
-        <div class="setting description">
-          <p>
+        <div class="setting empty">
+          <!-- <p>
             Chesster was written in TypeScript by waymondrang. Chess pieces
             created by Colin M.L. Burnett.
-          </p>
+          </p> -->
         </div>
       </div>
     </div>

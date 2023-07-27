@@ -28,6 +28,6 @@ module.exports = {
     filename: "[name].js",
     path: path.resolve(__dirname, "./public/"),
   },
-  watch: true,
-  mode: "development",
+  watch: false,
+  mode: "production",
 };

@@ -41,6 +41,7 @@ export const boardSize = 64,
     MOVE: 0b00000001,
     SETTINGS: 0b00000010,
     VISUALIZE_MOVE: 0b00000011,
+    REQUEST_SETTINGS: 0b00000100,
   },
   pieces = {
     EMPTY_CELL: 0b0000,

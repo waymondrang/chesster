@@ -31,7 +31,7 @@ h6 {
     font-family: 'Gasoek One', sans-serif;
 }
 
-h1 {
+#chesster {
     font-size: var(--primary-font-size, 1rem);
     font-weight: 400;
     font-style: normal;
@@ -40,12 +40,14 @@ h1 {
     text-align: start;
     line-height: initial;
     margin: 0;
-    opacity: 0;
+    opacity: 0.1;
     animation: titleFade 5s cubic-bezier(1, 0, 0, 1);
     transition: opacity 0.5s cubic-bezier(0, 0, .01, 1);
+    cursor: pointer;
+    user-select: none;
 }
 
-h1:hover {
+#chesster:hover {
     opacity: 1;
 }
 
@@ -59,7 +61,7 @@ h1:hover {
     }
 
     100% {
-        opacity: 0;
+        opacity: 0.1;
     }
 }
 
@@ -76,6 +78,88 @@ nav {
 #labs {
     letter-spacing: 0.01rem;
     opacity: 1;
+}
+
+#about_container {
+    position: absolute;
+    bottom: 0;
+    left: 50%;
+    transform: translate(-50%, 0);
+    background-color: #d9d9d9;
+    padding: 0;
+    width: 100%;
+    height: var(--chessboard-size, 400px);
+    box-sizing: border-box;
+    z-index: 9999;
+    font-size: var(--settings-secondary-font-size);
+    border-radius: calc(var(--border-size, 0.25rem) * 2);
+    overflow: hidden;
+    cursor: pointer;
+    user-select: none;
+}
+
+#about_container.hidden {
+    display: none;
+}
+
+#about_container img {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    width: calc(var(--chessboard-size, 400px) / 2);
+    height: calc(var(--chessboard-size, 400px) / 2);
+}
+
+#about_container .circular_text {
+    width: calc(var(--chessboard-size, 400px) / 4);
+    height: calc(var(--chessboard-size, 400px) / 4);
+    border-radius: 50%;
+    position: absolute;
+    text-align: center;
+}
+
+#about_container .circular_text.right {
+    top: 50%;
+    left: 50%;
+    transform: translate(0, -50%);
+}
+
+#about_container .circular_text.left {
+    top: 50%;
+    left: 50%;
+    transform: translate(-100%, -50%);
+}
+
+#about_container .circular_text p {
+    margin: 0;
+    padding: 0;
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+}
+
+#about_container .circular_text i,
+#about_container .circular_text::before {
+    content: '';
+    float: left;
+    height: 100%;
+    width: 50%;
+    shape-outside: radial-gradient(farthest-side at right, transparent calc(100% - var(--settings-inner-padding)), #fff 0);
+}
+
+#about_container .circular_text i {
+    float: right;
+    shape-outside: radial-gradient(farthest-side at left, transparent calc(100% - var(--settings-inner-padding)), #fff 0);
+}
+
+#about_help {
+    position: absolute;
+    bottom: 0;
+    left: 50%;
+    transform: translate(-50%, 0);
+    color: #ff1507;
 }
 
 #settings {
@@ -214,14 +298,23 @@ nav {
 }
 
 .setting.description {
-    background: #1b1b1b;
+    background: transparent;
     grid-column-start: 1;
     grid-column-end: 9;
+    display: flex;
+    justify-content: center;
+    align-items: center;
 }
 
 .setting.description p {
     color: #ffffff;
-    max-width: 100%;
+    max-width: initial;
+    text-align: center;
+    background: #1b1b1b;
+    padding: 1rem 2rem;
+    border-radius: calc(var(--border-size, 0.25rem) * 2) calc(var(--border-size, 0.25rem) * 2) 0 0;
+    position: absolute;
+    bottom: 0;
 }
 
 #game {
@@ -630,14 +723,14 @@ nav {
     :root {
         --primary-font-size: 2.5rem;
         --icon-font-size: 1.75rem;
-        --settings-font-size: 1.8rem;
+        --settings-font-size: 1.6rem;
         --settings-secondary-font-size: 1rem;
         --settings-inner-padding: 1rem;
     }
 }
 
 
-#turn.BLACK {
+#turn.thinking.BLACK {
     animation-duration: 1.2s;
     animation-fill-mode: forwards;
     animation-iteration-count: infinite;
@@ -646,9 +739,24 @@ nav {
     position: relative;
 }
 
-#turn.BLACK:not(.game-over) {
+#turn.thinking.BLACK:not(.game-over) {
     animation-name: thinking;
     background: linear-gradient(to right, #1b1b1b 4%, #3b3b3b 27%, #1b1b1b 50%);
+    background-size: calc(var(--chessboard-size, 400px) /2) calc(var(--chessboard-size, 400px)/8);
+}
+
+#turn.thinking.WHITE {
+    animation-duration: 1.2s;
+    animation-fill-mode: forwards;
+    animation-iteration-count: infinite;
+    animation-timing-function: linear;
+    background: #fefefe;
+    position: relative;
+}
+
+#turn.thinking.WHITE:not(.game-over) {
+    animation-name: thinking;
+    background: linear-gradient(to right, #fefefe 4%, #cecece 27%, #fefefe 50%);
     background-size: calc(var(--chessboard-size, 400px) /2) calc(var(--chessboard-size, 400px)/8);
 }
 
