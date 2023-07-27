@@ -509,6 +509,11 @@ nav {
     overflow: hidden;
 }
 
+#chessboard.rotated {
+    transform: rotate(180deg);
+    transform-origin: center center;
+}
+
 /* #chessboard>div:nth-child(1) {
     border-top-left-radius: calc(var(--border-size, 0.25rem) * 2);
 }
@@ -610,7 +615,10 @@ nav {
     background-size: 93.33333%;
     background-repeat: no-repeat;
     background-position: center;
-    transition: transform 0.25s cubic-bezier(0, 0, .01, 1);
+}
+
+#game.animate_rotate .piece {
+    transition: transform 0.5s cubic-bezier(0, 1, .01, 1);
 }
 
 #game.rotated .piece {
@@ -679,7 +687,7 @@ nav {
 }
 
 .move.selected {
-    background-image: url("data:image/svg+xml;base64,PHN2Zw0KICB4bWxuczpzdmc9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIg0KICB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciDQogIHhtbG5zOnhsaW5rPSJodHRwOi8vd3d3LnczLm9yZy8xOTk5L3hsaW5rIg0KICB2ZXJzaW9uPSIxLjAiDQogIHdpZHRoPSI2NCINCiAgaGVpZ2h0PSI2NCINCiAgdmlld0JveD0iLTEwMCAtMTAwIDIwMCAyMDAiPg0KICA8Y2lyY2xlDQogICAgY3g9IjAiIGN5PSIwIiByPSI1NSINCiAgICBzdHlsZT0iZmlsbDojZmZmZmZmIiAvPg0KPC9zdmc+");
+    background-image: url("data:image/svg+xml;base64,PHN2Zw0KICB4bWxuczpzdmc9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIg0KICB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciDQogIHhtbG5zOnhsaW5rPSJodHRwOi8vd3d3LnczLm9yZy8xOTk5L3hsaW5rIg0KICB2ZXJzaW9uPSIxLjAiDQogIHdpZHRoPSI2NCINCiAgaGVpZ2h0PSI2NCINCiAgdmlld0JveD0iLTEwMCAtMTAwIDIwMCAyMDAiPg0KICA8Y2lyY2xlDQogICAgY3g9IjAiIGN5PSIwIiByPSI1NSINCiAgICBzdHlsZT0iZmlsbDojZmZmZmZmODAiIC8+DQo8L3N2Zz4=");
 }
 
 .cell img#checkmated {

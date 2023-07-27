@@ -242,10 +242,15 @@ function updateBoard(gameBoard: ChessterBoard, previousBoard: ChessterBoard) {
     chessboard.classList.add("disabled");
   else chessboard.classList.remove("disabled");
 
-  if (gameSelection === "tabletop" && game.turn === BLACK) {
-    game_div.classList.add("rotated");
-  } else if (gameSelection === "tabletop") {
-    game_div.classList.remove("rotated");
+  if (gameSelection === "pass" && game.turn === BLACK) {
+    chessboard.classList.add("rotated");
+  } else {
+    chessboard.classList.remove("rotated");
+  }
+
+  if (gameSelection === "tabletop" || gameSelection === "pass") {
+    if (game.turn === BLACK) game_div.classList.add("rotated");
+    else game_div.classList.remove("rotated");
   }
 
   undo.disabled =
@@ -622,6 +627,9 @@ info_touch_area.addEventListener("click", infoTouchAreaHandler);
 game_selection.addEventListener("change", () => {
   closePromotion();
   info.classList.remove("collapsed");
+  game_div.classList.remove("rotated");
+  chessboard.classList.remove("rotated");
+  game_div.classList.remove("animate_rotate");
 
   switch (game_selection.value) {
     case "whiteAI":
@@ -631,6 +639,8 @@ game_selection.addEventListener("change", () => {
     case "blackAI":
       playerTeam = 1;
       enableAI = true;
+      game_div.classList.add("rotated");
+      chessboard.classList.add("rotated");
       break;
     case "pass":
       playerTeam = 0;
@@ -640,10 +650,9 @@ game_selection.addEventListener("change", () => {
       playerTeam = 0;
       enableAI = false;
       info.classList.toggle("collapsed");
+      game_div.classList.add("animate_rotate");
       break;
   }
-
-  game_div.classList.remove("rotated");
 
   gameSelection = game_selection.value as
     | "whiteAI"
