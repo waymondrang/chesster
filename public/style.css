@@ -281,7 +281,8 @@ body.about #settings_icon {
     overflow: hidden;
 }
 
-body:not(.settings) #settings_container {
+body:not(.settings) #settings_container,
+body.about #settings_container {
     display: none;
 }
 
