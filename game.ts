@@ -54,6 +54,7 @@ export class ChessterGame {
   //     zobrist key indexes     //
   /////////////////////////////////
 
+  #zobristLength = 6 * 2 * 64 + 1 + 4 + 8; // 781
   #blackToMoveZobristIndex = 768;
   #whiteCanCastleKingsideZobristIndex = 769;
   #whiteCanCastleQueensideZobristIndex = 770;
@@ -92,7 +93,7 @@ export class ChessterGame {
 
     this.#zeys = [8746989176631517180n]; // initial zobrist key
 
-    for (let i = 1; i < 781; i++)
+    for (let i = 1; i < this.#zobristLength; i++)
       this.#zeys.push(linearCongruentialGenerator(this.#zeys[i - 1]));
 
     //////////////////////////////////////
@@ -126,16 +127,7 @@ export class ChessterGame {
     //     update on init     //
     ////////////////////////////
 
-    // let sanityZobrist = this.zobrist;
-
     this.#update(); // if we properly validate this move, this should not be required
-
-    // if (this.zobrist !== sanityZobrist) {
-    //   console.log("zobrist mismatch");
-    //   console.log(this.zobrist);
-    //   console.log(sanityZobrist);
-    //   throw new Error("zobrist mismatch");
-    // }
   }
 
   /**
