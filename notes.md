@@ -1,3 +1,9 @@
+### todo
+
+- [ ] implement tapered evaluation https://www.chessprogramming.org/Tapered_Eval
+- [ ] implement iterative deepening
+- [ ] implement piece square tables
+
 ### piece representation
 
 | piece      | bit pattern |
@@ -54,21 +60,20 @@
 
 ### history representation
 
-| data           | # of bits | start |
-| -------------- | --------- | ----- |
-| bcqc           | 1         | 31    |
-| wcqc           | 1         | 30    |
-| bckc           | 1         | 29    |
-| wckc           | 1         | 28    |
-| bcm            | 1         | 27    |
-| wcm            | 1         | 26    |
-| bc             | 1         | 25    |
-| wc             | 1         | 24    |
-| captured piece | 4         | 20    |
-| move from      | 6         | 14    |
-| move to        | 6         | 8     |
-| move type      | 4         | 4     |
-| original piece | 4         | 0     |
+| data            | # of bits | start |
+| --------------- | --------- | ----- |
+| bcqc            | 1         | 31    |
+| wcqc            | 1         | 30    |
+| bckc            | 1         | 29    |
+| wckc            | 1         | 28    |
+| en passant file | 2         | 26    |
+| bc              | 1         | 25    |
+| wc              | 1         | 24    |
+| captured piece  | 4         | 20    |
+| move from       | 6         | 14    |
+| move to         | 6         | 8     |
+| move type       | 4         | 4     |
+| original piece  | 4         | 0     |
 
 \*_32 bits total_
 
@@ -103,3 +108,31 @@
 | 40  | 101000 | 101001 | 101010 | 101011 | 101100 | 101101 | 101110 | 101111 |
 | 48  | 110000 | 110001 | 110010 | 110011 | 110100 | 110101 | 110110 | 110111 |
 | 56  | 111000 | 111001 | 111010 | 111011 | 111100 | 111101 | 111110 | 111111 |
+
+### zobrist hashing
+
+| index     | significance             |
+| --------- | ------------------------ |
+| 0 - 767   | 12 pieces for each space |
+| 768       | black to move            |
+| 769       | white king side castle   |
+| 770       | white queen side castle  |
+| 771       | black king side castle   |
+| 772       | black queen side castle  |
+| 773 - 780 | en passant file (1-8)    |
+
+### fen strings
+
+rn3k1r/p1Bp2p1/5ppn/6N1/3pQ3/8/PP2PPPP/4KB1R w K - 4 21
+
+### bulk counting results
+
+Depth: 1 Number of positions: 20 Number of captures: 0 Number of checks: 0 Number of checkmates: 0 Number of stalemates: 0 Time: 4.611100003123283ms
+Depth: 2 Number of positions: 400 Number of captures: 0 Number of checks: 0 Number of checkmates: 0 Number of stalemates: 0 Time: 24.368000000715256ms
+Depth: 3 Number of positions: 8902 Number of captures: 34 Number of checks: 12 Number of checkmates: 0 Number of stalemates: 0 Time: 83.79879999905825ms
+Depth: 4 Number of positions: 197281 Number of captures: 1576 Number of checks: 469 Number of checkmates: 8 Number of stalemates: 0 Time: 1421.0551000013947ms
+Depth: 5 Number of positions: 4865609 Number of captures: 82719 Number of checks: 27351 Number of checkmates: 347 Number of stalemates: 0 Time: 33937.21069999784ms
+Depth: 6 Number of positions: 119060324 Number of captures: 2812008 Number of checks: 809099 Number of checkmates: 10828 Number of stalemates: 0 Time: 1045469.0795999989ms
+Depth: 7 Number of positions: 3195904244 Number of captures: 108329926 Number of checks: 33103848 Number of checkmates: 435767 Number of stalemates: 0 Time: 25288350.737400003ms\*
+
+\*the bug in this depth is believed to be fixed

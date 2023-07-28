@@ -1,5 +1,6 @@
-- use faster data structure for player pieces
-- cannot castle out of check
 - create more comprehensive performance tests involving the AI, the number of iterations per unit time perhaps?
 - use 4 64-bit numbers to represent each bit of the piece representation (i.e. 1st 64-bit number would represent the team, the rest of the numbers would be bit masked and shifted to represent the piece type in integer (switch case))
 - automate testing to determine if changes improve ai performance
+- add en passant to fen reader, will also update zobrist initialization
+- add simulation-specific methods in the game to potentially improve performance. these would not calculate any zobrist hashes.
+- properly implement quiesce search and iterative deepening

@@ -1,20 +1,15 @@
-import { ChessterGame } from "./game";
 import {
   BLACK,
   ChessterBoard,
   ChessterBoardString,
   ChessterGameState,
-  ChessterLocation,
   ChessterMove,
-  ChessterPiece,
   ChessterPieceString,
-  ChessterPlayer,
-  PartialChessterGameState,
   RecursivePartial,
   WHITE,
   boardSize,
   moveTypes,
-  ChessterTeam,
+  pieces,
 } from "./types";
 
 export function generateRandomInteger(min: number, max: number) {
@@ -23,6 +18,15 @@ export function generateRandomInteger(min: number, max: number) {
 
 export function getKeyByValue(object: any, value: any) {
   return Object.keys(object).find((key) => object[key] === value);
+}
+
+/**
+ * Generates a random 64-bit integer
+ * @param seed The seed to use for the random number generator
+ * @returns A random 64-bit integer
+ */
+export function linearCongruentialGenerator(seed: bigint): bigint {
+  return (2862933555777941757n * seed + 3037000493n) % 18446744073709551616n;
 }
 
 /**
@@ -97,10 +101,10 @@ export function fenStringToGameState(
   return {
     board: fenStringToBoard(fen.split(" ")[0], flip),
     turn: fenToPlayer[fen.split(" ")[1]],
-    wckc: fen.split(" ")[2].includes("K") ? 1 : 0,
-    wcqc: fen.split(" ")[2].includes("Q") ? 1 : 0,
-    bckc: fen.split(" ")[2].includes("k") ? 1 : 0,
-    bcqc: fen.split(" ")[2].includes("q") ? 1 : 0,
+    wckc: fen.split(" ")[2].includes("K"),
+    wcqc: fen.split(" ")[2].includes("Q"),
+    bckc: fen.split(" ")[2].includes("k"),
+    bcqc: fen.split(" ")[2].includes("q"),
   };
 }
 
@@ -313,29 +317,29 @@ export function numberToPieceString(pieceNumber: number): string {
 
 export function numberToFileName(pieceNumber: number): string {
   switch (pieceNumber) {
-    case 0b0011:
+    case pieces.BLACK_PAWN:
       return "pawn_black";
-    case 0b0010:
+    case pieces.WHITE_PAWN:
       return "pawn_white";
-    case 0b0101:
+    case pieces.BLACK_KNIGHT:
       return "knight_black";
-    case 0b0100:
+    case pieces.WHITE_KNIGHT:
       return "knight_white";
-    case 0b1001:
+    case pieces.BLACK_ROOK:
       return "rook_black";
-    case 0b1000:
+    case pieces.WHITE_ROOK:
       return "rook_white";
-    case 0b0111:
+    case pieces.BLACK_BISHOP:
       return "bishop_black";
-    case 0b0110:
+    case pieces.WHITE_BISHOP:
       return "bishop_white";
-    case 0b1011:
+    case pieces.BLACK_QUEEN:
       return "queen_black";
-    case 0b1010:
+    case pieces.WHITE_QUEEN:
       return "queen_white";
-    case 0b1101:
+    case pieces.BLACK_KING:
       return "king_black";
-    case 0b1100:
+    case pieces.WHITE_KING:
       return "king_white";
     default:
       return "";

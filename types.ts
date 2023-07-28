@@ -39,6 +39,30 @@ export const boardSize = 64,
   ],
   messageTypes = {
     MOVE: 0b00000001,
+    SETTINGS: 0b00000010,
+    VISUALIZE_MOVE: 0b00000011,
+    REQUEST_SETTINGS: 0b00000100,
+  },
+  pieces = {
+    EMPTY_CELL: 0b0000,
+    PAWN: 0b001,
+    WHITE_PAWN: 0b0010,
+    BLACK_PAWN: 0b0011,
+    KNIGHT: 0b010,
+    WHITE_KNIGHT: 0b0100,
+    BLACK_KNIGHT: 0b0101,
+    BISHOP: 0b011,
+    WHITE_BISHOP: 0b0110,
+    BLACK_BISHOP: 0b0111,
+    ROOK: 0b100,
+    WHITE_ROOK: 0b1000,
+    BLACK_ROOK: 0b1001,
+    QUEEN: 0b101,
+    WHITE_QUEEN: 0b1010,
+    BLACK_QUEEN: 0b1011,
+    KING: 0b110,
+    WHITE_KING: 0b1100,
+    BLACK_KING: 0b1101,
   };
 
 export type ChessterPieceString =
@@ -74,19 +98,21 @@ export type ChessterPlayer = {
 export type ChessterMove = number;
 
 export type ChessterGameState = {
-  board: Array<number>;
-  wc: number; // white check
-  bc: number; // black check
-  wcm: number; // white checkmate
-  bcm: number; // black checkmate
-  wckc: number; // can white castle kingside
-  wcqc: number; // can white castle queenside
-  bckc: number; // can black castle kingside
-  bcqc: number; // can black castle queenside
-  sm: number; // stalemate
+  board: number[];
+  wc: boolean; // white check
+  bc: boolean; // black check
+  wcm: boolean; // white checkmate
+  bcm: boolean; // black checkmate
+  wckc: boolean; // can white castle kingside
+  wcqc: boolean; // can white castle queenside
+  bckc: boolean; // can black castle kingside
+  bcqc: boolean; // can black castle queenside
+  stalemate: boolean; // stalemate
+  draw: boolean; // draw
   turn: 0 | 1;
   history: ChessterHistory;
-  simulation: 0 | 1;
+  zistory: bigint[]; // zobrist history
+  zobrist: bigint; // zobrist hash
 };
 
 export type PartialChessterGameState = {
@@ -95,7 +121,6 @@ export type PartialChessterGameState = {
   black?: Partial<ChessterPlayer>;
   history?: ChessterHistory;
   turn?: ChessterTeam;
-  simulation?: boolean;
 };
 
 export type ChessterPiece = number;

@@ -8,15 +8,24 @@
       href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@20..48,100..700,0..1,-50..200"
     />
     <link rel="stylesheet" href="style.css" />
-    <title>chesster the chess engine</title>
+    <meta
+      name="description"
+      content="Experience Chesster, a dependency-less JavaScript chess engine and AI."
+    />
+    <link rel="icon" type="image/png" href="favicon.png" />
+    <link rel="icon" href="favicon.svg" type="image/svg+xml" />
+    <title>ChessterJS</title>
   </head>
   <body>
     <nav>
-      <h1>CHESSTER</h1>
-      <span id="labs">WR ● LABS</span>
+      <h1 id="chesster">CHESSTER</h1>
+      <button id="settings_icon">
+        <span class="material-symbols-outlined"> settings </span>
+      </button>
     </nav>
     <div id="game">
       <div id="info">
+        <div id="info_touch_area"></div>
         <div id="status">
           <span id="turn"
             ><span class="material-symbols-outlined">chess</span></span
@@ -41,6 +50,113 @@
         </button>
       </div>
       <div id="chessboard"></div>
+      <div id="about_container" class="hidden">
+        <a
+          target="_blank"
+          href="https://github.com/waymondrang/chesster"
+          class="cell"
+          id="github_link"
+        >
+          <div class="piece github"></div>
+        </a>
+        <div class="middle">
+          <img src="favicon.svg" alt="Chesster Logo" />
+        </div>
+        <div class="left">
+          <p>
+            Chesster is an experimental TypeScript chess engine and interface.
+          </p>
+        </div>
+        <div class="right">
+          <p>Icons from Google Fonts. Chess pieces by Colin M.L. Burnett.</p>
+        </div>
+        <!-- <p id="about_help">Click anywhere to close</p> -->
+        <div id="zen_tip">
+          <p>
+            Enter zen mode by clicking the empty space in the bar above the
+            board. Click the bar again to exit.
+          </p>
+        </div>
+        <button id="close_about">
+          <span class="material-symbols-outlined">close</span>
+        </button>
+      </div>
+      <div id="settings_container">
+        <div class="setting">
+          <div>
+            <label for="gameSelection">Game Selection</label>
+            <p>Default is Player vs. Chesster.</p>
+          </div>
+        </div>
+        <select name="gameSelection" id="gameSelection">
+          <option value="whiteAI">Player vs. Chesster</option>
+          <option value="blackAI">Chesster vs. Player</option>
+          <option value="pass">Local Game</option>
+          <option value="tabletop">Tabletop Game</option>
+        </select>
+        <div class="setting" id="depthSetting">
+          <div>
+            <label for="depth">Search Depth</label>
+            <p>
+              Larger depths may result in slower but stronger play. Default is
+              3.
+            </p>
+          </div>
+        </div>
+        <select class="autosave" name="depth" id="depth">
+          <option value="1">1</option>
+          <option value="2">2</option>
+          <option value="3">3</option>
+          <option value="4">4</option>
+          <option value="5">5</option>
+          <option value="6">6</option>
+        </select>
+        <div class="setting" id="pseudoLegalEvaluationSetting">
+          <div>
+            <label for="pseudoLegalEvaluation">Psuedo-Legal Evaluation</label>
+            <p>
+              Will result in faster but less accurate move generation. Default
+              is false.
+            </p>
+          </div>
+        </div>
+        <select
+          class="autosave"
+          name="pseudoLegalEvaluation"
+          id="pseudoLegalEvaluation"
+        >
+          <option value="true">True</option>
+          <option value="false">False</option>
+        </select>
+        <div class="setting" id="searchAlgorithmSetting">
+          <div>
+            <label for="searchAlgorithm">Search Algorithm</label>
+            <p>Default is negaScout.</p>
+          </div>
+        </div>
+        <select class="autosave" name="searchAlgorithm" id="searchAlgorithm">
+          <option value="negaScout">negaScout</option>
+          <option value="miniMax">miniMax</option>
+          <option value="negaMax">negaMax</option>
+        </select>
+        <div class="setting" id="visualizeSearchSetting">
+          <div>
+            <label for="visualizeSearch">Visualize Search</label>
+            <p>Only applicable to negaScout and negaMax. Default is true.</p>
+          </div>
+        </div>
+        <select class="autosave" name="visualizeSearch" id="visualizeSearch">
+          <option value="true">True</option>
+          <option value="false">False</option>
+        </select>
+        <button id="toggle_fullscreen">
+          Toggle Fullscreen&nbsp;
+          <span class="material-symbols-outlined"> fullscreen </span>
+        </button>
+        <button id="close_settings">
+          <span class="material-symbols-outlined">close</span>
+        </button>
+      </div>
     </div>
     <script src="bundle.js"></script>
   </body>
