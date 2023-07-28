@@ -329,7 +329,6 @@ body.about #settings_container {
     margin-left: 0;
     color: #fefefec0;
     max-width: 420px;
-    transition: height 10s cubic-bezier(0, 0, 0, 1);
 }
 
 #filler {
@@ -413,9 +412,9 @@ body.about #settings_container {
 #info {
     background-color: #2c2c2c;
     font-size: 0.8rem;
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
+    display: grid;
+    grid-template-columns: repeat(8, 1fr);
+    grid-template-rows: 1fr;
     width: 100%;
     overflow: hidden;
     box-sizing: border-box;
@@ -426,8 +425,8 @@ body.about #settings_container {
     height: calc(var(--chessboard-size, 400px) / 8);
     user-select: none;
     position: relative;
-    transition: height 0.25s cubic-bezier(0, 0, .01, 1),
-        width 0.25s cubic-bezier(0, 0, .01, 1),
+    transition: height 0.25s cubic-bezier(.5, 0, 0, 1),
+        width 0.25s cubic-bezier(.5, 0, 0, 1),
         margin-bottom 0.25s step-start;
 }
 
@@ -440,16 +439,12 @@ body.about #info {
     display: none;
 }
 
-#status,
-#controls {
-    display: flex;
-    height: 100%;
-    /* transition: opacity 0.5s cubic-bezier(0, 0, 0, 1); */
-}
-
-body.zen #status,
-body.zen #controls {
-    opacity: 0;
+body.zen #turn,
+body.zen #end,
+body.zen #undo,
+body.zen #restart,
+body.zen #toggle_settings {
+    display: none;
 }
 
 #info_touch_area {
@@ -461,6 +456,11 @@ body.zen #controls {
     z-index: 0;
     cursor: pointer;
     background-color: transparent;
+    transition: background-color 0.15s cubic-bezier(0, 0, 0, 1) 0.1875s, z-index 0s step-end 0.275s;
+}
+
+body.zen #info_touch_area {
+    z-index: 999;
     transition: background-color 0.25s cubic-bezier(0, 0, 0, 1);
 }
 
@@ -472,10 +472,6 @@ body.zen #info {
 
 body.zen #info .material-symbols-outlined {
     opacity: 0;
-}
-
-body.zen #info_touch_area {
-    z-index: 999;
 }
 
 body.zen #game.WHITE #info_touch_area {
@@ -491,15 +487,18 @@ body.zen #game.BLACK #info_touch_area {
 /****************/
 
 #turn {
-    transition: background-color 0.25s cubic-bezier(0, 0, .01, 1),
-        color 0.25s cubic-bezier(0, 0, .01, 1);
     height: 100%;
-    width: calc(var(--chessboard-size, 400px) / 8);
     margin: 0;
     padding: 0;
     position: relative;
     z-index: 1;
     background-color: #1b1b1b;
+
+    grid-column-start: 1;
+    grid-column-end: 2;
+
+    transition: background-color 0.25s cubic-bezier(0, 0, 0, 1),
+        color 0.25s cubic-bezier(0, 0, 0, 1);
 }
 
 #turn span {
@@ -535,7 +534,8 @@ body.zen #game.BLACK #info_touch_area {
 
 #end {
     height: 100%;
-    width: calc(var(--chessboard-size, 400px) / 8);
+    width: 100%;
+
     margin: 0;
     padding: 0;
     position: relative;
@@ -546,6 +546,9 @@ body.zen #game.BLACK #info_touch_area {
     z-index: 0;
     opacity: 1;
     transition: transform 0.25s cubic-bezier(0, 0, .01, 1), width 0.25s cubic-bezier(0, 0, .01, 1);
+
+    grid-column-start: 2;
+    grid-column-end: 3;
 }
 
 #end.hidden {
@@ -568,20 +571,26 @@ body.zen #game.BLACK #info_touch_area {
 
 #undo {
     height: 100%;
-    width: calc(var(--chessboard-size, 400px) / 8);
-    position: relative;
+    width: 100%;
+    position: absolute;
     background-color: #f21649;
-    border: 0px solid transparent;
+    border: none;
     box-sizing: border-box;
     color: #ffffff;
     cursor: pointer;
     margin: 0;
     padding: 0;
-    transition: width 0.2s cubic-bezier(0, 0, .01, 1);
+    transition: width 0.2s cubic-bezier(0, 0, .01, 1),
+        transform 0.25s cubic-bezier(0, 0, .01, 1);
+    transform: translateX(0);
+    right: 0;
+    grid-column-start: 6;
+    grid-column-end: 7;
 }
 
 #undo:disabled {
     width: 0;
+    /* transform: translateX(calc(var(--chessboard-size, 400px) / 8)); */
 }
 
 #undo:hover {
@@ -589,14 +598,47 @@ body.zen #game.BLACK #info_touch_area {
     color: #f21649;
 }
 
+/*******************/
+/*     restart     */
+/*******************/
+
+#restart {
+    height: 100%;
+    width: 100%;
+
+    position: relative;
+    background-color: #F25116;
+    border: 0px solid transparent;
+    box-sizing: border-box;
+    color: #ffffff;
+    cursor: pointer;
+    margin: 0;
+    padding: 0;
+    transition: background-color 0.2s cubic-bezier(0, 0, 0, 1),
+        color 0.2s cubic-bezier(0, 0, 0, 1);
+    /* box-shadow: 0 6px 12px rgba(242, 81, 22, 0.1), 0 6px 12px rgba(242, 81, 22, 0.1); */
+
+    grid-column-start: 7;
+    grid-column-end: 8;
+}
+
+#restart:hover {
+    background-color: #ffffff;
+    color: #F25116;
+}
+
+#restart span {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+}
+
 /***************************/
 /*     settings toggle     */
 /***************************/
 
-
 #toggle_settings {
-    height: 100%;
-    width: calc(var(--chessboard-size, 400px) / 8);
     position: relative;
     background-color: #3b3b3b;
     border: none;
@@ -607,6 +649,9 @@ body.zen #game.BLACK #info_touch_area {
     padding: 0;
     transition: background-color 0.2s cubic-bezier(0, 0, 0, 1),
         color 0.2s cubic-bezier(0, 0, 0, 1);
+
+    grid-column-start: 8;
+    grid-column-end: 9;
 }
 
 #toggle_settings:hover {
@@ -640,40 +685,6 @@ body.settings #toggle_settings .material-symbols-outlined {
     transform: rotate(360deg);
 }
 
-
-
-/*******************/
-/*     restart     */
-/*******************/
-
-#restart {
-    height: 100%;
-    width: calc(var(--chessboard-size, 400px) / 8);
-    position: relative;
-    background-color: #F25116;
-    border: 0px solid transparent;
-    box-sizing: border-box;
-    color: #ffffff;
-    cursor: pointer;
-    margin: 0;
-    padding: 0;
-    transition: background-color 0.2s cubic-bezier(0, 0, 0, 1),
-        color 0.2s cubic-bezier(0, 0, 0, 1);
-    /* box-shadow: 0 6px 12px rgba(242, 81, 22, 0.1), 0 6px 12px rgba(242, 81, 22, 0.1); */
-}
-
-#restart:hover {
-    background-color: #ffffff;
-    color: #F25116;
-}
-
-#restart span {
-    position: absolute;
-    top: 50%;
-    left: 50%;
-    transform: translate(-50%, -50%);
-}
-
 /**********************/
 /*     chessboard     */
 /**********************/
@@ -693,6 +704,7 @@ body.settings #toggle_settings .material-symbols-outlined {
     border-radius: calc(var(--border-size, 0.25rem) * 2);
     box-sizing: border-box;
     overflow: hidden;
+    position: relative;
 }
 
 #chessboard.rotated {
@@ -708,6 +720,48 @@ body.settings #toggle_settings .material-symbols-outlined {
 body.settings #chessboard,
 body.about #chessboard {
     visibility: hidden;
+}
+
+#chessboard .cell_layer {
+    position: absolute;
+    width: 100%;
+    height: 100%;
+    display: grid;
+    grid-template-columns: repeat(8, 1fr);
+    grid-template-rows: repeat(8, 1fr);
+    z-index: 0;
+}
+
+#chessboard .piece_layer {
+    position: absolute;
+    width: 100%;
+    height: 100%;
+    display: grid;
+    grid-template-columns: repeat(8, 1fr);
+    grid-template-rows: repeat(8, 1fr);
+    z-index: 1;
+}
+
+#chessboard .move_layer {
+    position: absolute;
+    width: 100%;
+    height: 100%;
+    display: grid;
+    grid-template-columns: repeat(8, 1fr);
+    grid-template-rows: repeat(8, 1fr);
+    z-index: 2;
+}
+
+#chessboard .touch_layer {
+    position: absolute;
+    width: 100%;
+    height: 100%;
+    display: grid;
+    grid-template-columns: repeat(8, 1fr);
+    grid-template-rows: repeat(8, 1fr);
+    z-index: 3;
+    cursor: pointer;
+    touch-action: manipulation;
 }
 
 /*********************/
@@ -745,7 +799,7 @@ body.about #chessboard {
     color: #fefefe;
     border: none;
     cursor: pointer;
-    transition: background-color 0.1s cubic-bezier(0, 0, .01, 1);
+    transition: background-color 0.1s cubic-bezier(0, 0, 0, 1);
     padding: var(--border-size, 0.25rem);
 }
 
@@ -788,15 +842,22 @@ body.about #chessboard {
     background-size: 100%;
     background-repeat: no-repeat;
     background-position: center;
+    opacity: 1;
 }
 
-#game.animate_rotate #chessboard .piece {
-    transition: transform 0.5s cubic-bezier(0, 1, .01, 1);
+body.animate_rotate #chessboard .piece {
+    transition: transform 0.5s cubic-bezier(.5, 0, 0, 1);
 }
 
-#game.rotated #chessboard .piece {
+body.rotated #chessboard .piece {
     transform: rotate(180deg);
     transform-origin: center center;
+}
+
+.piece.moving {
+    /* piece animation move speed */
+    transition: transform 0.25s cubic-bezier(.5, 0, 0, 1) !important;
+    z-index: 999;
 }
 
 .piece.rook_black {
@@ -852,12 +913,6 @@ body.about #chessboard {
 }
 
 .move {
-    width: 100%;
-    height: 100%;
-    position: absolute;
-    top: 50%;
-    left: 50%;
-    transform: translate(-50%, -50%);
     background-size: 66.66666%;
     background-repeat: no-repeat;
     background-position: center;
@@ -875,7 +930,7 @@ body.about #chessboard {
 }
 
 
-#game.rotated .cell img#checkmated {
+body.rotated .cell img#checkmated {
     top: initial;
     right: initial;
     bottom: calc(var(--border-size, 0.25rem) + var(--border-size, 0.25rem) / 2);
@@ -890,7 +945,7 @@ body.about #chessboard {
     right: calc(var(--border-size, 0.25rem));
 }
 
-#game.rotated .cell img#checked {
+body.rotated .cell img#checked {
     top: initial;
     right: initial;
     bottom: calc(var(--border-size, 0.25rem));

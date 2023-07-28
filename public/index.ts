@@ -74,6 +74,7 @@ if (fen !== "") game.init(fenStringToGameState(fen));
 ///////////////////
 
 type ElementBoard = {
+  touch: HTMLElement;
   cell: HTMLElement;
   piece: HTMLElement;
   move: HTMLElement;
@@ -94,6 +95,7 @@ var playerTeam: 0 | 1 = fen !== "" ? ((0b1 ^ game.turn) as 0 | 1) : 0; // defaul
 var enableAI = true; // default to true
 
 var isFullscreen = false;
+var piecesAreRotated = false;
 
 ///////////////////////////////
 //     utility functions     //
@@ -221,23 +223,38 @@ function updateBoard(gameBoard: ChessterBoard, previousBoard: ChessterBoard) {
         elementBoard[i].piece.classList.add(numberToFileName(gameBoard[i]));
     }
 
+    if ((enableAI && game.turn !== playerTeam) || game.isGameOver())
+      chessboard.classList.add("disabled");
+    else chessboard.classList.remove("disabled");
+
+    if (gameSelection === "pass") {
+      if (game.turn === BLACK) chessboard.classList.add("rotated");
+      else chessboard.classList.remove("rotated");
+    }
+
+    if (gameSelection === "tabletop" || gameSelection === "pass") {
+      if (game.turn === BLACK) document.body.classList.add("rotated");
+      else document.body.classList.remove("rotated");
+      piecesAreRotated = game.turn === BLACK;
+    }
+
+    undo.disabled =
+      game.history.length === 0 ||
+      (game.isGameOver() ? false : enableAI ? game.turn !== playerTeam : false);
+  }
+}
+
+function updateIndicators() {
+  for (let i = 0; i < boardSize; i++) {
     /**
-     * delete all check and checkmate indicators
+     * delete all check and checkmate indicators (note: the children of the cell
+     * node can only be check or checkmate indicators)
      */
-    if (elementBoard[i].cell.children.length > 1)
-      for (let j = 0; j < elementBoard[i].cell.children.length; j++) {
-        if (
-          elementBoard[i].cell.children[j].id === "checked" ||
-          elementBoard[i].cell.children[j].id === "checkmated"
-        ) {
-          elementBoard[i].cell.children[j].remove();
-          j--;
-        }
-      }
+    elementBoard[i].cell.replaceChildren();
 
     if (
-      (game.wcm && gameBoard[i] === pieces.WHITE_KING) ||
-      (game.bcm && gameBoard[i] === pieces.BLACK_KING)
+      (game.wcm && game.board[i] === pieces.WHITE_KING) ||
+      (game.bcm && game.board[i] === pieces.BLACK_KING)
     ) {
       let img = document.createElement("img");
       img.setAttribute(
@@ -248,8 +265,8 @@ function updateBoard(gameBoard: ChessterBoard, previousBoard: ChessterBoard) {
       img.setAttribute("id", "checkmated");
       elementBoard[i].cell.appendChild(img);
     } else if (
-      (game.wc && gameBoard[i] === pieces.WHITE_KING) ||
-      (game.bc && gameBoard[i] === pieces.BLACK_KING)
+      (game.wc && game.board[i] === pieces.WHITE_KING) ||
+      (game.bc && game.board[i] === pieces.BLACK_KING)
     ) {
       let img = document.createElement("img");
       img.setAttribute(
@@ -261,42 +278,56 @@ function updateBoard(gameBoard: ChessterBoard, previousBoard: ChessterBoard) {
       elementBoard[i].cell.appendChild(img);
     }
   }
-
-  if ((enableAI && game.turn !== playerTeam) || game.isGameOver())
-    chessboard.classList.add("disabled");
-  else chessboard.classList.remove("disabled");
-
-  if (gameSelection === "pass") {
-    if (game.turn === BLACK) chessboard.classList.add("rotated");
-    else chessboard.classList.remove("rotated");
-  }
-
-  if (gameSelection === "tabletop" || gameSelection === "pass") {
-    if (game.turn === BLACK) game_div.classList.add("rotated");
-    else game_div.classList.remove("rotated");
-  }
-
-  undo.disabled =
-    game.history.length === 0 ||
-    (game.isGameOver() ? false : enableAI ? game.turn !== playerTeam : false);
 }
 
-function clientMove(move: ChessterMove) {
-  makeMove(move);
+async function clientMove(move: ChessterMove) {
+  await makeMove(move);
   if (enableAI && !game.isGameOver())
     aiWorker.postMessage({ type: messageTypes.MOVE, state: game.getState() }); // disable to enable two player
 }
 
-function makeMove(move: ChessterMove) {
+async function makeMove(move: ChessterMove) {
   let previousBoard = [...game.board];
 
   game.move(move);
 
-  clearVisualizations();
-  updateBoard(game.board, previousBoard);
-  updateStatus(game.turn);
-  updateLastMove(game.history);
   clearMove();
+  clearVisualizations();
+
+  updateLastMove(game.history);
+  updateStatus(game.turn);
+  updateIndicators();
+
+  await (() => {
+    return new Promise<void>((resolve) => {
+      // animate chess piece from old position to new position
+      let from = (move >>> 14) & 0b111111;
+      let to = (move >>> 8) & 0b111111;
+
+      elementBoard[from].piece.classList.add("moving");
+      elementBoard[from].piece.style.transform = piecesAreRotated
+        ? `translate(${
+            elementBoard[to].cell.offsetLeft -
+            elementBoard[from].cell.offsetLeft
+          }px, ${
+            elementBoard[to].cell.offsetTop - elementBoard[from].cell.offsetTop
+          }px) rotate(180deg)`
+        : `translate(${
+            elementBoard[to].cell.offsetLeft -
+            elementBoard[from].cell.offsetLeft
+          }px, ${
+            elementBoard[to].cell.offsetTop - elementBoard[from].cell.offsetTop
+          }px)`;
+
+      setTimeout(() => {
+        elementBoard[from].piece.style.transform = "";
+        elementBoard[from].piece.classList.remove("moving");
+        resolve();
+      }, 250); // duration of css animation
+    });
+  })();
+
+  updateBoard(game.board, previousBoard);
 
   selectedPieceElement = null;
   selectedPieceMoves = [];
@@ -310,10 +341,12 @@ function makeUndo() {
   if (enableAI && game.turn !== playerTeam) game.undo();
 
   clearVisualizations();
+  clearMove();
+
   updateBoard(game.board, previousBoard);
   updateStatus(game.turn);
   updateLastMove(game.history);
-  clearMove();
+  updateIndicators();
 
   selectedPieceElement = null;
   selectedPieceMoves = [];
@@ -323,14 +356,14 @@ function makeUndo() {
     aiWorker.postMessage({ type: messageTypes.MOVE, state: game.getState() });
 }
 
-aiWorker.onmessage = function (event) {
+aiWorker.onmessage = async function (event) {
   switch (event.data.type) {
     case messageTypes.MOVE:
       if (event.data.move === undefined) {
         console.error("ai returned undefined move, likely game is over");
         return;
       }
-      makeMove(event.data.move);
+      await makeMove(event.data.move);
       break;
     case messageTypes.SETTINGS:
       (document.querySelector("#depth") as HTMLInputElement).value =
@@ -357,35 +390,59 @@ aiWorker.onmessage = function (event) {
 
 let pattern = 1;
 
+const touch_layer = document.createElement("div");
+touch_layer.classList.add("touch_layer");
+chessboard.appendChild(touch_layer);
+
+const move_layer = document.createElement("div");
+move_layer.classList.add("move_layer");
+chessboard.appendChild(move_layer);
+
+const piece_layer = document.createElement("div");
+piece_layer.classList.add("piece_layer");
+chessboard.appendChild(piece_layer);
+
+const cell_layer = document.createElement("div");
+cell_layer.classList.add("cell_layer");
+chessboard.appendChild(cell_layer);
+
 for (let i = 0; i < boardSize; i++) {
   const cell = document.createElement("div");
   const piece = document.createElement("div");
   const move = document.createElement("div");
+  const touch = document.createElement("div");
 
   cell.classList.add("cell");
   piece.classList.add("piece");
   move.classList.add("move");
+  touch.classList.add("touch");
 
   if (i % 8 == 0) pattern ^= 1;
   cell.classList.add(i % 2 === pattern ? "variant1" : "variant2");
 
-  cell.appendChild(piece);
-  cell.appendChild(move);
+  // cell.appendChild(piece);
+  // cell.appendChild(move);
 
-  chessboard.appendChild(cell);
+  // chessboard.appendChild(cell);
+
+  cell_layer.appendChild(cell);
+  piece_layer.appendChild(piece);
+  move_layer.appendChild(move);
+  touch_layer.appendChild(touch);
 
   elementBoard.push({
+    touch: touch,
     cell: cell,
     piece: piece,
     move: move,
   });
 
   (() => {
-    function cellHandler(event) {
+    function touchHandler(event) {
       // toggle selected cell
       event.preventDefault();
 
-      if (selectedPieceElement === cell) {
+      if (selectedPieceElement === piece) {
         clearMove();
         selectedPieceElement = null;
         selectedPieceMoves = [];
@@ -466,12 +523,12 @@ for (let i = 0; i < boardSize; i++) {
         elementBoard[(move >>> 8) & 0b111111].move.classList.add("selected");
       }
 
-      selectedPieceElement = cell;
+      selectedPieceElement = piece;
       selectedPieceMoves = moves;
     }
 
-    cell.addEventListener("touchstart", cellHandler);
-    cell.addEventListener("click", cellHandler);
+    touch.addEventListener("touchstart", touchHandler);
+    touch.addEventListener("click", touchHandler);
   })();
 }
 
@@ -494,10 +551,12 @@ function restartGame() {
   game.init();
 
   clearVisualizations();
+  clearMove();
+
   updateBoard(game.board, previousBoard);
   updateStatus(game.turn);
   updateLastMove(game.history);
-  clearMove();
+  updateIndicators();
 
   if (enableAI && playerTeam === BLACK)
     // ai will make first move if player is black
@@ -659,9 +718,9 @@ info_touch_area.addEventListener("click", infoTouchAreaHandler);
 game_selection.addEventListener("change", () => {
   closePromotion();
   document.body.classList.remove("zen");
-  game_div.classList.remove("rotated");
+  document.body.classList.remove("rotated");
   chessboard.classList.remove("rotated");
-  game_div.classList.remove("animate_rotate");
+  document.body.classList.remove("animate_rotate");
 
   document.querySelector("#depthSetting").classList.remove("disabled");
   document.querySelector("#depth").classList.remove("disabled");
@@ -678,6 +737,8 @@ game_selection.addEventListener("change", () => {
     .classList.remove("disabled");
   document.querySelector("#visualizeSearch").classList.remove("disabled");
 
+  piecesAreRotated = false;
+
   switch (game_selection.value) {
     case "whiteAI":
       playerTeam = 0;
@@ -686,12 +747,14 @@ game_selection.addEventListener("change", () => {
     case "blackAI":
       playerTeam = 1;
       enableAI = true;
-      game_div.classList.add("rotated");
+      piecesAreRotated = true;
+
+      document.body.classList.add("rotated");
       chessboard.classList.add("rotated");
       break;
     case "tabletop":
       document.body.classList.toggle("zen");
-      game_div.classList.add("animate_rotate");
+      document.body.classList.add("animate_rotate");
     case "pass":
       playerTeam = 0;
       enableAI = false;

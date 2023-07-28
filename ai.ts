@@ -25,10 +25,10 @@ const pieceSquareTableWeight = 3;
 //     default ai settings     //
 /////////////////////////////////
 
-const defaultDepth = 3; // default depth is 3
+const defaultDepth = 3;
 const defaultPseudoLegalEvaluation = false;
 const defaultSearchAlgorithm = "negaScout";
-const defaultVisualizeSearch = true;
+const defaultVisualizeSearch = false;
 
 //////////////////////////////////
 //     unsupported settings     //
