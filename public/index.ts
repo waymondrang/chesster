@@ -39,17 +39,17 @@ const promotion_options = document.querySelector(
   "#promotion-options"
 ) as HTMLDivElement;
 const undo = document.querySelector("#undo") as HTMLButtonElement;
-const settings = document.querySelector("#settings") as HTMLDivElement;
+const settings_icon = document.querySelector(
+  "#settings_icon"
+) as HTMLDivElement;
 const settings_container = document.querySelector(
   "#settings_container"
 ) as HTMLDivElement;
-const empty_settings = document.querySelectorAll(
-  ".setting.empty"
-) as NodeListOf<HTMLDivElement>;
+const close_settings = document.querySelector(
+  "#close_settings"
+) as HTMLButtonElement;
+const close_about = document.querySelector("#close_about") as HTMLButtonElement;
 const chesster = document.querySelector("#chesster") as HTMLHeadingElement;
-const about_container = document.querySelector(
-  "#about_container"
-) as HTMLDivElement;
 const game_selection = document.querySelector(
   "#gameSelection"
 ) as HTMLSelectElement;
@@ -57,6 +57,9 @@ const info = document.querySelector("#info") as HTMLDivElement;
 const info_touch_area = document.querySelector(
   "#info_touch_area"
 ) as HTMLDivElement;
+const toggle_fullscreen = document.querySelector(
+  "#toggle_fullscreen"
+) as HTMLButtonElement;
 
 const game = new ChessterGame();
 const aiWorker = new Worker("worker.js");
@@ -89,6 +92,8 @@ var gameSelection: "whiteAI" | "blackAI" | "pass" | "tabletop" = "whiteAI";
 var playerTeam: 0 | 1 = fen !== "" ? ((0b1 ^ game.turn) as 0 | 1) : 0; // default to white
 var enableAI = true; // default to true
 
+var isFullscreen = false;
+
 ///////////////////////////////
 //     utility functions     //
 ///////////////////////////////
@@ -100,6 +105,14 @@ function clearMove() {
     }
 
     elementBoard[i].move.classList.remove("selected");
+  }
+}
+
+function clearVisualizations() {
+  for (let i = 0; i < boardSize; i++) {
+    for (let modifier of ["visualize_from", "visualize_to"]) {
+      elementBoard[i].cell.classList.remove(modifier);
+    }
   }
 }
 
@@ -119,15 +132,7 @@ function updateLastMove(gameHistory: ChessterHistory) {
   }
 }
 
-function clearVisualizations() {
-  for (let i = 0; i < boardSize; i++) {
-    for (let modifier of ["visualize_from", "visualize_to"]) {
-      elementBoard[i].cell.classList.remove(modifier);
-    }
-  }
-}
-
-function visualizeMove(move: ChessterMove) {
+function updateVisualizeMove(move: ChessterMove) {
   clearVisualizations();
 
   let from = (move >>> 14) & 0b111111;
@@ -135,6 +140,24 @@ function visualizeMove(move: ChessterMove) {
 
   elementBoard[from].cell.classList.add("visualize_from");
   elementBoard[to].cell.classList.add("visualize_to");
+}
+
+function updateStatus(gameTurn: ChessterTeam) {
+  game_div.classList.remove("WHITE");
+  game_div.classList.remove("BLACK");
+  game_div.classList.add(gameTurn === 0 ? "WHITE" : "BLACK");
+
+  if (enableAI && gameTurn !== playerTeam) turn_span.classList.add("thinking");
+  else turn_span.classList.remove("thinking");
+
+  if (game.isGameOver()) {
+    end_span.classList.remove("hidden");
+    turn_span.classList.add("game-over");
+    document.body.classList.remove("zen");
+  } else {
+    end_span.classList.add("hidden");
+    turn_span.classList.remove("game-over");
+  }
 }
 
 function initBoard(gameBoard: ChessterBoard) {
@@ -242,10 +265,9 @@ function updateBoard(gameBoard: ChessterBoard, previousBoard: ChessterBoard) {
     chessboard.classList.add("disabled");
   else chessboard.classList.remove("disabled");
 
-  if (gameSelection === "pass" && game.turn === BLACK) {
-    chessboard.classList.add("rotated");
-  } else {
-    chessboard.classList.remove("rotated");
+  if (gameSelection === "pass") {
+    if (game.turn === BLACK) chessboard.classList.add("rotated");
+    else chessboard.classList.remove("rotated");
   }
 
   if (gameSelection === "tabletop" || gameSelection === "pass") {
@@ -256,20 +278,6 @@ function updateBoard(gameBoard: ChessterBoard, previousBoard: ChessterBoard) {
   undo.disabled =
     game.history.length === 0 ||
     (game.isGameOver() ? false : enableAI ? game.turn !== playerTeam : false);
-}
-
-function updateStatus(gameTurn: ChessterTeam) {
-  turn_span.classList.remove("WHITE");
-  turn_span.classList.remove("BLACK");
-  turn_span.classList.add(gameTurn === 0 ? "WHITE" : "BLACK");
-
-  if (game.isGameOver()) {
-    end_span.classList.remove("hidden");
-    turn_span.classList.add("game-over");
-  } else {
-    end_span.classList.add("hidden");
-    turn_span.classList.remove("game-over");
-  }
 }
 
 function clientMove(move: ChessterMove) {
@@ -294,7 +302,7 @@ function makeMove(move: ChessterMove) {
   turnMoves = game.moves();
 }
 
-function clientUndo() {
+function makeUndo() {
   let previousBoard = [...game.board];
 
   game.undo();
@@ -337,7 +345,7 @@ aiWorker.onmessage = function (event) {
       game_selection.value = gameSelection;
       break;
     case messageTypes.VISUALIZE_MOVE:
-      visualizeMove(event.data.move);
+      updateVisualizeMove(event.data.move);
       break;
   }
 };
@@ -414,7 +422,7 @@ for (let i = 0; i < boardSize; i++) {
 
             button.appendChild(piece);
 
-            button.addEventListener("touchstart", (event) => {
+            function promotionHandler(event) {
               event.preventDefault();
 
               promotion.classList.add("hidden");
@@ -422,17 +430,10 @@ for (let i = 0; i < boardSize; i++) {
               chessboard.classList.remove("disabled");
 
               clientMove(move);
-            });
+            }
 
-            button.addEventListener("click", (event) => {
-              event.preventDefault();
-
-              promotion.classList.add("hidden");
-              promotion_options.replaceChildren(); // clear buttons
-              chessboard.classList.remove("disabled");
-
-              clientMove(move);
-            });
+            button.addEventListener("touchstart", promotionHandler);
+            button.addEventListener("click", promotionHandler);
 
             promotion_options.appendChild(button);
           }
@@ -517,65 +518,45 @@ restart.addEventListener("click", (event) => {
 });
 
 function toggleSettings() {
-  settings.classList.toggle("enabled");
-  settings_container.classList.toggle("hidden");
+  document.body.classList.toggle("settings");
 }
 
-settings.addEventListener("touchstart", (event) => {
+function settingsIconHandler(event: any) {
   event.preventDefault();
   postMessage({ type: messageTypes.REQUEST_SETTINGS });
   toggleSettings();
-});
+}
 
-settings.addEventListener("click", (event) => {
+function closeSettingsHandler(event: any) {
   event.preventDefault();
-  postMessage({ type: messageTypes.REQUEST_SETTINGS });
   toggleSettings();
-});
+}
 
-empty_settings.forEach((element) => {
-  element.addEventListener("touchstart", (event) => {
-    event.preventDefault();
-    toggleSettings();
-  });
-});
+settings_icon.addEventListener("touchstart", settingsIconHandler);
+settings_icon.addEventListener("click", settingsIconHandler);
 
-empty_settings.forEach((element) => {
-  element.addEventListener("click", (event) => {
-    event.preventDefault();
-    toggleSettings();
-  });
-});
+close_settings.addEventListener("touchstart", closeSettingsHandler);
+close_settings.addEventListener("click", closeSettingsHandler);
 
 undo.addEventListener("touchstart", (event) => {
   event.preventDefault();
-  clientUndo();
+  makeUndo();
 });
 
 undo.addEventListener("click", (event) => {
   event.preventDefault();
-  clientUndo();
+  makeUndo();
 });
 
-chesster.addEventListener("touchstart", (event) => {
+function aboutHandler(event: any) {
   event.preventDefault();
-  about_container.classList.toggle("hidden");
-});
+  document.body.classList.toggle("about");
+}
 
-chesster.addEventListener("click", (event) => {
-  event.preventDefault();
-  about_container.classList.toggle("hidden");
-});
-
-about_container.addEventListener("touchstart", (event) => {
-  event.preventDefault();
-  about_container.classList.toggle("hidden");
-});
-
-about_container.addEventListener("click", (event) => {
-  event.preventDefault();
-  about_container.classList.toggle("hidden");
-});
+chesster.addEventListener("touchstart", aboutHandler);
+chesster.addEventListener("click", aboutHandler);
+close_about.addEventListener("touchstart", aboutHandler);
+close_about.addEventListener("click", aboutHandler);
 
 function closePromotion() {
   promotion.classList.add("hidden");
@@ -590,6 +571,56 @@ function promotionCloseHandler(event: any) {
 
 promotion_close.addEventListener("touchstart", promotionCloseHandler);
 promotion_close.addEventListener("click", promotionCloseHandler);
+
+function toggleFullscreen() {
+  if (isFullscreen) {
+    const documentElement = document as Document & {
+      mozCancelFullScreen(): Promise<void>;
+      webkitExitFullscreen(): Promise<void>;
+      msExitFullscreen(): Promise<void>;
+    };
+
+    if (documentElement.exitFullscreen) {
+      documentElement.exitFullscreen();
+      isFullscreen = false;
+    } else if (documentElement.webkitExitFullscreen) {
+      /* Safari */
+      documentElement.webkitExitFullscreen();
+      isFullscreen = false;
+    } else if (documentElement.msExitFullscreen) {
+      /* IE11 */
+      documentElement.msExitFullscreen();
+      isFullscreen = false;
+    }
+  } else {
+    const documentElement = document.documentElement as HTMLElement & {
+      mozRequestFullScreen(): Promise<void>;
+      webkitRequestFullscreen(): Promise<void>;
+      msRequestFullscreen(): Promise<void>;
+    };
+
+    if (documentElement.requestFullscreen) {
+      documentElement.requestFullscreen();
+      isFullscreen = true;
+    } else if (documentElement.webkitRequestFullscreen) {
+      /* Safari */
+      documentElement.webkitRequestFullscreen();
+      isFullscreen = true;
+    } else if (documentElement.msRequestFullscreen) {
+      /* IE11 */
+      documentElement.msRequestFullscreen();
+      isFullscreen = true;
+    }
+  }
+}
+
+function fullscreenHandler(event: any) {
+  event.preventDefault();
+  toggleFullscreen();
+}
+
+toggle_fullscreen.addEventListener("touchstart", fullscreenHandler);
+toggle_fullscreen.addEventListener("click", fullscreenHandler);
 
 function saveSettings() {
   aiWorker.postMessage({
@@ -617,7 +648,7 @@ settings_container.querySelectorAll("select.autosave").forEach((element) => {
 
 function infoTouchAreaHandler(event: any) {
   event.preventDefault();
-  info.classList.toggle("collapsed");
+  document.body.classList.toggle("zen");
 }
 
 info_touch_area.addEventListener("touchstart", infoTouchAreaHandler);
@@ -626,10 +657,25 @@ info_touch_area.addEventListener("click", infoTouchAreaHandler);
 
 game_selection.addEventListener("change", () => {
   closePromotion();
-  info.classList.remove("collapsed");
+  document.body.classList.remove("zen");
   game_div.classList.remove("rotated");
   chessboard.classList.remove("rotated");
   game_div.classList.remove("animate_rotate");
+
+  document.querySelector("#depthSetting").classList.remove("disabled");
+  document.querySelector("#depth").classList.remove("disabled");
+  document
+    .querySelector("#pseudoLegalEvaluationSetting")
+    .classList.remove("disabled");
+  document.querySelector("#pseudoLegalEvaluation").classList.remove("disabled");
+  document
+    .querySelector("#searchAlgorithmSetting")
+    .classList.remove("disabled");
+  document.querySelector("#searchAlgorithm").classList.remove("disabled");
+  document
+    .querySelector("#visualizeSearchSetting")
+    .classList.remove("disabled");
+  document.querySelector("#visualizeSearch").classList.remove("disabled");
 
   switch (game_selection.value) {
     case "whiteAI":
@@ -642,15 +688,30 @@ game_selection.addEventListener("change", () => {
       game_div.classList.add("rotated");
       chessboard.classList.add("rotated");
       break;
+    case "tabletop":
+      document.body.classList.toggle("zen");
+      game_div.classList.add("animate_rotate");
     case "pass":
       playerTeam = 0;
       enableAI = false;
+
+      document.querySelector("#depthSetting").classList.add("disabled");
+      document.querySelector("#depth").classList.add("disabled");
+      document
+        .querySelector("#pseudoLegalEvaluationSetting")
+        .classList.add("disabled");
+      document
+        .querySelector("#pseudoLegalEvaluation")
+        .classList.add("disabled");
+      document
+        .querySelector("#searchAlgorithmSetting")
+        .classList.add("disabled");
+      document.querySelector("#searchAlgorithm").classList.add("disabled");
+      document
+        .querySelector("#visualizeSearchSetting")
+        .classList.add("disabled");
+      document.querySelector("#visualizeSearch").classList.add("disabled");
       break;
-    case "tabletop":
-      playerTeam = 0;
-      enableAI = false;
-      info.classList.toggle("collapsed");
-      game_div.classList.add("animate_rotate");
       break;
   }
 
@@ -670,6 +731,7 @@ game_selection.addEventListener("change", () => {
 const borderMultiplier = 0.005;
 const widthScalar = 0.93333333333;
 const heightScalar = 0.7;
+const maxChessboardSize = 980;
 
 function getChessboardSize() {
   const heightMax = window.innerHeight * heightScalar;
@@ -677,7 +739,7 @@ function getChessboardSize() {
 
   let size = heightMax > widthMax ? widthMax : heightMax;
 
-  if (size > 860) size = 860;
+  if (size > maxChessboardSize) size = maxChessboardSize;
 
   return size;
 }

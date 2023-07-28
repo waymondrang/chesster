@@ -19,7 +19,7 @@
   <body>
     <nav>
       <h1 id="chesster">CHESSTER</h1>
-      <button id="settings">
+      <button id="settings_icon">
         <span class="material-symbols-outlined"> settings </span>
       </button>
     </nav>
@@ -51,6 +51,14 @@
       </div>
       <div id="chessboard"></div>
       <div id="about_container" class="hidden">
+        <a
+          target="_blank"
+          href="https://github.com/waymondrang/chesster"
+          class="cell"
+          id="github_link"
+        >
+          <div class="piece github"></div>
+        </a>
         <div class="middle">
           <img src="favicon.svg" alt="Chesster Logo" />
         </div>
@@ -63,9 +71,30 @@
           <p>Icons from Google Fonts. Chess pieces by Colin M.L. Burnett.</p>
         </div>
         <!-- <p id="about_help">Click anywhere to close</p> -->
+        <div id="zen_tip">
+          <p>
+            Enter zen mode by clicking the empty space in the bar above the
+            board. Click the bar again to exit.
+          </p>
+        </div>
+        <button id="close_about">
+          <span class="material-symbols-outlined">close</span>
+        </button>
       </div>
-      <div id="settings_container" class="hidden">
+      <div id="settings_container">
         <div class="setting">
+          <div>
+            <label for="gameSelection">Game Selection</label>
+            <p>Default is Player vs. Chesster.</p>
+          </div>
+        </div>
+        <select name="gameSelection" id="gameSelection">
+          <option value="whiteAI">Player vs. Chesster</option>
+          <option value="blackAI">Chesster vs. Player</option>
+          <option value="pass">Local Game</option>
+          <option value="tabletop">Tabletop Game</option>
+        </select>
+        <div class="setting" id="depthSetting">
           <div>
             <label for="depth">Search Depth</label>
             <p>
@@ -82,7 +111,7 @@
           <option value="5">5</option>
           <option value="6">6</option>
         </select>
-        <div class="setting">
+        <div class="setting" id="pseudoLegalEvaluationSetting">
           <div>
             <label for="pseudoLegalEvaluation">Psuedo-Legal Evaluation</label>
             <p>
@@ -99,7 +128,7 @@
           <option value="true">True</option>
           <option value="false">False</option>
         </select>
-        <div class="setting">
+        <div class="setting" id="searchAlgorithmSetting">
           <div>
             <label for="searchAlgorithm">Search Algorithm</label>
             <p>Default is negaScout.</p>
@@ -110,7 +139,7 @@
           <option value="miniMax">miniMax</option>
           <option value="negaMax">negaMax</option>
         </select>
-        <div class="setting">
+        <div class="setting" id="visualizeSearchSetting">
           <div>
             <label for="visualizeSearch">Visualize Search</label>
             <p>Only applicable to negaScout and negaMax. Default is true.</p>
@@ -120,26 +149,13 @@
           <option value="true">True</option>
           <option value="false">False</option>
         </select>
-        <div class="setting">
-          <div>
-            <label for="gameSelection">Game Selection</label>
-            <p>Default is White vs AI.</p>
-          </div>
-        </div>
-        <select name="gameSelection" id="gameSelection">
-          <option value="whiteAI">White vs AI</option>
-          <option value="blackAI">Black vs AI</option>
-          <option value="pass">PassPlay</option>
-          <option value="tabletop">Tabletop</option>
-        </select>
-        <div class="setting empty"></div>
-        <div class="setting empty"></div>
-        <div class="setting empty">
-          <!-- <p>
-            Chesster was written in TypeScript by waymondrang. Chess pieces
-            created by Colin M.L. Burnett.
-          </p> -->
-        </div>
+        <button id="toggle_fullscreen">
+          Toggle Fullscreen&nbsp;
+          <span class="material-symbols-outlined"> fullscreen </span>
+        </button>
+        <button id="close_settings">
+          <span class="material-symbols-outlined">close</span>
+        </button>
       </div>
     </div>
     <script src="bundle.js"></script>
