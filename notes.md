@@ -1,8 +1,8 @@
 ### todo
 
-- [ ] implement tapered evaluation https://www.chessprogramming.org/Tapered_Eval
+- [x] implement tapered evaluation https://www.chessprogramming.org/Tapered_Eval
 - [ ] implement iterative deepening
-- [ ] implement piece square tables
+- [x] implement piece square tables
 
 ### piece representation
 

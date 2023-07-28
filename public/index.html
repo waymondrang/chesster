@@ -17,40 +17,13 @@
     <title>ChessterJS</title>
   </head>
   <body>
-    <nav>
-      <h1 id="chesster">CHESSTER</h1>
+    <!-- <nav>
       <button id="settings_icon">
         <span class="material-symbols-outlined"> settings </span>
       </button>
-    </nav>
+    </nav> -->
     <div id="game">
-      <div id="info">
-        <div id="info_touch_area"></div>
-        <div id="status">
-          <span id="turn"
-            ><span class="material-symbols-outlined">chess</span></span
-          >
-          <span id="end" class="hidden">
-            <span class="material-symbols-outlined">flag</span>
-          </span>
-        </div>
-        <div id="controls">
-          <button id="undo" disabled>
-            <span class="material-symbols-outlined">undo</span>
-          </button>
-          <button id="restart">
-            <span class="material-symbols-outlined">refresh</span>
-          </button>
-        </div>
-      </div>
-      <div id="promotion" class="hidden">
-        <div id="promotion-options"></div>
-        <button id="promotion-close">
-          <span class="material-symbols-outlined">close</span>
-        </button>
-      </div>
-      <div id="chessboard"></div>
-      <div id="about_container" class="hidden">
+      <div id="about_container">
         <a
           target="_blank"
           href="https://github.com/waymondrang/chesster"
@@ -59,6 +32,13 @@
         >
           <div class="piece github"></div>
         </a>
+        <div id="wrLabs">
+          <p>
+            A wrLabs
+            <br />
+            Project
+          </p>
+        </div>
         <div class="middle">
           <img src="favicon.svg" alt="Chesster Logo" />
         </div>
@@ -73,15 +53,47 @@
         <!-- <p id="about_help">Click anywhere to close</p> -->
         <div id="zen_tip">
           <p>
-            Enter zen mode by clicking the empty space in the bar above the
-            board. Click the bar again to exit.
+            Tip: Enter zen mode by clicking the middle region of the bar above
+            the chessboard.
           </p>
         </div>
         <button id="close_about">
           <span class="material-symbols-outlined">close</span>
         </button>
-        <div id="version"><p>Build 6c1d863</p></div>
+        <div id="version">
+          <p>Build 6c1d863</p>
+        </div>
       </div>
+      <div id="info">
+        <!-- <h1 id="chesster">CHESSTER</h1> -->
+        <div id="info_touch_area" title="Toggle zen mode"></div>
+        <div id="status">
+          <span id="turn" title="Current turn"
+            ><span class="material-symbols-outlined">chess</span></span
+          >
+          <span id="end" class="hidden" title="Game over!">
+            <span class="material-symbols-outlined">flag</span>
+          </span>
+        </div>
+        <div id="controls">
+          <button id="undo" disabled title="Undo the last move">
+            <span class="material-symbols-outlined">undo</span>
+          </button>
+          <button id="restart" title="Restart the game">
+            <span class="material-symbols-outlined">refresh</span>
+          </button>
+          <button id="toggle_settings" title="Open settings panel">
+            <span class="material-symbols-outlined">settings</span>
+          </button>
+        </div>
+      </div>
+      <div id="promotion" class="hidden">
+        <div id="promotion-options"></div>
+        <button id="promotion-close">
+          <span class="material-symbols-outlined">close</span>
+        </button>
+      </div>
+      <div id="chessboard"></div>
       <div id="settings_container">
         <div class="setting">
           <div>
@@ -154,6 +166,7 @@
           Toggle Fullscreen&nbsp;
           <span class="material-symbols-outlined"> fullscreen </span>
         </button>
+        <button id="toggle_about">About Chesster</button>
         <button id="close_settings">
           <span class="material-symbols-outlined">close</span>
         </button>

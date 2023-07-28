@@ -47,13 +47,19 @@ h6 {
     opacity: 0.1;
     /* animation: titleFade 5s cubic-bezier(1, 0, 0, 1); */
     transition: opacity 0.5s cubic-bezier(0, 0, .01, 1);
-    cursor: pointer;
     user-select: none;
+
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+
+    z-index: 999;
 }
 
-#chesster:hover {
+/* #chesster:hover {
     opacity: 1 !important;
-}
+} */
 
 body.zen #chesster {
     opacity: 0;
@@ -105,6 +111,7 @@ nav {
     display: grid;
     grid-template-columns: repeat(8, 1fr);
     grid-template-rows: repeat(8, 1fr);
+    background-color: #1b1b1b;
 }
 
 body:not(.about) #about_container {
@@ -155,16 +162,31 @@ body:not(.about) #about_container {
     transform: translate(-50%, -50%);
 }
 
-#about_container #github_link {
+#wrLabs {
+    grid-column-start: 5;
+    grid-column-end: 7;
+    grid-row-start: 2;
+    grid-row-end: 4;
+    position: relative;
+    background: #F25116;
+}
+
+#wrLabs p {
+    margin: 0;
+    padding: 0;
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    text-align: left;
+}
+
+#github_link {
     grid-column-start: 3;
     grid-column-end: 5;
     grid-row-start: 2;
     grid-row-end: 4;
 }
-
-/* #github_link .piece {
-    transform: rotate(-12deg);
-} */
 
 #zen_tip {
     grid-column-start: 5;
@@ -192,7 +214,6 @@ body:not(.about) #about_container {
     grid-column-end: 5;
     grid-row-start: 6;
     grid-row-end: 8;
-    border-radius: 999px;
     border: none;
     background-color: #BBA2DE;
     color: #fefefe;
@@ -332,7 +353,7 @@ body.about #settings_container {
     pointer-events: none;
     cursor: not-allowed;
     user-select: none;
-    opacity: 0.4;
+    opacity: 0.2;
 }
 
 #settings_container select {
@@ -375,7 +396,7 @@ body.about #settings_container {
     box-sizing: border-box;
     background: transparent;
     grid-column-start: 1;
-    grid-column-end: 9;
+    grid-column-end: 6;
     background-color: #6e791b;
     color: #fefefe;
     cursor: pointer;
@@ -385,6 +406,25 @@ body.about #settings_container {
     display: flex;
     align-items: center;
     justify-content: center;
+}
+
+#toggle_about {
+    border: none;
+    /* border-top: 1px solid #3b3b3b; */
+    box-sizing: border-box;
+    background: transparent;
+    grid-column-start: 6;
+    grid-column-end: 9;
+    background-color: #A0A9EB;
+    color: #fefefe;
+    cursor: pointer;
+    font-size: var(--settings-font-size);
+    font-family: inherit;
+
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: #fefefe;
 }
 
 #close_settings {
@@ -403,7 +443,7 @@ body.about #settings_container {
 }
 
 #close_settings:hover {
-    background-color: #6e791b;
+    background-color: #3b3b3b;
 }
 
 /****************/
@@ -596,6 +636,47 @@ body.zen #game.BLACK #info_touch_area {
     color: #f21649;
 }
 
+/***************************/
+/*     settings toggle     */
+/***************************/
+
+
+#toggle_settings {
+    height: 100%;
+    width: calc(var(--chessboard-size, 400px) / 8);
+    position: relative;
+    background-color: #3b3b3b;
+    border: 0px solid transparent;
+    box-sizing: border-box;
+    color: #fefefe;
+    cursor: pointer;
+    margin: 0;
+    padding: 0;
+    transition: all 0.2s cubic-bezier(0, 0, 0, 1);
+}
+
+#toggle_settings:hover {
+    background-color: #fefefe;
+    color: #3b3b3b;
+}
+
+#toggle_settings .material-symbols-outlined {
+    transition: all 0.25s cubic-bezier(0, 0, 0, 1);
+    font-variation-settings:
+        'FILL' 0,
+        'wght' 400,
+        'GRAD' 0,
+        'opsz' 20
+}
+
+body.settings #toggle_settings .material-symbols-outlined {
+    font-variation-settings:
+        'FILL' 1,
+        'wght' 400,
+        'GRAD' 0,
+        'opsz' 20
+}
+
 
 /*******************/
 /*     restart     */
@@ -739,16 +820,16 @@ body.about #chessboard {
 .piece {
     width: 100%;
     height: 100%;
-    background-size: 93.33333%;
+    background-size: 100%;
     background-repeat: no-repeat;
     background-position: center;
 }
 
-#game.animate_rotate .piece {
+#game.animate_rotate #chessboard .piece {
     transition: transform 0.5s cubic-bezier(0, 1, .01, 1);
 }
 
-#game.rotated .piece {
+#game.rotated #chessboard .piece {
     transform: rotate(180deg);
     transform-origin: center center;
 }

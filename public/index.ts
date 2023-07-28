@@ -39,9 +39,6 @@ const promotion_options = document.querySelector(
   "#promotion-options"
 ) as HTMLDivElement;
 const undo = document.querySelector("#undo") as HTMLButtonElement;
-const settings_icon = document.querySelector(
-  "#settings_icon"
-) as HTMLDivElement;
 const settings_container = document.querySelector(
   "#settings_container"
 ) as HTMLDivElement;
@@ -49,16 +46,20 @@ const close_settings = document.querySelector(
   "#close_settings"
 ) as HTMLButtonElement;
 const close_about = document.querySelector("#close_about") as HTMLButtonElement;
-const chesster = document.querySelector("#chesster") as HTMLHeadingElement;
 const game_selection = document.querySelector(
   "#gameSelection"
 ) as HTMLSelectElement;
-const info = document.querySelector("#info") as HTMLDivElement;
 const info_touch_area = document.querySelector(
   "#info_touch_area"
 ) as HTMLDivElement;
 const toggle_fullscreen = document.querySelector(
   "#toggle_fullscreen"
+) as HTMLButtonElement;
+const toggle_about = document.querySelector(
+  "#toggle_about"
+) as HTMLButtonElement;
+const toggle_settings = document.querySelector(
+  "#toggle_settings"
 ) as HTMLButtonElement;
 
 const game = new ChessterGame();
@@ -532,8 +533,8 @@ function closeSettingsHandler(event: any) {
   toggleSettings();
 }
 
-settings_icon.addEventListener("touchstart", settingsIconHandler);
-settings_icon.addEventListener("click", settingsIconHandler);
+toggle_settings.addEventListener("touchstart", settingsIconHandler);
+toggle_settings.addEventListener("click", settingsIconHandler);
 
 close_settings.addEventListener("touchstart", closeSettingsHandler);
 close_settings.addEventListener("click", closeSettingsHandler);
@@ -553,8 +554,8 @@ function aboutHandler(event: any) {
   document.body.classList.toggle("about");
 }
 
-chesster.addEventListener("touchstart", aboutHandler);
-chesster.addEventListener("click", aboutHandler);
+toggle_about.addEventListener("touchstart", aboutHandler);
+toggle_about.addEventListener("click", aboutHandler);
 close_about.addEventListener("touchstart", aboutHandler);
 close_about.addEventListener("click", aboutHandler);
 
@@ -730,7 +731,7 @@ game_selection.addEventListener("change", () => {
 
 const borderMultiplier = 0.005;
 const widthScalar = 0.93333333333;
-const heightScalar = 0.7;
+const heightScalar = 0.72;
 const maxChessboardSize = 980;
 
 function getChessboardSize() {
