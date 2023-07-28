@@ -419,19 +419,6 @@ export function boardStringToBuffer(boardString: ChessterBoardString): Buffer {
   return buffer;
 }
 
-export function historyToString(history: number) {
-  return (
-    moveToString(history) +
-    ` captured piece: ${(history >>> 20) & 0b1111} (${numberToPieceString(
-      (history >>> 20) & 0b1111
-    )}), wc: ${(history >>> 24) & 0b1}, bc: ${(history >>> 25) & 0b1}, wcm: ${
-      (history >>> 26) & 0b1
-    }, bcm: ${(history >>> 27) & 0b1}, wckc: ${(history >>> 28) & 0b1}, bckc: ${
-      (history >>> 29) & 0b1
-    }, wcqc: ${(history >>> 30) & 0b1}, bcqc: ${(history >>> 31) & 0b1}`
-  );
-}
-
 export function moveToString(move: number) {
   return `move type: "${getKeyByValue(
     moveTypes,

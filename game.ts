@@ -8,6 +8,7 @@ import {
   boardSize,
   defaultBoard,
   moveTypes,
+  pieces,
 } from "./types";
 import {
   binaryToString,
@@ -54,7 +55,9 @@ export class ChessterGame {
   //     zobrist key indexes     //
   /////////////////////////////////
 
-  #zobristLength = 6 * 2 * 64 + 1 + 4 + 8; // 781
+  /** length of zobrist keys */
+  #zobristLength = 6 * 2 * 64 + 1 + 4 + 8; // 781\
+
   #blackToMoveZobristIndex = 768;
   #whiteCanCastleKingsideZobristIndex = 769;
   #whiteCanCastleQueensideZobristIndex = 770;
@@ -127,7 +130,7 @@ export class ChessterGame {
     //     update on init     //
     ////////////////////////////
 
-    this.#update(); // if we properly validate this move, this should not be required
+    this.#update();
   }
 
   /**
@@ -150,12 +153,10 @@ export class ChessterGame {
       this.bcm = false;
       this.wcm = false;
 
-      this.bcqc = ((move >>> 31) & 0b1) === 1;
-      this.wcqc = ((move >>> 30) & 0b1) === 1;
-      this.bckc = ((move >>> 29) & 0b1) === 1;
-      this.wckc = ((move >>> 28) & 0b1) === 1;
-      // this.bcm = ((move >>> 27) & 0b1) === 1;
-      // this.wcm = ((move >>> 26) & 0b1) === 1;
+      this.bcqc = ((move >>> 29) & 0b1) === 1;
+      this.wcqc = ((move >>> 28) & 0b1) === 1;
+      this.bckc = ((move >>> 27) & 0b1) === 1;
+      this.wckc = ((move >>> 26) & 0b1) === 1;
       this.bc = ((move >>> 25) & 0b1) === 1;
       this.wc = ((move >>> 24) & 0b1) === 1;
 
@@ -238,12 +239,10 @@ export class ChessterGame {
   move(move: ChessterMove) {
     // 32 bit number
     let history =
-      ((this.bcqc ? 1 : 0) << 31) |
-      ((this.wcqc ? 1 : 0) << 30) |
-      ((this.bckc ? 1 : 0) << 29) |
-      ((this.wckc ? 1 : 0) << 28) |
-      // ((this.bcm ? 1 : 0) << 27) |
-      // ((this.wcm ? 1 : 0) << 26) |
+      ((this.bcqc ? 1 : 0) << 29) |
+      ((this.wcqc ? 1 : 0) << 28) |
+      ((this.bckc ? 1 : 0) << 27) |
+      ((this.wckc ? 1 : 0) << 26) |
       ((this.bc ? 1 : 0) << 25) |
       ((this.wc ? 1 : 0) << 24);
 
@@ -276,17 +275,17 @@ export class ChessterGame {
           ] ^
           this.#zeys[
             (((move >>> 14) & 0b111111) + 3) * 12 +
-              (this.board[((move >>> 14) & 0b111111) + 3] - 2) // remove rook
+              ((pieces.WHITE_ROOK | (move & 0b1)) - 2) // remove rook
           ] ^
           this.#zeys[
             (((move >>> 14) & 0b111111) + 1) * 12 +
-              (this.board[((move >>> 14) & 0b111111) + 3] - 2) // add rook
+              ((pieces.WHITE_ROOK | (move & 0b1)) - 2) // add rook
           ];
 
         this.board[(move >>> 14) & 0b111111] = 0;
         this.board[((move >>> 14) & 0b111111) + 2] = move & 0b1111;
         this.board[((move >>> 14) & 0b111111) + 1] =
-          this.board[((move >>> 14) & 0b111111) + 3];
+          pieces.WHITE_ROOK | (move & 0b1);
         this.board[((move >>> 14) & 0b111111) + 3] = 0;
         break;
       case moveTypes.CASTLE_QUEENSIDE:
@@ -303,21 +302,21 @@ export class ChessterGame {
           ] ^
           this.#zeys[
             (((move >>> 14) & 0b111111) - 4) * 12 +
-              (this.board[((move >>> 14) & 0b111111) - 4] - 2) // remove rook
+              ((pieces.WHITE_ROOK | (move & 0b1)) - 2) // remove rook
           ] ^
           this.#zeys[
             (((move >>> 14) & 0b111111) - 1) * 12 +
-              (this.board[((move >>> 14) & 0b111111) - 4] - 2) // add rook
+              ((pieces.WHITE_ROOK | (move & 0b1)) - 2) // add rook
           ];
 
         this.board[(move >>> 14) & 0b111111] = 0;
         this.board[((move >>> 14) & 0b111111) - 2] = move & 0b1111;
         this.board[((move >>> 14) & 0b111111) - 1] =
-          this.board[((move >>> 14) & 0b111111) - 4];
+          pieces.WHITE_ROOK | (move & 0b1);
         this.board[((move >>> 14) & 0b111111) - 4] = 0;
         break;
       case moveTypes.EN_PASSANT_WHITE:
-        history |= this.board[((move >>> 8) & 0b111111) + 8] << 20;
+        history |= pieces.BLACK_PAWN << 20;
 
         this.zobrist ^=
           this.#zeys[
@@ -325,18 +324,18 @@ export class ChessterGame {
               (this.board[((move >>> 8) & 0b111111) + 8] - 2) // remove captured piece
           ] ^
           this.#zeys[
-            ((move >>> 8) & 0b111111) * 12 + ((move & 0b1111) - 2) // add moved piece (white pawn)
+            ((move >>> 8) & 0b111111) * 12 + (pieces.WHITE_PAWN - 2) // add moved piece (white pawn)
           ] ^
           this.#zeys[
-            ((move >>> 14) & 0b111111) * 12 + ((move & 0b1111) - 2) // remove moved piece (white pawn)
+            ((move >>> 14) & 0b111111) * 12 + (pieces.WHITE_PAWN - 2) // remove moved piece (white pawn)
           ];
 
         this.board[(move >>> 14) & 0b111111] = 0;
-        this.board[(move >>> 8) & 0b111111] = move & 0b1111;
+        this.board[(move >>> 8) & 0b111111] = pieces.WHITE_PAWN;
         this.board[((move >>> 8) & 0b111111) + 8] = 0;
         break;
       case moveTypes.EN_PASSANT_BLACK:
-        history |= this.board[((move >>> 8) & 0b111111) - 8] << 20;
+        history |= pieces.WHITE_PAWN << 20;
 
         this.zobrist ^=
           this.#zeys[
@@ -344,14 +343,14 @@ export class ChessterGame {
               (this.board[((move >>> 8) & 0b111111) - 8] - 2) // remove captured piece
           ] ^
           this.#zeys[
-            ((move >>> 8) & 0b111111) * 12 + ((move & 0b1111) - 2) // add moved piece (black pawn)
+            ((move >>> 8) & 0b111111) * 12 + (pieces.BLACK_PAWN - 2) // add moved piece (black pawn)
           ] ^
           this.#zeys[
-            ((move >>> 14) & 0b111111) * 12 + ((move & 0b1111) - 2) // remove moved piece (black pawn)
+            ((move >>> 14) & 0b111111) * 12 + (pieces.BLACK_PAWN - 2) // remove moved piece (black pawn)
           ];
 
         this.board[(move >>> 14) & 0b111111] = 0;
-        this.board[(move >>> 8) & 0b111111] = move & 0b1111;
+        this.board[(move >>> 8) & 0b111111] = pieces.BLACK_PAWN;
         this.board[((move >>> 8) & 0b111111) - 8] = 0; // captured space
         break;
       case moveTypes.PROMOTION_QUEEN_CAPTURE:
@@ -363,28 +362,30 @@ export class ChessterGame {
               (this.board[(move >>> 8) & 0b111111] - 2) // remove captured piece
           ] ^
           this.#zeys[
-            ((move >>> 8) & 0b111111) * 12 + (((move & 0b0001) | 0b1010) - 2) // add moved piece
+            ((move >>> 8) & 0b111111) * 12 +
+              (((move & 0b1) | pieces.WHITE_QUEEN) - 2) // add moved piece
           ] ^
           this.#zeys[
             ((move >>> 14) & 0b111111) * 12 + ((move & 0b1111) - 2) // remove moved piece
           ];
 
         this.board[(move >>> 14) & 0b111111] = 0;
-        this.board[(move >>> 8) & 0b111111] = (move & 0b0001) | 0b1010;
+        this.board[(move >>> 8) & 0b111111] = (move & 0b1) | pieces.WHITE_QUEEN;
         break;
       case moveTypes.PROMOTION_QUEEN:
         history |= this.board[(move >>> 8) & 0b111111] << 20;
 
         this.zobrist ^=
           this.#zeys[
-            ((move >>> 8) & 0b111111) * 12 + (((move & 0b0001) | 0b1010) - 2) // add moved piece
+            ((move >>> 8) & 0b111111) * 12 +
+              (((move & 0b1) | pieces.WHITE_QUEEN) - 2) // add moved piece
           ] ^
           this.#zeys[
             ((move >>> 14) & 0b111111) * 12 + ((move & 0b1111) - 2) // remove moved piece
           ];
 
         this.board[(move >>> 14) & 0b111111] = 0;
-        this.board[(move >>> 8) & 0b111111] = (move & 0b0001) | 0b1010;
+        this.board[(move >>> 8) & 0b111111] = (move & 0b1) | pieces.WHITE_QUEEN;
         break;
       case moveTypes.PROMOTION_ROOK_CAPTURE:
         history |= this.board[(move >>> 8) & 0b111111] << 20;
@@ -395,28 +396,30 @@ export class ChessterGame {
               (this.board[(move >>> 8) & 0b111111] - 2) // remove captured piece
           ] ^
           this.#zeys[
-            ((move >>> 8) & 0b111111) * 12 + (((move & 0b0001) | 0b1000) - 2) // add moved piece (change)
+            ((move >>> 8) & 0b111111) * 12 +
+              (((move & 0b1) | pieces.WHITE_ROOK) - 2) // add moved piece (change)
           ] ^
           this.#zeys[
             ((move >>> 14) & 0b111111) * 12 + ((move & 0b1111) - 2) // remove moved piece
           ];
 
         this.board[(move >>> 14) & 0b111111] = 0;
-        this.board[(move >>> 8) & 0b111111] = (move & 0b0001) | 0b1000;
+        this.board[(move >>> 8) & 0b111111] = (move & 0b1) | pieces.WHITE_ROOK;
         break;
       case moveTypes.PROMOTION_ROOK:
         history |= this.board[(move >>> 8) & 0b111111] << 20;
 
         this.zobrist ^=
           this.#zeys[
-            ((move >>> 8) & 0b111111) * 12 + (((move & 0b0001) | 0b1000) - 2) // add moved piece (change)
+            ((move >>> 8) & 0b111111) * 12 +
+              (((move & 0b1) | pieces.WHITE_ROOK) - 2) // add moved piece (change)
           ] ^
           this.#zeys[
             ((move >>> 14) & 0b111111) * 12 + ((move & 0b1111) - 2) // remove moved piece
           ];
 
         this.board[(move >>> 14) & 0b111111] = 0;
-        this.board[(move >>> 8) & 0b111111] = (move & 0b0001) | 0b1000;
+        this.board[(move >>> 8) & 0b111111] = (move & 0b1) | pieces.WHITE_ROOK;
         break;
       case moveTypes.PROMOTION_BISHOP_CAPTURE:
         history |= this.board[(move >>> 8) & 0b111111] << 20;
@@ -427,28 +430,32 @@ export class ChessterGame {
               (this.board[(move >>> 8) & 0b111111] - 2) // remove captured piece
           ] ^
           this.#zeys[
-            ((move >>> 8) & 0b111111) * 12 + (((move & 0b0001) | 0b0110) - 2) // add moved piece (change)
+            ((move >>> 8) & 0b111111) * 12 +
+              (((move & 0b1) | pieces.WHITE_BISHOP) - 2) // add moved piece (change)
           ] ^
           this.#zeys[
             ((move >>> 14) & 0b111111) * 12 + ((move & 0b1111) - 2) // remove moved piece
           ];
 
         this.board[(move >>> 14) & 0b111111] = 0;
-        this.board[(move >>> 8) & 0b111111] = (move & 0b0001) | 0b0110;
+        this.board[(move >>> 8) & 0b111111] =
+          (move & 0b1) | pieces.WHITE_BISHOP;
         break;
       case moveTypes.PROMOTION_BISHOP:
         history |= this.board[(move >>> 8) & 0b111111] << 20;
 
         this.zobrist ^=
           this.#zeys[
-            ((move >>> 8) & 0b111111) * 12 + (((move & 0b0001) | 0b0110) - 2) // add moved piece (change)
+            ((move >>> 8) & 0b111111) * 12 +
+              (((move & 0b1) | pieces.WHITE_BISHOP) - 2) // add moved piece (change)
           ] ^
           this.#zeys[
             ((move >>> 14) & 0b111111) * 12 + ((move & 0b1111) - 2) // remove moved piece
           ];
 
         this.board[(move >>> 14) & 0b111111] = 0;
-        this.board[(move >>> 8) & 0b111111] = (move & 0b0001) | 0b0110;
+        this.board[(move >>> 8) & 0b111111] =
+          (move & 0b1) | pieces.WHITE_BISHOP;
         break;
       case moveTypes.PROMOTION_KNIGHT_CAPTURE:
         history |= this.board[(move >>> 8) & 0b111111] << 20;
@@ -459,28 +466,32 @@ export class ChessterGame {
               (this.board[(move >>> 8) & 0b111111] - 2) // remove captured piece
           ] ^
           this.#zeys[
-            ((move >>> 8) & 0b111111) * 12 + (((move & 0b0001) | 0b0100) - 2) // add moved piece (change)
+            ((move >>> 8) & 0b111111) * 12 +
+              (((move & 0b1) | pieces.WHITE_KNIGHT) - 2) // add moved piece (change)
           ] ^
           this.#zeys[
             ((move >>> 14) & 0b111111) * 12 + ((move & 0b1111) - 2) // remove moved piece
           ];
 
         this.board[(move >>> 14) & 0b111111] = 0;
-        this.board[(move >>> 8) & 0b111111] = (move & 0b0001) | 0b0100;
+        this.board[(move >>> 8) & 0b111111] =
+          (move & 0b1) | pieces.WHITE_KNIGHT;
         break;
       case moveTypes.PROMOTION_KNIGHT:
         history |= this.board[(move >>> 8) & 0b111111] << 20;
 
         this.zobrist ^=
           this.#zeys[
-            ((move >>> 8) & 0b111111) * 12 + (((move & 0b0001) | 0b0100) - 2) // add moved piece (change)
+            ((move >>> 8) & 0b111111) * 12 +
+              (((move & 0b1) | pieces.WHITE_KNIGHT) - 2) // add moved piece (change)
           ] ^
           this.#zeys[
             ((move >>> 14) & 0b111111) * 12 + ((move & 0b1111) - 2) // remove moved piece
           ];
 
         this.board[(move >>> 14) & 0b111111] = 0;
-        this.board[(move >>> 8) & 0b111111] = (move & 0b0001) | 0b0100;
+        this.board[(move >>> 8) & 0b111111] =
+          (move & 0b1) | pieces.WHITE_KNIGHT;
         break;
       case moveTypes.DOUBLE_PAWN_PUSH:
         this.zobrist ^=
@@ -575,35 +586,35 @@ export class ChessterGame {
         break;
       case moveTypes.PROMOTION_QUEEN_CAPTURE:
         board[(move >>> 14) & 0b111111] = 0;
-        board[(move >>> 8) & 0b111111] = (move & 0b0001) | 0b1010;
+        board[(move >>> 8) & 0b111111] = (move & 0b1) | pieces.WHITE_QUEEN;
         break;
       case moveTypes.PROMOTION_QUEEN:
         board[(move >>> 14) & 0b111111] = 0;
-        board[(move >>> 8) & 0b111111] = (move & 0b0001) | 0b1010;
+        board[(move >>> 8) & 0b111111] = (move & 0b1) | pieces.WHITE_QUEEN;
         break;
       case moveTypes.PROMOTION_ROOK_CAPTURE:
         board[(move >>> 14) & 0b111111] = 0;
-        board[(move >>> 8) & 0b111111] = (move & 0b0001) | 0b1000;
+        board[(move >>> 8) & 0b111111] = (move & 0b1) | pieces.WHITE_ROOK;
         break;
       case moveTypes.PROMOTION_ROOK:
         board[(move >>> 14) & 0b111111] = 0;
-        board[(move >>> 8) & 0b111111] = (move & 0b0001) | 0b1000;
+        board[(move >>> 8) & 0b111111] = (move & 0b1) | pieces.WHITE_ROOK;
         break;
       case moveTypes.PROMOTION_BISHOP_CAPTURE:
         board[(move >>> 14) & 0b111111] = 0;
-        board[(move >>> 8) & 0b111111] = (move & 0b0001) | 0b0110;
+        board[(move >>> 8) & 0b111111] = (move & 0b1) | pieces.WHITE_BISHOP;
         break;
       case moveTypes.PROMOTION_BISHOP:
         board[(move >>> 14) & 0b111111] = 0;
-        board[(move >>> 8) & 0b111111] = (move & 0b0001) | 0b0110;
+        board[(move >>> 8) & 0b111111] = (move & 0b1) | pieces.WHITE_BISHOP;
         break;
       case moveTypes.PROMOTION_KNIGHT_CAPTURE:
         board[(move >>> 14) & 0b111111] = 0;
-        board[(move >>> 8) & 0b111111] = (move & 0b0001) | 0b0100;
+        board[(move >>> 8) & 0b111111] = (move & 0b1) | pieces.WHITE_KNIGHT;
         break;
       case moveTypes.PROMOTION_KNIGHT:
         board[(move >>> 14) & 0b111111] = 0;
-        board[(move >>> 8) & 0b111111] = (move & 0b0001) | 0b0100;
+        board[(move >>> 8) & 0b111111] = (move & 0b1) | pieces.WHITE_KNIGHT;
         break;
       case moveTypes.DOUBLE_PAWN_PUSH:
       case moveTypes.MOVE:
