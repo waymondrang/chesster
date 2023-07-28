@@ -723,7 +723,7 @@ body.about #chessboard {
     overflow: hidden;
     padding: 0;
     border: none;
-    margin-bottom: calc(var(--chessboard-size, 400px) / 50);
+    margin-bottom: calc(var(--chessboard-size, 400px) / 40);
     box-sizing: border-box;
     border-radius: calc(var(--border-size, 0.25rem) * 2);
     /* box-shadow: 0 19px 38px rgba(0, 0, 0, 0.30), 0 15px 12px rgba(0, 0, 0, 0.22); */
