@@ -50,6 +50,17 @@ export class ChessterGame {
   /** zobrist keys */
   #zeys: bigint[];
 
+  /////////////////////////////////
+  //     zobrist key indexes     //
+  /////////////////////////////////
+
+  #blackToMoveZobristIndex = 768;
+  #whiteCanCastleKingsideZobristIndex = 769;
+  #whiteCanCastleQueensideZobristIndex = 770;
+  #blackCanCastleKingsideZobristIndex = 771;
+  #blackCanCastleQueensideZobristIndex = 772;
+  #enPassantFileZobristIndex = 773;
+
   /**
    * Creates a new Chesster game instance
    */
@@ -96,12 +107,17 @@ export class ChessterGame {
         if (this.board[i])
           this.zobrist ^= this.#zeys[i * 12 + (this.board[i] - 2)];
 
-      if (this.turn === BLACK) this.zobrist ^= this.#zeys[768];
+      if (this.turn === BLACK)
+        this.zobrist ^= this.#zeys[this.#blackToMoveZobristIndex];
 
-      if (this.wckc) this.zobrist ^= this.#zeys[769];
-      if (this.wcqc) this.zobrist ^= this.#zeys[770];
-      if (this.bckc) this.zobrist ^= this.#zeys[771];
-      if (this.bcqc) this.zobrist ^= this.#zeys[772];
+      if (this.wckc)
+        this.zobrist ^= this.#zeys[this.#whiteCanCastleKingsideZobristIndex];
+      if (this.wcqc)
+        this.zobrist ^= this.#zeys[this.#whiteCanCastleQueensideZobristIndex];
+      if (this.bckc)
+        this.zobrist ^= this.#zeys[this.#blackCanCastleKingsideZobristIndex];
+      if (this.bcqc)
+        this.zobrist ^= this.#zeys[this.#blackCanCastleQueensideZobristIndex];
     }
 
     this.zistory = state?.zistory ?? [this.zobrist];
@@ -475,7 +491,8 @@ export class ChessterGame {
         this.board[(move >>> 8) & 0b111111] = (move & 0b0001) | 0b0100;
         break;
       case moveTypes.DOUBLE_PAWN_PUSH:
-        this.zobrist ^= this.#zeys[((move >>> 8) & 0b111) + 773];
+        this.zobrist ^=
+          this.#zeys[((move >>> 8) & 0b111) + this.#enPassantFileZobristIndex];
       case moveTypes.MOVE:
         this.zobrist ^=
           this.#zeys[((move >>> 14) & 0b111111) * 12 + ((move & 0b1111) - 2)] ^
@@ -499,7 +516,8 @@ export class ChessterGame {
       // return (this.history[this.history.length - 1] >>> 8) & 0b111;
       this.zobrist ^=
         this.#zeys[
-          ((this.history[this.history.length - 1] >>> 8) & 0b111) + 773
+          ((this.history[this.history.length - 1] >>> 8) & 0b111) +
+            this.#enPassantFileZobristIndex
         ];
 
     this.history.push(history | (move & 0b11111111111111111111)); // order independent
@@ -510,7 +528,7 @@ export class ChessterGame {
     //     update zobrist     //
     ////////////////////////////
 
-    this.zobrist ^= this.#zeys[768]; // flip turn
+    this.zobrist ^= this.#zeys[this.#blackToMoveZobristIndex]; // flip turn
 
     let positionSeenCount = 1; // current position has, obviously, been seen once
     for (let i = this.zistory.length - 1; i >= 0; i--) {
@@ -743,22 +761,22 @@ export class ChessterGame {
 
     if (this.wckc && (this.board[60] !== 0b1100 || this.board[63] !== 0b1000)) {
       this.wckc = false;
-      this.zobrist ^= this.#zeys[769];
+      this.zobrist ^= this.#zeys[this.#whiteCanCastleKingsideZobristIndex];
     }
 
     if (this.wcqc && (this.board[60] !== 0b1100 || this.board[56] !== 0b1000)) {
       this.wcqc = false;
-      this.zobrist ^= this.#zeys[770];
+      this.zobrist ^= this.#zeys[this.#whiteCanCastleQueensideZobristIndex];
     }
 
     if (this.bckc && (this.board[4] !== 0b1101 || this.board[7] !== 0b1001)) {
       this.bckc = false;
-      this.zobrist ^= this.#zeys[771];
+      this.zobrist ^= this.#zeys[this.#blackCanCastleKingsideZobristIndex];
     }
 
     if (this.bcqc && (this.board[4] !== 0b1101 || this.board[0] !== 0b1001)) {
       this.bcqc = false;
-      this.zobrist ^= this.#zeys[772];
+      this.zobrist ^= this.#zeys[this.#blackCanCastleQueensideZobristIndex];
     }
 
     /*
