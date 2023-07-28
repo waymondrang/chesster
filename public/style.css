@@ -205,6 +205,25 @@ body:not(.about) #about_container {
     color: #BBA2DE;
 }
 
+#version {
+    grid-column-start: 3;
+    grid-column-end: 7;
+    grid-row-start: 8;
+    grid-row-end: 9;
+    position: relative;
+}
+
+#version p {
+    margin: 0;
+    padding: 0;
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    text-align: center;
+    color: #A0A9EB;
+}
+
 /*************************/
 /*     settings icon     */
 /*************************/
