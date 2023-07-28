@@ -218,7 +218,8 @@ body:not(.about) #about_container {
     background-color: #BBA2DE;
     color: #fefefe;
     cursor: pointer;
-    transition: all 0.25s cubic-bezier(0, 0, .01, 1);
+    transition: background-color 0.25s cubic-bezier(0, 0, 0, 1),
+        color 0.25s cubic-bezier(0, 0, 0, 1);
 }
 
 #close_about:hover {
@@ -243,59 +244,6 @@ body:not(.about) #about_container {
     transform: translate(-50%, -50%);
     text-align: center;
     color: #A0A9EB;
-}
-
-/*************************/
-/*     settings icon     */
-/*************************/
-
-#settings_icon {
-    background-color: transparent;
-    color: #fefefe;
-    position: relative;
-    display: flex;
-    justify-content: center;
-    align-items: center;
-    cursor: pointer;
-    transition: all 0.25s cubic-bezier(0, 0, 0, 1);
-    opacity: 0.25;
-    border: none;
-    border-radius: 999px;
-    box-sizing: border-box;
-    -webkit-user-select: none;
-    -ms-user-select: none;
-    user-select: none;
-    font-variation-settings:
-        'FILL' 1,
-        'wght' 400,
-        'GRAD' 0,
-        'opsz' 48;
-}
-
-body.settings #settings_icon {
-    color: #fefefe;
-    opacity: 1;
-}
-
-body.zen #settings_icon {
-    opacity: 0;
-}
-
-body.about #settings_icon {
-    display: none;
-}
-
-#settings_icon span {
-    transform: rotate(0deg);
-    transition: all 0.5s cubic-bezier(0, 0, 0, 1);
-}
-
-#settings_icon:hover {
-    opacity: 1 !important;
-}
-
-#settings_icon:active span {
-    transform: rotate(360deg);
 }
 
 /********************/
@@ -439,7 +387,7 @@ body.about #settings_container {
     background-color: #2c2c2c;
     color: #fefefe;
     cursor: pointer;
-    transition: all 0.25s cubic-bezier(0, 0, .01, 1);
+    transition: background-color 0.25s cubic-bezier(0, 0, .01, 1);
 }
 
 #close_settings:hover {
@@ -472,12 +420,15 @@ body.about #settings_container {
     overflow: hidden;
     box-sizing: border-box;
     border-radius: calc(var(--border-size, 0.25rem) * 2);
-    margin-bottom: calc(var(--chessboard-size, 400px) / 50);
+    margin: 0 auto;
+    margin-bottom: calc(var(--chessboard-size, 400px) / 40);
     /* box-shadow: 0 19px 38px rgba(0, 0, 0, 0.30), 0 15px 12px rgba(0, 0, 0, 0.22); */
     height: calc(var(--chessboard-size, 400px) / 8);
     user-select: none;
     position: relative;
-    transition: height 0.25s cubic-bezier(0, 0, .01, 1), margin-bottom 0.25s step-start;
+    transition: height 0.25s cubic-bezier(0, 0, .01, 1),
+        width 0.25s cubic-bezier(0, 0, .01, 1),
+        margin-bottom 0.25s step-start;
 }
 
 #info .material-symbols-outlined {
@@ -493,7 +444,7 @@ body.about #info {
 #controls {
     display: flex;
     height: 100%;
-    transition: opacity 0.5s cubic-bezier(0, 0, 0, 1);
+    /* transition: opacity 0.5s cubic-bezier(0, 0, 0, 1); */
 }
 
 body.zen #status,
@@ -514,7 +465,8 @@ body.zen #controls {
 }
 
 body.zen #info {
-    height: calc(var(--chessboard-size, 400px) / 50);
+    height: calc(var(--chessboard-size, 400px) / 40);
+    width: calc(var(--chessboard-size, 400px) / 4);
     cursor: pointer;
 }
 
@@ -527,7 +479,7 @@ body.zen #info_touch_area {
 }
 
 body.zen #game.WHITE #info_touch_area {
-    background-color: #fefefe;
+    background-color: #d9d9d9;
 }
 
 body.zen #game.BLACK #info_touch_area {
@@ -539,14 +491,15 @@ body.zen #game.BLACK #info_touch_area {
 /****************/
 
 #turn {
-    transition: all 0.25s cubic-bezier(0, 0, .01, 1);
+    transition: background-color 0.25s cubic-bezier(0, 0, .01, 1),
+        color 0.25s cubic-bezier(0, 0, .01, 1);
     height: 100%;
     width: calc(var(--chessboard-size, 400px) / 8);
     margin: 0;
     padding: 0;
     position: relative;
     z-index: 1;
-    background: #1b1b1b;
+    background-color: #1b1b1b;
 }
 
 #turn span {
@@ -557,7 +510,7 @@ body.zen #game.BLACK #info_touch_area {
 }
 
 #game.WHITE #turn {
-    background: #fefefe;
+    background-color: #fefefe;
     color: #2c2c2c;
     font-variation-settings:
         'FILL' 0,
@@ -567,7 +520,7 @@ body.zen #game.BLACK #info_touch_area {
 }
 
 #game.BLACK #turn {
-    background: #2c2c2c;
+    background-color: #2c2c2c;
     color: #fefefe;
     font-variation-settings:
         'FILL' 1,
@@ -624,7 +577,7 @@ body.zen #game.BLACK #info_touch_area {
     cursor: pointer;
     margin: 0;
     padding: 0;
-    transition: all 0.2s cubic-bezier(0, 0, .01, 1);
+    transition: width 0.2s cubic-bezier(0, 0, .01, 1);
 }
 
 #undo:disabled {
@@ -646,13 +599,14 @@ body.zen #game.BLACK #info_touch_area {
     width: calc(var(--chessboard-size, 400px) / 8);
     position: relative;
     background-color: #3b3b3b;
-    border: 0px solid transparent;
+    border: none;
     box-sizing: border-box;
     color: #fefefe;
     cursor: pointer;
     margin: 0;
     padding: 0;
-    transition: all 0.2s cubic-bezier(0, 0, 0, 1);
+    transition: background-color 0.2s cubic-bezier(0, 0, 0, 1),
+        color 0.2s cubic-bezier(0, 0, 0, 1);
 }
 
 #toggle_settings:hover {
@@ -661,7 +615,8 @@ body.zen #game.BLACK #info_touch_area {
 }
 
 #toggle_settings .material-symbols-outlined {
-    transition: all 0.25s cubic-bezier(0, 0, 0, 1);
+    transition: font-variation-settings 0.2s cubic-bezier(0, 0, 0, 1),
+        transform 0.5s cubic-bezier(0, 0, 0, 1);
     font-variation-settings:
         'FILL' 0,
         'wght' 400,
@@ -676,6 +631,15 @@ body.settings #toggle_settings .material-symbols-outlined {
         'GRAD' 0,
         'opsz' 20
 }
+
+#toggle_settings span {
+    transform: rotate(0deg);
+}
+
+#toggle_settings:active span {
+    transform: rotate(360deg);
+}
+
 
 
 /*******************/
@@ -693,7 +657,8 @@ body.settings #toggle_settings .material-symbols-outlined {
     cursor: pointer;
     margin: 0;
     padding: 0;
-    transition: all 0.2s cubic-bezier(0, 0, .01, 1);
+    transition: background-color 0.2s cubic-bezier(0, 0, 0, 1),
+        color 0.2s cubic-bezier(0, 0, 0, 1);
     /* box-shadow: 0 6px 12px rgba(242, 81, 22, 0.1), 0 6px 12px rgba(242, 81, 22, 0.1); */
 }
 
@@ -780,7 +745,7 @@ body.about #chessboard {
     color: #fefefe;
     border: none;
     cursor: pointer;
-    transition: all 0.1s cubic-bezier(0, 0, .01, 1);
+    transition: background-color 0.1s cubic-bezier(0, 0, .01, 1);
     padding: var(--border-size, 0.25rem);
 }
 
