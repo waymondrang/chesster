@@ -13,6 +13,8 @@ import {
   moveTypes,
   messageTypes,
   pieces,
+  ChessterGameState,
+  RecursivePartial,
 } from "../types";
 import {
   binaryToString,
@@ -61,6 +63,16 @@ const toggle_about = document.querySelector(
 const toggle_settings = document.querySelector(
   "#toggle_settings"
 ) as HTMLButtonElement;
+const visualize_search = document.querySelector(
+  "#visualizeSearch"
+) as HTMLSelectElement;
+const search_algorithm = document.querySelector(
+  "#searchAlgorithm"
+) as HTMLSelectElement;
+const custom_game = document.querySelector("#customGame") as HTMLInputElement;
+const load_custom_game = document.querySelector(
+  "#loadCustomGame"
+) as HTMLButtonElement;
 
 const game = new ChessterGame();
 const aiWorker = new Worker("worker.js");
@@ -96,6 +108,7 @@ var enableAI = true; // default to true
 
 var isFullscreen = false;
 var piecesAreRotated = false;
+var isTabletop = false;
 
 ///////////////////////////////
 //     utility functions     //
@@ -211,7 +224,6 @@ function initBoard(gameBoard: ChessterBoard) {
 }
 
 function updateBoard(gameBoard: ChessterBoard, previousBoard: ChessterBoard) {
-  console.log("updating board", game.turn, gameSelection);
   for (let i = 0; i < boardSize; i++) {
     if (gameBoard[i] !== previousBoard[i]) {
       if (previousBoard[i] !== 0)
@@ -232,7 +244,7 @@ function updateBoard(gameBoard: ChessterBoard, previousBoard: ChessterBoard) {
       else chessboard.classList.remove("rotated");
     }
 
-    if (gameSelection === "tabletop" || gameSelection === "pass") {
+    if (isTabletop || gameSelection === "pass") {
       if (game.turn === BLACK) document.body.classList.add("rotated");
       else document.body.classList.remove("rotated");
       piecesAreRotated = game.turn === BLACK;
@@ -420,10 +432,8 @@ aiWorker.onmessage = async function (event) {
       (
         document.querySelector("#pseudoLegalEvaluation") as HTMLInputElement
       ).value = event.data.settings.pseudoLegalEvaluation.toString();
-      (document.querySelector("#searchAlgorithm") as HTMLInputElement).value =
-        event.data.settings.searchAlgorithm;
-      (document.querySelector("#visualizeSearch") as HTMLInputElement).value =
-        event.data.settings.visualizeSearch.toString();
+      search_algorithm.value = event.data.settings.searchAlgorithm;
+      visualize_search.value = event.data.settings.visualizeSearch.toString();
 
       game_selection.value = gameSelection;
       break;
@@ -594,10 +604,10 @@ if (enableAI && fen !== "")
   aiWorker.postMessage({ type: messageTypes.MOVE, state: game.getState() });
 else turnMoves = game.moves();
 
-function restartGame() {
+function restartGame(gameState?: RecursivePartial<ChessterGameState>) {
   let previousBoard = [...game.board];
 
-  game.init();
+  game.init(gameState);
 
   clearVisualizations();
   clearMove();
@@ -633,6 +643,7 @@ function toggleSettings() {
 function settingsIconHandler(event: any) {
   event.preventDefault();
   postMessage({ type: messageTypes.REQUEST_SETTINGS });
+  customGameInputHandler(event);
   toggleSettings();
 }
 
@@ -741,12 +752,8 @@ function saveSettings() {
       pseudoLegalEvaluation:
         (document.querySelector("#pseudoLegalEvaluation") as HTMLInputElement)
           .value === "true",
-      searchAlgorithm: (
-        document.querySelector("#searchAlgorithm") as HTMLInputElement
-      ).value,
-      visualizeSearch:
-        (document.querySelector("#visualizeSearch") as HTMLInputElement)
-          .value === "true",
+      searchAlgorithm: search_algorithm.value,
+      visualizeSearch: visualize_search.value === "true",
     },
   });
 }
@@ -780,13 +787,17 @@ game_selection.addEventListener("change", () => {
   document
     .querySelector("#searchAlgorithmSetting")
     .classList.remove("disabled");
-  document.querySelector("#searchAlgorithm").classList.remove("disabled");
+  search_algorithm.classList.remove("disabled");
   document
     .querySelector("#visualizeSearchSetting")
     .classList.remove("disabled");
-  document.querySelector("#visualizeSearch").classList.remove("disabled");
+  visualize_search.classList.remove("disabled");
+
+  custom_game.classList.add("hidden");
+  load_custom_game.classList.add("hidden");
 
   piecesAreRotated = false;
+  isTabletop = false;
 
   switch (game_selection.value) {
     case "whiteAI":
@@ -802,8 +813,11 @@ game_selection.addEventListener("change", () => {
       chessboard.classList.add("rotated");
       break;
     case "tabletop":
+      isTabletop = true;
+
       document.body.classList.toggle("zen");
       document.body.classList.add("animate_rotate");
+
     case "pass":
       playerTeam = 0;
       enableAI = false;
@@ -819,12 +833,47 @@ game_selection.addEventListener("change", () => {
       document
         .querySelector("#searchAlgorithmSetting")
         .classList.add("disabled");
-      document.querySelector("#searchAlgorithm").classList.add("disabled");
+      search_algorithm.classList.add("disabled");
       document
         .querySelector("#visualizeSearchSetting")
         .classList.add("disabled");
-      document.querySelector("#visualizeSearch").classList.add("disabled");
+      visualize_search.classList.add("disabled");
       break;
+    case "custom":
+      playerTeam = 0;
+      enableAI = false;
+      isTabletop = true; // custom game currently only supports tabletop
+
+      document.body.classList.add("animate_rotate");
+
+      custom_game.classList.remove("hidden");
+      load_custom_game.classList.remove("hidden");
+
+      document.querySelector("#depthSetting").classList.add("disabled");
+      document.querySelector("#depth").classList.add("disabled");
+      document
+        .querySelector("#pseudoLegalEvaluationSetting")
+        .classList.add("disabled");
+      document
+        .querySelector("#pseudoLegalEvaluation")
+        .classList.add("disabled");
+      document
+        .querySelector("#searchAlgorithmSetting")
+        .classList.add("disabled");
+      search_algorithm.classList.add("disabled");
+      document
+        .querySelector("#visualizeSearchSetting")
+        .classList.add("disabled");
+      visualize_search.classList.add("disabled");
+      break;
+  }
+
+  switch (search_algorithm.value) {
+    case "miniMax":
+      visualize_search.classList.add("disabled");
+      document
+        .querySelector("#visualizeSearchSetting")
+        .classList.add("disabled");
       break;
   }
 
@@ -837,6 +886,54 @@ game_selection.addEventListener("change", () => {
   restartGame();
 });
 
+search_algorithm.addEventListener("change", () => {
+  visualize_search.classList.remove("disabled");
+  document
+    .querySelector("#visualizeSearchSetting")
+    .classList.remove("disabled");
+
+  switch (search_algorithm.value) {
+    case "miniMax":
+      visualize_search.classList.add("disabled");
+      document
+        .querySelector("#visualizeSearchSetting")
+        .classList.add("disabled");
+      break;
+  }
+});
+
+function loadCustomGameHandler(event: any) {
+  event.preventDefault();
+
+  if (custom_game.value === "") return;
+
+  try {
+    restartGame(fenStringToGameState(custom_game.value));
+  } catch (error) {
+    console.error(error);
+    load_custom_game.textContent = "Invalid FEN";
+    load_custom_game.classList.remove("success");
+    load_custom_game.classList.add("error");
+    return;
+  }
+
+  load_custom_game.textContent = "Success!";
+  load_custom_game.classList.remove("error");
+  load_custom_game.classList.add("success");
+}
+
+function customGameInputHandler(event: any) {
+  console.log("custom game changed");
+  load_custom_game.textContent = "Load";
+  load_custom_game.classList.remove("success");
+  load_custom_game.classList.remove("error");
+}
+
+custom_game.addEventListener("input", customGameInputHandler);
+
+load_custom_game.addEventListener("touchstart", loadCustomGameHandler);
+load_custom_game.addEventListener("click", loadCustomGameHandler);
+
 /////////////////////////
 //     dynamic css     //
 /////////////////////////
@@ -845,16 +942,50 @@ const borderMultiplier = 0.005;
 const widthScalar = 0.93333333333;
 const heightScalar = 0.72;
 const maxChessboardSize = 980;
+const borderlessThreshold = 600;
+
+var isBorderless = false;
 
 function getChessboardSize() {
-  const heightMax = window.innerHeight * heightScalar;
-  const widthMax = window.innerWidth * widthScalar;
+  const innerHeight = window.innerHeight;
+  const innerWidth = window.innerWidth;
 
-  let size = heightMax > widthMax ? widthMax : heightMax;
+  let size =
+    innerHeight * heightScalar > innerWidth * widthScalar
+      ? innerWidth * widthScalar
+      : innerHeight * heightScalar;
+
+  isBorderless = false;
 
   if (size > maxChessboardSize) size = maxChessboardSize;
+  else if (
+    innerHeight * heightScalar > innerWidth &&
+    innerWidth * widthScalar <= borderlessThreshold
+  ) {
+    size =
+      innerHeight * heightScalar > innerWidth
+        ? innerWidth
+        : innerHeight * heightScalar;
+    isBorderless = true;
+  }
 
   return size;
+}
+
+function getBorderSizeBorderless() {
+  return isBorderless
+    ? 0
+    : (window.innerHeight > window.innerWidth
+        ? window.innerWidth
+        : window.innerHeight) * borderMultiplier;
+}
+
+function getBorderSize() {
+  return (
+    (window.innerHeight > window.innerWidth
+      ? window.innerWidth
+      : window.innerHeight) * borderMultiplier
+  );
 }
 
 document.documentElement.style.setProperty(
@@ -864,11 +995,12 @@ document.documentElement.style.setProperty(
 
 document.documentElement.style.setProperty(
   "--border-size",
-  (window.innerHeight > window.innerWidth
-    ? window.innerWidth
-    : window.innerHeight) *
-    borderMultiplier +
-    "px"
+  getBorderSize() + "px"
+);
+
+document.documentElement.style.setProperty(
+  "--border-size-borderless",
+  getBorderSizeBorderless() + "px"
 );
 
 window.addEventListener("resize", () => {
@@ -876,12 +1008,14 @@ window.addEventListener("resize", () => {
     "--chessboard-size",
     getChessboardSize() + "px"
   );
+
   document.documentElement.style.setProperty(
     "--border-size",
-    (window.innerHeight > window.innerWidth
-      ? window.innerWidth
-      : window.innerHeight) *
-      borderMultiplier +
-      "px"
+    getBorderSize() + "px"
+  );
+
+  document.documentElement.style.setProperty(
+    "--border-size-borderless",
+    getBorderSizeBorderless() + "px"
   );
 });

@@ -107,7 +107,6 @@ nav {
     box-sizing: border-box;
     z-index: 9999;
     font-size: var(--settings-secondary-font-size);
-    border-radius: calc(var(--border-size, 0.25rem) * 2);
     display: grid;
     grid-template-columns: repeat(4, 1fr);
     grid-template-rows: repeat(6, 1fr);
@@ -234,7 +233,7 @@ body:not(.about) #about_container {
     width: 100%;
     transform: translate(-50%, 0);
     opacity: 0;
-    color: #ffffff;
+    color: #F9900A;
     transition: opacity 0.25s cubic-bezier(0, 0, 0, 1);
 }
 
@@ -261,7 +260,7 @@ body:not(.about) #about_container {
     grid-template-columns: repeat(8, 1fr);
     grid-template-rows: repeat(8, 1fr);
     grid-auto-flow: row;
-    border-radius: calc(var(--border-size, 0.25rem) * 2);
+    border-radius: calc(var(--border-size-borderless, 0.25rem) * 2);
     overflow: hidden;
 }
 
@@ -327,10 +326,78 @@ body.about #settings_container {
     max-width: 420px;
 }
 
-#filler {
-    grid-column-start: 4;
+#gameSelection,
+#gameSelectionSetting {
+    z-index: 1000;
+}
+
+#loadCustomGame {
+    grid-column-start: 6;
     grid-column-end: 9;
-    background: #2c2c2c;
+    grid-row-start: 2;
+    grid-row-end: 3;
+    transition: transform 0.25s cubic-bezier(0, 0, 0, 1),
+        visibility 0.25s cubic-bezier(0, 0, 0, 1),
+        background-color 0.25s cubic-bezier(0, 0, 0, 1);
+    background-color: #B2A6F5;
+    z-index: 999;
+    border: none;
+    font-family: inherit;
+    font-size: var(--settings-font-size);
+    color: #fefefe;
+    cursor: pointer;
+}
+
+#loadCustomGame.success {
+    background-color: #96A862;
+    color: #fefefe;
+}
+
+#loadCustomGame.error {
+    background-color: #A970C2;
+    color: #fefefe;
+}
+
+#customGame {
+    grid-column-start: 1;
+    grid-column-end: 6;
+    grid-row-start: 2;
+    grid-row-end: 3;
+    background-color: #9185D4;
+    padding: 0 0 0 var(--settings-inner-padding);
+    box-sizing: border-box;
+    z-index: 999;
+    border: none;
+    font-family: inherit;
+    font-size: var(--settings-font-size);
+    color: #fefefe;
+    transition: transform 0.25s cubic-bezier(0, 0, 0, 1),
+        visibility 0.25s cubic-bezier(0, 0, 0, 1);
+}
+
+#customGame::placeholder {
+    color: #fefefe;
+    opacity: 0.6;
+}
+
+#customGame.hidden,
+#loadCustomGame.hidden {
+    transform: translateY(calc(-1 * var(--chessboard-size, 400px) / 8));
+    visibility: hidden;
+}
+
+#depthSetting {
+    grid-column-start: 1;
+    grid-column-end: 6;
+    grid-row-start: 2;
+    grid-row-end: 3;
+}
+
+#depth {
+    grid-column-start: 6;
+    grid-column-end: 9;
+    grid-row-start: 2;
+    grid-row-end: 3;
 }
 
 #toggle_fullscreen {
@@ -414,7 +481,7 @@ body.about #settings_container {
     width: 100%;
     overflow: hidden;
     box-sizing: border-box;
-    border-radius: calc(var(--border-size, 0.25rem) * 2);
+    border-radius: calc(var(--border-size-borderless, 0.25rem) * 2);
     margin: 0 auto;
     margin-bottom: calc(var(--chessboard-size, 400px) / 40);
     /* box-shadow: 0 19px 38px rgba(0, 0, 0, 0.30), 0 15px 12px rgba(0, 0, 0, 0.22); */
@@ -463,6 +530,7 @@ body.zen #info_touch_area {
 body.zen #info {
     height: calc(var(--chessboard-size, 400px) / 40);
     width: calc(var(--chessboard-size, 400px) / 4);
+    border-radius: calc(var(--border-size, 0.25rem) * 2);
     cursor: pointer;
 }
 
@@ -697,7 +765,7 @@ body.settings #toggle_settings .material-symbols-outlined {
     border: none;
     color: #1b1b1b;
     /* box-shadow: 0 19px 38px rgba(0, 0, 0, 0.30), 0 15px 12px rgba(0, 0, 0, 0.22); */
-    border-radius: calc(var(--border-size, 0.25rem) * 2);
+    border-radius: calc(var(--border-size-borderless, 0.25rem) * 2);
     box-sizing: border-box;
     overflow: hidden;
     position: relative;
@@ -775,7 +843,7 @@ body.about #chessboard {
     border: none;
     margin-bottom: calc(var(--chessboard-size, 400px) / 40);
     box-sizing: border-box;
-    border-radius: calc(var(--border-size, 0.25rem) * 2);
+    border-radius: calc(var(--border-size-borderless, 0.25rem) * 2);
     /* box-shadow: 0 19px 38px rgba(0, 0, 0, 0.30), 0 15px 12px rgba(0, 0, 0, 0.22); */
     z-index: 999;
     transition: height 0.25s cubic-bezier(0, 0, .01, 1), margin-bottom 0.25s step-start;
@@ -787,6 +855,10 @@ body.about #chessboard {
     transition: height 0.25s cubic-bezier(0, 0, .01, 1), margin-bottom 0.5s cubic-bezier(0.75, 0, 0.25, 1);
 }
 
+body.about #promotion {
+    display: none;
+}
+
 #promotion button {
     font-size: var(--primary-font-size);
     height: calc(var(--chessboard-size, 400px) / 8);
@@ -796,7 +868,6 @@ body.about #chessboard {
     border: none;
     cursor: pointer;
     transition: background-color 0.1s cubic-bezier(0, 0, 0, 1);
-    padding: var(--border-size, 0.25rem);
 }
 
 #promotion button:hover {
@@ -919,41 +990,41 @@ body.rotated #chessboard .piece {
 }
 
 .cell img#checkmated {
-    height: calc(var(--border-size, 0.25rem) * 2);
+    height: calc(var(--border-size, 0.25rem) * 2.2);
     position: absolute;
-    top: calc(var(--border-size, 0.25rem) + var(--border-size, 0.25rem) / 2);
-    right: calc(var(--border-size, 0.25rem) + var(--border-size, 0.25rem) / 2);
+    top: 8%;
+    right: 8%;
 }
 
 
 body.rotated .cell img#checkmated {
     top: initial;
     right: initial;
-    bottom: calc(var(--border-size, 0.25rem) + var(--border-size, 0.25rem) / 2);
-    left: calc(var(--border-size, 0.25rem) + var(--border-size, 0.25rem) / 2);
+    bottom: 8%;
+    left: 8%;
 }
 
 .cell img#checked {
-    height: calc(var(--border-size, 0.25rem) * 2);
+    height: calc(var(--border-size, 0.25rem) * 2.2);
     position: absolute;
     border-radius: 50%;
-    top: calc(var(--border-size, 0.25rem));
-    right: calc(var(--border-size, 0.25rem));
+    top: 8%;
+    right: 8%;
 }
 
 body.rotated .cell img#checked {
     top: initial;
     right: initial;
-    bottom: calc(var(--border-size, 0.25rem));
-    left: calc(var(--border-size, 0.25rem));
+    bottom: 8%;
+    left: 8%;
 }
 
 .cell.variant1 img#checked {
-    border: calc(var(--border-size, 0.25rem) / 2) solid #d9d9d9;
+    border: calc(var(--border-size, 0.25rem) / 1.6) solid #d9d9d9;
 }
 
 .cell.variant2 img#checked {
-    border: calc(var(--border-size, 0.25rem) / 2) solid #b5b5b5;
+    border: calc(var(--border-size, 0.25rem) / 1.6) solid #b5b5b5;
 }
 
 .cell.variant1 {

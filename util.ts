@@ -78,12 +78,17 @@ export function fenStringToBoard(fen: string, flip?: boolean): number[] {
 
       if (isNaN(spaceCount)) {
         // if is not a number, try to read in as a piece
+        if (fenToPiece[ch] === undefined)
+          throw new Error("Invalid fen string: " + fen);
         newBoard.push(fenToPiece[ch]);
       } else {
         // otherwise skip as many spaces
         newBoard = newBoard.concat(Array(spaceCount).fill(0));
       }
     }
+
+    if (newBoard.length % 8 !== 0)
+      throw new Error("Invalid fen string: " + fen);
   }
 
   return newBoard;
@@ -97,6 +102,14 @@ export function fenStringToGameState(
     w: WHITE,
     b: BLACK,
   };
+
+  // sanity check
+  if (
+    fen.split(" ").length < 3 ||
+    fen.split(" ")[0].split("/").length !== 8 ||
+    (fen.split(" ")[1] !== "w" && fen.split(" ")[1] !== "b")
+  )
+    throw new Error("Invalid fen string: " + fen);
 
   return {
     board: fenStringToBoard(fen.split(" ")[0], flip),
