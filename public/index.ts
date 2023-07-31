@@ -319,6 +319,55 @@ async function makeMove(move: ChessterMove) {
             elementBoard[to].cell.offsetTop - elementBoard[from].cell.offsetTop
           }px)`;
 
+      switch ((move >>> 4) & 0b1111) {
+        case moveTypes.CASTLE_KINGSIDE:
+          elementBoard[to + 1].piece.classList.add("moving");
+          elementBoard[to + 1].piece.style.transform = piecesAreRotated
+            ? `translate(${
+                elementBoard[to - 1].cell.offsetLeft -
+                elementBoard[to + 1].cell.offsetLeft
+              }px, ${
+                elementBoard[to - 1].cell.offsetTop -
+                elementBoard[to + 1].cell.offsetTop
+              }px) rotate(180deg)`
+            : `translate(${
+                elementBoard[to - 1].cell.offsetLeft -
+                elementBoard[to + 1].cell.offsetLeft
+              }px, ${
+                elementBoard[to - 1].cell.offsetTop -
+                elementBoard[to + 1].cell.offsetTop
+              }px)`;
+
+          setTimeout(() => {
+            elementBoard[to + 1].piece.style.transform = "";
+            elementBoard[to + 1].piece.classList.remove("moving");
+          }, 250); // duration of css animation
+          break;
+        case moveTypes.CASTLE_QUEENSIDE:
+          elementBoard[to - 2].piece.classList.add("moving");
+          elementBoard[to - 2].piece.style.transform = piecesAreRotated
+            ? `translate(${
+                elementBoard[to + 1].cell.offsetLeft -
+                elementBoard[to - 2].cell.offsetLeft
+              }px, ${
+                elementBoard[to + 1].cell.offsetTop -
+                elementBoard[to - 2].cell.offsetTop
+              }px) rotate(180deg)`
+            : `translate(${
+                elementBoard[to + 1].cell.offsetLeft -
+                elementBoard[to - 2].cell.offsetLeft
+              }px, ${
+                elementBoard[to + 1].cell.offsetTop -
+                elementBoard[to - 2].cell.offsetTop
+              }px)`;
+
+          setTimeout(() => {
+            elementBoard[to - 2].piece.style.transform = "";
+            elementBoard[to - 2].piece.classList.remove("moving");
+          }, 250); // duration of css animation
+          break;
+      }
+
       setTimeout(() => {
         elementBoard[from].piece.style.transform = "";
         elementBoard[from].piece.classList.remove("moving");
