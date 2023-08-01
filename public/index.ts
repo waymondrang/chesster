@@ -2,6 +2,7 @@
 //     imports     //
 /////////////////////
 
+import { jar } from "request";
 import { ChessterGame } from "../game";
 import {
   BLACK,
@@ -15,6 +16,7 @@ import {
   pieces,
   ChessterGameState,
   RecursivePartial,
+  WHITE,
 } from "../types";
 import {
   binaryToString,
@@ -73,6 +75,9 @@ const custom_game = document.querySelector("#customGame") as HTMLInputElement;
 const load_custom_game = document.querySelector(
   "#loadCustomGame"
 ) as HTMLButtonElement;
+const show_custom_game = document.querySelector(
+  "#showCustomGame"
+) as HTMLButtonElement;
 
 const game = new ChessterGame();
 const aiWorker = new Worker("worker.js");
@@ -101,7 +106,14 @@ var turnMoves: ChessterMove[] = [];
 var selectedPieceElement: HTMLElement = null;
 var selectedPieceMoves: ChessterMove[] = [];
 
-var gameSelection: "whiteAI" | "blackAI" | "pass" | "tabletop" = "whiteAI";
+var gameSelection:
+  | "whiteAI"
+  | "blackAI"
+  | "local"
+  | "tabletop"
+  | "customLocal"
+  | "customTabletop"
+  | "customChesster" = "whiteAI";
 
 var playerTeam: 0 | 1 = fen !== "" ? ((0b1 ^ game.turn) as 0 | 1) : 0; // default to white
 var enableAI = true; // default to true
@@ -109,6 +121,9 @@ var enableAI = true; // default to true
 var isFullscreen = false;
 var piecesAreRotated = false;
 var isTabletop = false;
+var isLocal = false;
+
+var importedFEN = "";
 
 ///////////////////////////////
 //     utility functions     //
@@ -161,7 +176,7 @@ function updateVisualizeMove(move: ChessterMove) {
 function updateStatus(gameTurn: ChessterTeam) {
   game_div.classList.remove("WHITE");
   game_div.classList.remove("BLACK");
-  game_div.classList.add(gameTurn === 0 ? "WHITE" : "BLACK");
+  game_div.classList.add(gameTurn === WHITE ? "WHITE" : "BLACK");
 
   if (enableAI && gameTurn !== playerTeam) turn_span.classList.add("thinking");
   else turn_span.classList.remove("thinking");
@@ -239,12 +254,12 @@ function updateBoard(gameBoard: ChessterBoard, previousBoard: ChessterBoard) {
       chessboard.classList.add("disabled");
     else chessboard.classList.remove("disabled");
 
-    if (gameSelection === "pass") {
+    if (isLocal) {
       if (game.turn === BLACK) chessboard.classList.add("rotated");
       else chessboard.classList.remove("rotated");
     }
 
-    if (isTabletop || gameSelection === "pass") {
+    if (isTabletop || isLocal) {
       if (game.turn === BLACK) document.body.classList.add("rotated");
       else document.body.classList.remove("rotated");
       piecesAreRotated = game.turn === BLACK;
@@ -609,6 +624,16 @@ function restartGame(gameState?: RecursivePartial<ChessterGameState>) {
 
   game.init(gameState);
 
+  if (gameSelection === "customChesster") {
+    playerTeam = game.turn;
+
+    if (playerTeam === BLACK) {
+      piecesAreRotated = true;
+      document.body.classList.add("rotated");
+      chessboard.classList.add("rotated");
+    }
+  }
+
   clearVisualizations();
   clearMove();
 
@@ -617,8 +642,8 @@ function restartGame(gameState?: RecursivePartial<ChessterGameState>) {
   updateLastMove(game.history);
   updateIndicators();
 
-  if (enableAI && playerTeam === BLACK)
-    // ai will make first move if player is black
+  if (enableAI && game.turn !== playerTeam)
+    // ai will make first move if player is black or
     aiWorker.postMessage({ type: messageTypes.MOVE, state: game.getState() });
 
   selectedPieceElement = null;
@@ -626,15 +651,21 @@ function restartGame(gameState?: RecursivePartial<ChessterGameState>) {
   turnMoves = game.moves();
 }
 
-restart.addEventListener("touchstart", (event) => {
+function restartHandler(event: any) {
   event.preventDefault();
-  restartGame();
-});
+  if (
+    gameSelection === "customChesster" ||
+    gameSelection === "customLocal" ||
+    gameSelection === "customTabletop"
+  ) {
+    restartGame(fenStringToGameState(importedFEN));
+  } else {
+    restartGame();
+  }
+}
 
-restart.addEventListener("click", (event) => {
-  event.preventDefault();
-  restartGame();
-});
+restart.addEventListener("touchstart", restartHandler);
+restart.addEventListener("click", restartHandler);
 
 function toggleSettings() {
   document.body.classList.toggle("settings");
@@ -795,9 +826,13 @@ game_selection.addEventListener("change", () => {
 
   custom_game.classList.add("hidden");
   load_custom_game.classList.add("hidden");
+  show_custom_game.classList.add("hidden");
 
   piecesAreRotated = false;
   isTabletop = false;
+  isLocal = false;
+  gameSelection = game_selection.value as typeof gameSelection;
+  importedFEN = "";
 
   switch (game_selection.value) {
     case "whiteAI":
@@ -813,14 +848,13 @@ game_selection.addEventListener("change", () => {
       chessboard.classList.add("rotated");
       break;
     case "tabletop":
+      playerTeam = 0;
+      enableAI = false;
+
       isTabletop = true;
 
       document.body.classList.toggle("zen");
       document.body.classList.add("animate_rotate");
-
-    case "pass":
-      playerTeam = 0;
-      enableAI = false;
 
       document.querySelector("#depthSetting").classList.add("disabled");
       document.querySelector("#depth").classList.add("disabled");
@@ -839,11 +873,36 @@ game_selection.addEventListener("change", () => {
         .classList.add("disabled");
       visualize_search.classList.add("disabled");
       break;
-    case "custom":
+    case "local":
       playerTeam = 0;
       enableAI = false;
-      isTabletop = true; // custom game currently only supports tabletop
 
+      isLocal = true;
+
+      document.querySelector("#depthSetting").classList.add("disabled");
+      document.querySelector("#depth").classList.add("disabled");
+      document
+        .querySelector("#pseudoLegalEvaluationSetting")
+        .classList.add("disabled");
+      document
+        .querySelector("#pseudoLegalEvaluation")
+        .classList.add("disabled");
+      document
+        .querySelector("#searchAlgorithmSetting")
+        .classList.add("disabled");
+      search_algorithm.classList.add("disabled");
+      document
+        .querySelector("#visualizeSearchSetting")
+        .classList.add("disabled");
+      visualize_search.classList.add("disabled");
+      break;
+    case "customTabletop":
+      playerTeam = 0;
+      enableAI = false;
+
+      isTabletop = true;
+
+      document.body.classList.toggle("zen");
       document.body.classList.add("animate_rotate");
 
       custom_game.classList.remove("hidden");
@@ -866,6 +925,37 @@ game_selection.addEventListener("change", () => {
         .classList.add("disabled");
       visualize_search.classList.add("disabled");
       break;
+    case "customLocal":
+      playerTeam = 0;
+      enableAI = false;
+
+      isLocal = true;
+
+      custom_game.classList.remove("hidden");
+      load_custom_game.classList.remove("hidden");
+
+      document.querySelector("#depthSetting").classList.add("disabled");
+      document.querySelector("#depth").classList.add("disabled");
+      document
+        .querySelector("#pseudoLegalEvaluationSetting")
+        .classList.add("disabled");
+      document
+        .querySelector("#pseudoLegalEvaluation")
+        .classList.add("disabled");
+      document
+        .querySelector("#searchAlgorithmSetting")
+        .classList.add("disabled");
+      search_algorithm.classList.add("disabled");
+      document
+        .querySelector("#visualizeSearchSetting")
+        .classList.add("disabled");
+      visualize_search.classList.add("disabled");
+      break;
+    case "customChesster":
+      playerTeam = 0;
+      enableAI = true;
+      show_custom_game.classList.remove("hidden");
+      break;
   }
 
   switch (search_algorithm.value) {
@@ -876,12 +966,6 @@ game_selection.addEventListener("change", () => {
         .classList.add("disabled");
       break;
   }
-
-  gameSelection = game_selection.value as
-    | "whiteAI"
-    | "blackAI"
-    | "pass"
-    | "tabletop";
 
   restartGame();
 });
@@ -902,8 +986,14 @@ search_algorithm.addEventListener("change", () => {
   }
 });
 
+var loadCustomGameTimeout: NodeJS.Timeout;
+
 function loadCustomGameHandler(event: any) {
   event.preventDefault();
+
+  piecesAreRotated = false;
+  document.body.classList.remove("rotated");
+  chessboard.classList.remove("rotated");
 
   if (custom_game.value === "") return;
 
@@ -917,13 +1007,22 @@ function loadCustomGameHandler(event: any) {
     return;
   }
 
+  importedFEN = custom_game.value;
+
   load_custom_game.textContent = "Success!";
   load_custom_game.classList.remove("error");
   load_custom_game.classList.add("success");
+
+  if (gameSelection === "customChesster") {
+    clearTimeout(loadCustomGameTimeout);
+    loadCustomGameTimeout = setTimeout(() => {
+      load_custom_game.classList.add("hidden");
+      custom_game.classList.add("hidden");
+    }, 500);
+  }
 }
 
 function customGameInputHandler(event: any) {
-  console.log("custom game changed");
   load_custom_game.textContent = "Load";
   load_custom_game.classList.remove("success");
   load_custom_game.classList.remove("error");
@@ -933,6 +1032,16 @@ custom_game.addEventListener("input", customGameInputHandler);
 
 load_custom_game.addEventListener("touchstart", loadCustomGameHandler);
 load_custom_game.addEventListener("click", loadCustomGameHandler);
+
+function showCustomGameHandler(event: any) {
+  event.preventDefault();
+
+  custom_game.classList.toggle("hidden");
+  load_custom_game.classList.toggle("hidden");
+}
+
+show_custom_game.addEventListener("touchstart", showCustomGameHandler);
+show_custom_game.addEventListener("click", showCustomGameHandler);
 
 /////////////////////////
 //     dynamic css     //

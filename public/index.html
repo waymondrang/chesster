@@ -29,14 +29,15 @@
             <label for="gameSelection">Game Selection</label>
           </div>
         </div>
+        <button id="showCustomGame" class="hidden">Import FEN</button>
         <select name="gameSelection" id="gameSelection">
           <option value="whiteAI">Player vs. Chesster</option>
           <option value="blackAI">Chesster vs. Player</option>
-          <option value="pass">Local Game</option>
+          <option value="local">Local Game</option>
           <option value="tabletop">Tabletop Game</option>
-          <option value="custom">Custom Tabletop Game</option>
-          <option value="" disabled>Custom Chesster Game</option>
-          <option value="" disabled>Custom Local Game</option>
+          <option value="customLocal">Custom Local</option>
+          <option value="customTabletop">Custom Tabletop</option>
+          <option value="customChesster">Custom Chesster</option>
           <option value="" disabled>Battle Royale</option>
         </select>
         <div class="setting" id="depthSetting">
@@ -121,7 +122,7 @@
             Project
           </p>
           <div id="version">
-            <p>0e5913a</p>
+            <p>71c31ae</p>
           </div>
         </div>
         <div class="middle">

@@ -278,7 +278,7 @@ body.about #settings_container {
     display: flex;
     justify-content: space-between;
     align-items: center;
-    z-index: 999;
+    z-index: 0;
     overflow: hidden;
     grid-column-start: 1;
     grid-column-end: 6;
@@ -313,6 +313,7 @@ body.about #settings_container {
     grid-column-start: 6;
     grid-column-end: 9;
     font-size: var(--settings-font-size);
+    outline: none;
 }
 
 .setting p {
@@ -326,9 +327,19 @@ body.about #settings_container {
     max-width: 420px;
 }
 
-#gameSelection,
+#gameSelection {
+    z-index: 3;
+}
+
 #gameSelectionSetting {
-    z-index: 1000;
+    z-index: 1;
+}
+
+#gameSelectionSetting {
+    grid-column-start: 1;
+    grid-column-end: 6;
+    grid-row-start: 1;
+    grid-row-end: 2;
 }
 
 #loadCustomGame {
@@ -340,7 +351,7 @@ body.about #settings_container {
         visibility 0.25s cubic-bezier(0, 0, 0, 1),
         background-color 0.25s cubic-bezier(0, 0, 0, 1);
     background-color: #B2A6F5;
-    z-index: 999;
+    z-index: 1;
     border: none;
     font-family: inherit;
     font-size: var(--settings-font-size);
@@ -366,7 +377,7 @@ body.about #settings_container {
     background-color: #9185D4;
     padding: 0 0 0 var(--settings-inner-padding);
     box-sizing: border-box;
-    z-index: 999;
+    z-index: 0;
     border: none;
     font-family: inherit;
     font-size: var(--settings-font-size);
@@ -383,6 +394,28 @@ body.about #settings_container {
 #customGame.hidden,
 #loadCustomGame.hidden {
     transform: translateY(calc(-1 * var(--chessboard-size, 400px) / 8));
+    visibility: hidden;
+}
+
+#showCustomGame {
+    grid-column-start: 4;
+    grid-column-end: 6;
+    grid-row-start: 1;
+    grid-row-end: 2;
+    z-index: 2;
+    border: none;
+    font-family: inherit;
+    font-size: var(--settings-font-size);
+    transition: transform 0.25s cubic-bezier(0, 0, 0, 1),
+        visibility 0.25s cubic-bezier(0, 0, 0, 1),
+        background-color 0.25s cubic-bezier(0, 0, 0, 1);
+    background-color: #B2A6F5;
+    color: #fefefe;
+    cursor: pointer;
+}
+
+#showCustomGame.hidden {
+    transform: translateX(calc(var(--chessboard-size, 400px) / 4));
     visibility: hidden;
 }
 
