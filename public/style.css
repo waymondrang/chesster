@@ -26,7 +26,7 @@ input {
 }
 
 p.warn {
-    color: #F25116 !important;
+    color: #F9900A !important;
 }
 
 h1,
@@ -36,45 +36,6 @@ h4,
 h5,
 h6 {
     font-family: 'Gasoek One', sans-serif;
-}
-
-#settings_icon,
-#chesster {
-    touch-action: manipulation;
-}
-
-#chesster {
-    font-size: var(--primary-font-size, 1rem);
-    font-weight: 400;
-    font-style: normal;
-    font-stretch: normal;
-    font-optical-sizing: auto;
-    text-align: start;
-    line-height: initial;
-    margin: 0;
-    opacity: 0.1;
-    /* animation: titleFade 5s cubic-bezier(1, 0, 0, 1); */
-    transition: opacity 0.5s cubic-bezier(0, 0, .01, 1);
-    user-select: none;
-
-    position: absolute;
-    top: 50%;
-    left: 50%;
-    transform: translate(-50%, -50%);
-
-    z-index: 999;
-}
-
-/* #chesster:hover {
-    opacity: 1 !important;
-} */
-
-body.zen #chesster {
-    opacity: 0;
-}
-
-body.about #chesster {
-    display: none;
 }
 
 @keyframes titleFade {
@@ -263,9 +224,12 @@ body:not(.about) #about_container {
     overflow: hidden;
 }
 
-body:not(.settings) #settings_container,
-body.about #settings_container {
+body:not(.settings) #settings_container {
     display: none;
+}
+
+body.about #settings_container {
+    visibility: hidden;
 }
 
 .setting {
@@ -510,7 +474,7 @@ body.about #settings_container {
 }
 
 body.about #info {
-    display: none;
+    visibility: hidden;
 }
 
 body.zen #turn,
@@ -867,7 +831,7 @@ body.about #chessboard {
 }
 
 body.about #promotion {
-    display: none;
+    visibility: hidden;
 }
 
 #promotion button {
