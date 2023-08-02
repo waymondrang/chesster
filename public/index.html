@@ -29,10 +29,9 @@
             <label for="gameSelection">Game Selection</label>
           </div>
         </div>
-        <button id="showCustomGame" class="hidden">Import FEN</button>
+        <button id="showCustomGame" class="hidden">Configure</button>
         <select name="gameSelection" id="gameSelection">
-          <option value="whiteAI">Player vs. Chesster</option>
-          <option value="blackAI">Chesster vs. Player</option>
+          <option value="chesster">ChessterNet</option>
           <option value="local">Local Game</option>
           <option value="tabletop">Tabletop Game</option>
           <option value="customLocal">Custom Local</option>
@@ -40,20 +39,24 @@
           <option value="customChesster">Custom Chesster</option>
           <option value="" disabled>Battle Royale</option>
         </select>
+
+        <div class="setting" id="playAsSetting">
+          <div>
+            <label for="playAs">Play As</label>
+            <p class="warn">Changing this will restart the game.</p>
+          </div>
+        </div>
+        <select name="playAs" id="playAs">
+          <option value="white">White</option>
+          <option value="black">Black</option>
+        </select>
+
         <div class="setting" id="depthSetting">
           <div>
             <label for="depth">Search Depth</label>
             <p>Larger depths may result in slower but stronger play.</p>
           </div>
         </div>
-        <input
-          class="autosave hidden"
-          type="text"
-          name="customGame"
-          id="customGame"
-          placeholder="Enter FEN string"
-        />
-        <button class="hidden" id="loadCustomGame">Load</button>
         <select class="autosave" name="depth" id="depth">
           <option value="1">1</option>
           <option value="2">2</option>
@@ -63,6 +66,16 @@
           <option value="6">6</option>
           <option value="7">7</option>
         </select>
+
+        <input
+          class="autosave hidden"
+          type="text"
+          name="customGame"
+          id="customGame"
+          placeholder="Enter FEN string"
+        />
+        <button class="hidden" id="loadCustomGame">Load</button>
+
         <div class="setting" id="pseudoLegalEvaluationSetting">
           <div>
             <label for="pseudoLegalEvaluation">Psuedo-Legal Evaluation</label>
@@ -102,9 +115,9 @@
           <span class="material-symbols-outlined"> fullscreen </span>
         </button>
         <button id="toggle_about">About Chesster</button>
-        <button id="close_settings">
+        <!-- <button id="close_settings">
           <span class="material-symbols-outlined">close</span>
-        </button>
+        </button> -->
       </div>
       <div id="about_container">
         <a

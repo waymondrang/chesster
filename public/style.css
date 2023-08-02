@@ -21,6 +21,14 @@ body {
     color: #fefefe;
 }
 
+input {
+    border-radius: 0;
+}
+
+p.warn {
+    color: #F25116 !important;
+}
+
 h1,
 h2,
 h3,
@@ -81,15 +89,6 @@ body.about #chesster {
     100% {
         opacity: 0.1;
     }
-}
-
-nav {
-    margin: 0 auto;
-    width: var(--chessboard-size, 400px);
-    padding: 0.5rem 0;
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
 }
 
 /***************************/
@@ -285,12 +284,6 @@ body.about #settings_container {
     transition: opacity 0.1s cubic-bezier(0, 0, 0, 1);
 }
 
-.setting.empty {
-    background: transparent;
-    grid-column-start: 1;
-    grid-column-end: 9;
-}
-
 .setting.disabled,
 #settings_container select.disabled {
     pointer-events: none;
@@ -419,14 +412,14 @@ body.about #settings_container {
     visibility: hidden;
 }
 
-#depthSetting {
+#playAsSetting {
     grid-column-start: 1;
     grid-column-end: 6;
     grid-row-start: 2;
     grid-row-end: 3;
 }
 
-#depth {
+#playAs {
     grid-column-start: 6;
     grid-column-end: 9;
     grid-row-start: 2;
@@ -440,6 +433,8 @@ body.about #settings_container {
     background: transparent;
     grid-column-start: 1;
     grid-column-end: 6;
+    grid-row-start: 7;
+    grid-row-end: 9;
     background-color: #6e791b;
     color: #fefefe;
     cursor: pointer;
@@ -458,6 +453,8 @@ body.about #settings_container {
     background: transparent;
     grid-column-start: 6;
     grid-column-end: 9;
+    grid-row-start: 7;
+    grid-row-end: 9;
     background-color: #A0A9EB;
     color: #fefefe;
     cursor: pointer;
@@ -468,25 +465,6 @@ body.about #settings_container {
     align-items: center;
     justify-content: center;
     color: #fefefe;
-}
-
-#close_settings {
-    border: none;
-    /* border-top: 1px solid #3b3b3b; */
-    box-sizing: border-box;
-    background: transparent;
-    grid-column-start: 1;
-    grid-column-end: 9;
-    grid-row-start: 7;
-    grid-row-end: 9;
-    background-color: #2c2c2c;
-    color: #fefefe;
-    cursor: pointer;
-    transition: background-color 0.25s cubic-bezier(0, 0, .01, 1);
-}
-
-#close_settings:hover {
-    background-color: #3b3b3b;
 }
 
 /****************/

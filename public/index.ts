@@ -46,9 +46,6 @@ const undo = document.querySelector("#undo") as HTMLButtonElement;
 const settings_container = document.querySelector(
   "#settings_container"
 ) as HTMLDivElement;
-const close_settings = document.querySelector(
-  "#close_settings"
-) as HTMLButtonElement;
 const close_about = document.querySelector("#close_about") as HTMLButtonElement;
 const game_selection = document.querySelector(
   "#gameSelection"
@@ -78,6 +75,7 @@ const load_custom_game = document.querySelector(
 const show_custom_game = document.querySelector(
   "#showCustomGame"
 ) as HTMLButtonElement;
+const play_as = document.querySelector("#playAs") as HTMLSelectElement;
 
 const game = new ChessterGame();
 const aiWorker = new Worker("worker.js");
@@ -107,13 +105,12 @@ var selectedPieceElement: HTMLElement = null;
 var selectedPieceMoves: ChessterMove[] = [];
 
 var gameSelection:
-  | "whiteAI"
-  | "blackAI"
+  | "chesster"
   | "local"
   | "tabletop"
   | "customLocal"
   | "customTabletop"
-  | "customChesster" = "whiteAI";
+  | "customChesster" = "chesster";
 
 var playerTeam: 0 | 1 = fen !== "" ? ((0b1 ^ game.turn) as 0 | 1) : 0; // default to white
 var enableAI = true; // default to true
@@ -442,15 +439,21 @@ aiWorker.onmessage = async function (event) {
       await makeMove(event.data.move);
       break;
     case messageTypes.SETTINGS:
+      /////////////////////////////
+      //     update settings     //
+      /////////////////////////////
+
       (document.querySelector("#depth") as HTMLInputElement).value =
         event.data.settings.depth.toString();
       (
         document.querySelector("#pseudoLegalEvaluation") as HTMLInputElement
       ).value = event.data.settings.pseudoLegalEvaluation.toString();
+
       search_algorithm.value = event.data.settings.searchAlgorithm;
       visualize_search.value = event.data.settings.visualizeSearch.toString();
-
       game_selection.value = gameSelection;
+      play_as.value = playerTeam === WHITE ? "white" : "black";
+
       break;
     case messageTypes.VISUALIZE_MOVE:
       updateVisualizeMove(event.data.move);
@@ -619,19 +622,19 @@ if (enableAI && fen !== "")
   aiWorker.postMessage({ type: messageTypes.MOVE, state: game.getState() });
 else turnMoves = game.moves();
 
-function restartGame(gameState?: RecursivePartial<ChessterGameState>) {
+function restartGame() {
   let previousBoard = [...game.board];
 
-  game.init(gameState);
+  if (importedFEN !== "") game.init(fenStringToGameState(importedFEN));
+  else game.init();
 
-  if (gameSelection === "customChesster") {
-    playerTeam = game.turn;
+  document.body.classList.remove("rotated");
+  chessboard.classList.remove("rotated");
 
-    if (playerTeam === BLACK) {
-      piecesAreRotated = true;
-      document.body.classList.add("rotated");
-      chessboard.classList.add("rotated");
-    }
+  if (playerTeam === BLACK) {
+    piecesAreRotated = true;
+    document.body.classList.add("rotated");
+    chessboard.classList.add("rotated");
   }
 
   clearVisualizations();
@@ -653,15 +656,7 @@ function restartGame(gameState?: RecursivePartial<ChessterGameState>) {
 
 function restartHandler(event: any) {
   event.preventDefault();
-  if (
-    gameSelection === "customChesster" ||
-    gameSelection === "customLocal" ||
-    gameSelection === "customTabletop"
-  ) {
-    restartGame(fenStringToGameState(importedFEN));
-  } else {
-    restartGame();
-  }
+  restartGame();
 }
 
 restart.addEventListener("touchstart", restartHandler);
@@ -686,8 +681,8 @@ function closeSettingsHandler(event: any) {
 toggle_settings.addEventListener("touchstart", settingsIconHandler);
 toggle_settings.addEventListener("click", settingsIconHandler);
 
-close_settings.addEventListener("touchstart", closeSettingsHandler);
-close_settings.addEventListener("click", closeSettingsHandler);
+// close_settings.addEventListener("touchstart", closeSettingsHandler);
+// close_settings.addEventListener("click", closeSettingsHandler);
 
 undo.addEventListener("touchstart", (event) => {
   event.preventDefault();
@@ -802,13 +797,7 @@ info_touch_area.addEventListener("touchstart", infoTouchAreaHandler);
 
 info_touch_area.addEventListener("click", infoTouchAreaHandler);
 
-game_selection.addEventListener("change", () => {
-  closePromotion();
-  document.body.classList.remove("zen");
-  document.body.classList.remove("rotated");
-  chessboard.classList.remove("rotated");
-  document.body.classList.remove("animate_rotate");
-
+function resetSettingClasses() {
   document.querySelector("#depthSetting").classList.remove("disabled");
   document.querySelector("#depth").classList.remove("disabled");
   document
@@ -823,6 +812,31 @@ game_selection.addEventListener("change", () => {
     .querySelector("#visualizeSearchSetting")
     .classList.remove("disabled");
   visualize_search.classList.remove("disabled");
+  play_as.classList.remove("disabled");
+  document.querySelector("#playAsSetting").classList.remove("disabled");
+}
+
+function disableSettings() {
+  document.querySelector("#depthSetting").classList.add("disabled");
+  document.querySelector("#depth").classList.add("disabled");
+  document
+    .querySelector("#pseudoLegalEvaluationSetting")
+    .classList.add("disabled");
+  document.querySelector("#pseudoLegalEvaluation").classList.add("disabled");
+  document.querySelector("#searchAlgorithmSetting").classList.add("disabled");
+  search_algorithm.classList.add("disabled");
+  document.querySelector("#visualizeSearchSetting").classList.add("disabled");
+  visualize_search.classList.add("disabled");
+  play_as.classList.add("disabled");
+  document.querySelector("#playAsSetting").classList.add("disabled");
+}
+
+game_selection.addEventListener("change", () => {
+  closePromotion();
+  document.body.classList.remove("zen");
+  document.body.classList.remove("animate_rotate");
+
+  resetSettingClasses();
 
   custom_game.classList.add("hidden");
   load_custom_game.classList.add("hidden");
@@ -835,17 +849,16 @@ game_selection.addEventListener("change", () => {
   importedFEN = "";
 
   switch (game_selection.value) {
-    case "whiteAI":
-      playerTeam = 0;
+    case "chesster":
+      playerTeam = play_as.value === "white" ? WHITE : BLACK;
       enableAI = true;
-      break;
-    case "blackAI":
-      playerTeam = 1;
-      enableAI = true;
-      piecesAreRotated = true;
+      piecesAreRotated = playerTeam === BLACK;
 
-      document.body.classList.add("rotated");
-      chessboard.classList.add("rotated");
+      if (playerTeam === BLACK) {
+        document.body.classList.add("rotated");
+        chessboard.classList.add("rotated");
+      }
+
       break;
     case "tabletop":
       playerTeam = 0;
@@ -853,25 +866,9 @@ game_selection.addEventListener("change", () => {
 
       isTabletop = true;
 
-      document.body.classList.toggle("zen");
       document.body.classList.add("animate_rotate");
 
-      document.querySelector("#depthSetting").classList.add("disabled");
-      document.querySelector("#depth").classList.add("disabled");
-      document
-        .querySelector("#pseudoLegalEvaluationSetting")
-        .classList.add("disabled");
-      document
-        .querySelector("#pseudoLegalEvaluation")
-        .classList.add("disabled");
-      document
-        .querySelector("#searchAlgorithmSetting")
-        .classList.add("disabled");
-      search_algorithm.classList.add("disabled");
-      document
-        .querySelector("#visualizeSearchSetting")
-        .classList.add("disabled");
-      visualize_search.classList.add("disabled");
+      disableSettings();
       break;
     case "local":
       playerTeam = 0;
@@ -879,82 +876,47 @@ game_selection.addEventListener("change", () => {
 
       isLocal = true;
 
-      document.querySelector("#depthSetting").classList.add("disabled");
-      document.querySelector("#depth").classList.add("disabled");
-      document
-        .querySelector("#pseudoLegalEvaluationSetting")
-        .classList.add("disabled");
-      document
-        .querySelector("#pseudoLegalEvaluation")
-        .classList.add("disabled");
-      document
-        .querySelector("#searchAlgorithmSetting")
-        .classList.add("disabled");
-      search_algorithm.classList.add("disabled");
-      document
-        .querySelector("#visualizeSearchSetting")
-        .classList.add("disabled");
-      visualize_search.classList.add("disabled");
+      disableSettings();
       break;
     case "customTabletop":
       playerTeam = 0;
       enableAI = false;
+      importedFEN = custom_game.value;
 
       isTabletop = true;
 
-      document.body.classList.toggle("zen");
       document.body.classList.add("animate_rotate");
 
       custom_game.classList.remove("hidden");
       load_custom_game.classList.remove("hidden");
 
-      document.querySelector("#depthSetting").classList.add("disabled");
-      document.querySelector("#depth").classList.add("disabled");
-      document
-        .querySelector("#pseudoLegalEvaluationSetting")
-        .classList.add("disabled");
-      document
-        .querySelector("#pseudoLegalEvaluation")
-        .classList.add("disabled");
-      document
-        .querySelector("#searchAlgorithmSetting")
-        .classList.add("disabled");
-      search_algorithm.classList.add("disabled");
-      document
-        .querySelector("#visualizeSearchSetting")
-        .classList.add("disabled");
-      visualize_search.classList.add("disabled");
+      disableSettings();
       break;
     case "customLocal":
       playerTeam = 0;
       enableAI = false;
+      importedFEN = custom_game.value;
 
       isLocal = true;
 
       custom_game.classList.remove("hidden");
       load_custom_game.classList.remove("hidden");
 
-      document.querySelector("#depthSetting").classList.add("disabled");
-      document.querySelector("#depth").classList.add("disabled");
-      document
-        .querySelector("#pseudoLegalEvaluationSetting")
-        .classList.add("disabled");
-      document
-        .querySelector("#pseudoLegalEvaluation")
-        .classList.add("disabled");
-      document
-        .querySelector("#searchAlgorithmSetting")
-        .classList.add("disabled");
-      search_algorithm.classList.add("disabled");
-      document
-        .querySelector("#visualizeSearchSetting")
-        .classList.add("disabled");
-      visualize_search.classList.add("disabled");
+      disableSettings();
       break;
     case "customChesster":
-      playerTeam = 0;
+      playerTeam = play_as.value === "white" ? WHITE : BLACK;
+      piecesAreRotated = playerTeam === BLACK;
       enableAI = true;
+      importedFEN = custom_game.value;
+
       show_custom_game.classList.remove("hidden");
+
+      if (playerTeam === BLACK) {
+        document.body.classList.add("rotated");
+        chessboard.classList.add("rotated");
+      }
+
       break;
   }
 
@@ -986,28 +948,39 @@ search_algorithm.addEventListener("change", () => {
   }
 });
 
+play_as.addEventListener("change", () => {
+  playerTeam = play_as.value === "white" ? WHITE : BLACK;
+  piecesAreRotated = playerTeam === BLACK;
+
+  document.body.classList.remove("rotated");
+  chessboard.classList.remove("rotated");
+
+  restartGame();
+});
+
 var loadCustomGameTimeout: NodeJS.Timeout;
 
 function loadCustomGameHandler(event: any) {
   event.preventDefault();
 
   piecesAreRotated = false;
-  document.body.classList.remove("rotated");
-  chessboard.classList.remove("rotated");
+  // document.body.classList.remove("rotated");
+  // chessboard.classList.remove("rotated");
 
   if (custom_game.value === "") return;
 
+  importedFEN = custom_game.value;
+
   try {
-    restartGame(fenStringToGameState(custom_game.value));
+    restartGame();
   } catch (error) {
     console.error(error);
+    importedFEN = "";
     load_custom_game.textContent = "Invalid FEN";
     load_custom_game.classList.remove("success");
     load_custom_game.classList.add("error");
     return;
   }
-
-  importedFEN = custom_game.value;
 
   load_custom_game.textContent = "Success!";
   load_custom_game.classList.remove("error");
